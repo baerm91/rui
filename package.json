@@ -15,11 +15,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "gsap": "^3.12.7",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "three": "^0.170.0"
+    "three": "^0.170.0",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",

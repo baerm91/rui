@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
-  isValidModelUrl, loginUser, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
-  readSession, readStories, registerUser, removeStoryCollaborator, resetUserPassword, respondToCollaboration,
+  isValidModelUrl, loginWithOAuth, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
+  readSession, readStories, removeStoryCollaborator, respondToCollaboration,
   saveStory, unpublishStory, updateStoryCollaboratorRole, updateStoryMetadata, updateUserProfile, writeStories
 } from './platformStore.js';
 import { readProjects, updateProjectListingMetadata } from '../projects/projectStore.js';
@@ -158,7 +158,7 @@ function Header({ session, transparent = false }) {
               <div className="riu-account-dropdown" role="menu">
                 <a href="/account" role="menuitem"><Settings size={16} /> Einstellungen</a>
                 <a href="/dashboard" role="menuitem"><Library size={16} /> Meine Stories</a>
-                <button type="button" role="menuitem" onClick={() => { logoutUser(); go('/'); }}><LogOut size={16} /> Abmelden</button>
+                <button type="button" role="menuitem" onClick={async () => { await logoutUser(); go('/'); }}><LogOut size={16} /> Abmelden</button>
               </div>
             )}
           </div>
@@ -465,20 +465,14 @@ function Gallery({ session }) {
   );
 }
 
-function AuthPage({ mode, onSession }) {
+function AuthPage({ mode }) {
   const isRegister = mode === 'register';
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  async function submit(event) {
-    event.preventDefault();
+  async function authenticate() {
     setBusy(true); setError('');
-    const form = new FormData(event.currentTarget);
     try {
-      const payload = { name: form.get('name'), username: form.get('username'), email: form.get('email'), password: form.get('password') };
-      if (isRegister && String(payload.password).length < 8) throw new Error('Das Passwort muss mindestens 8 Zeichen lang sein.');
-      const user = isRegister ? await registerUser(payload) : await loginUser(payload);
-      onSession(user);
-      go('/dashboard');
+      await loginWithOAuth();
     } catch (cause) { setError(cause.message); setBusy(false); }
   }
   return (
@@ -495,65 +489,14 @@ function AuthPage({ mode, onSession }) {
           <div className="auth-card">
             <span className="riu-overline">{isRegister ? 'Kostenlos beginnen' : 'Anmelden'}</span>
             <h2>{isRegister ? 'Konto erstellen' : 'Zum Studio'}</h2>
-            <form onSubmit={submit}>
-              {isRegister && <label>Name<input name="name" required autoComplete="name" placeholder="Ihr Name" /></label>}
-              {isRegister && <label>Username<input name="username" required minLength="3" pattern="[A-Za-z0-9._-]+" autoComplete="username" placeholder="z. B. anna-museum" /><small>Damit können andere Sie zu Stories einladen.</small></label>}
-              <label>E-Mail<input name="email" required type="email" autoComplete="email" placeholder="name@beispiel.at" /></label>
-              <label>Passwort<input name="password" required type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} placeholder="Mindestens 8 Zeichen" /></label>
+            <div className="auth-oauth">
+              <p>RIU verwendet Google OAuth. Ihr Passwort wird weder von RIU noch in diesem Browser gespeichert.</p>
               {error && <div className="form-error">{error}</div>}
-              <button className="riu-button" disabled={busy}>{busy ? 'Einen Moment …' : isRegister ? 'Konto erstellen' : 'Anmelden'} <ArrowRight size={17} /></button>
-            </form>
-            <p className="auth-switch">{isRegister ? 'Bereits registriert?' : 'Noch kein Konto?'} <a href={isRegister ? '/login' : '/register'}>{isRegister ? 'Anmelden' : 'Konto erstellen'}</a></p>
-            {!isRegister && <p className="auth-switch"><a href="/reset-password">Passwort vergessen?</a></p>}
-          </div>
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function ResetPasswordPage() {
-  const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError('');
-    setSaved(false);
-    const form = new FormData(event.currentTarget);
-    try {
-      await resetUserPassword({ email: form.get('email'), password: form.get('password') });
-      setSaved(true);
-    } catch (cause) {
-      setError(cause.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="riu-page auth-page">
-      <Header session={null} />
-      <main className="auth-layout">
-        <section className="auth-intro">
-          <span className="riu-overline">Kontozugang</span>
-          <h1>Neues Passwort.</h1>
-          <p>Setzen Sie das Passwort Ihres lokal in diesem Browser gespeicherten Kontos neu.</p>
-        </section>
-        <section className="auth-panel">
-          <div className="auth-card">
-            <span className="riu-overline">Lokale Wiederherstellung</span>
-            <h2>Zugang erneuern</h2>
-            <form onSubmit={submit}>
-              <label>E-Mail<input name="email" required type="email" autoComplete="email" /></label>
-              <label>Neues Passwort<input name="password" required type="password" minLength="8" autoComplete="new-password" placeholder="Mindestens 8 Zeichen" /></label>
-              {error && <div className="form-error">{error}</div>}
-              {saved && <div className="form-success"><Check size={16} /> Passwort gespeichert. Sie können sich jetzt anmelden.</div>}
-              <button className="riu-button" disabled={busy}>{busy ? 'Speichern …' : 'Passwort neu setzen'}</button>
-            </form>
-            <p className="auth-switch"><a href="/login">Zurück zur Anmeldung</a></p>
+              <button type="button" className="riu-button" disabled={busy} onClick={authenticate}>
+                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : 'Mit Google fortfahren'}
+              </button>
+            </div>
+            <p className="auth-switch">Beim ersten Login wird Ihr bisheriger lokaler Carnuntum-/Heidentor-Bestand sicher mit Ihrem OAuth-Konto verbunden.</p>
           </div>
         </section>
       </main>
@@ -763,7 +706,7 @@ export default function PlatformApp() {
   if (path === '/discover') return <Discover session={session} />;
   if (path === '/login') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/register') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="register" onSession={setSession} />;
-  if (path === '/reset-password') return session ? <Dashboard session={session} onSession={setSession} /> : <ResetPasswordPage />;
+  if (path === '/reset-password') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" />;
   if (path === '/dashboard') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/account') return session ? <AccountPage session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/stories/new') return session ? <NewStory session={session} /> : <AuthPage mode="login" onSession={setSession} />;

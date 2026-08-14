@@ -11,7 +11,7 @@ Beide Ausgangsprojekte verwenden dieselbe clientseitige Basis:
 - Three.js 0.170 für glTF/GLB, Rendering, Picking und Kameras
 - GSAP für Kamera- und Portalübergänge
 - Tailwind-Utilities plus umfangreiches projektspezifisches CSS
-- `localStorage` und IndexedDB für Projekt- beziehungsweise lokale Modellpersistenz
+- Supabase Auth/PostgreSQL für Konten und Story-Persistenz; IndexedDB für Cache und lokale Modelle
 
 Ein Server-Backend oder Router war nicht vorhanden. Die Anwendung bestand aus einer Three.js-Laufzeit in `main.js`, einer React-Oberfläche und einer festen aktiven Projektdatei.
 
@@ -52,7 +52,9 @@ Das ältere Heidentor-JSON enthält `alignment` und vier `stations`. Beleuchtung
                   ▼
         platformStore (Repository-API)
                   │
-      IndexedDB: Konto + vollständige Story
+       Supabase Auth + PostgreSQL
+                  │
+       IndexedDB: Cache + lokale Medien
                   │
           ┌───────┴────────┐
           ▼                ▼
@@ -72,7 +74,7 @@ Das ältere Heidentor-JSON enthält `alignment` und vier `stations`. Beleuchtung
 ### Routing
 
 - `/` – öffentliche Galerie
-- `/login`, `/register` – Kontoabläufe
+- `/login`, `/register` – Google-OAuth-Einstieg
 - `/dashboard` – eigene Stories
 - `/account` – Name und Kontodaten verwalten
 - `/stories/new` – Story anlegen
@@ -85,7 +87,7 @@ Die schlanke Routenerkennung benötigt für den Prototyp keine zusätzliche Rout
 
 Eine Story besitzt Metadaten (`id`, `slug`, `ownerId`, Autor, Status, Zeitstempel, Cover), Branding, externe Modellreferenzen, Einstellungen, Alignment, globale Annotationen und eine geordnete Stationsliste. Der Status ist `draft` oder `published`. Nur veröffentlichte Stories erscheinen in der Galerie.
 
-`/studio/:id` wird nur gerendert, wenn die aktive Session dem `ownerId` entspricht. Der Editor erhält ausschließlich die aktive eigene Story in seiner Projektauswahl. Für Produktion muss dieselbe Regel zusätzlich serverseitig durchgesetzt werden.
+`/studio/:id` wird nur gerendert, wenn die aktive Supabase-Session Eigentümer- oder Editorrechte besitzt. Dieselbe Regel wird in PostgreSQL durch Row Level Security durchgesetzt.
 
 ### Modellstrategie
 
@@ -108,7 +110,7 @@ Manuell im Browser geprüft:
 - Desktop-Galerie und mobiler Breakpoint 390 × 844 ohne horizontalen Überlauf
 - Starhemberg und Heidentor über dieselbe Viewer-Route
 - Heidentor-Remoteassets bis 100 % ohne Ladefehler
-- Registrierung, Anmeldung und Abmeldung
+- Google-OAuth-Anmeldung und Abmeldung
 - Story mit externer glTF-URL anlegen
 - Editor öffnen, Station ergänzen und ändern, Kamera übernehmen
 - Projektannotation anlegen und bearbeiten
@@ -119,4 +121,4 @@ Manuell im Browser geprüft:
 
 ## Bewusste Grenzen
 
-Die browserlokale IndexedDB-Persistenz macht den Prototyp ohne Infrastruktur unmittelbar funktionsfähig und hält die Datenzugriffsschicht klein. Vollständige Story-Datensätze liegen in `riu_platform`; externe Modelle bleiben reine URL-Referenzen. Sie bietet jedoch keine echte Mehrgerätefähigkeit oder manipulationssichere Autorisierung. Der nächste Architekturschritt wäre ein API-Adapter mit serverseitigem Benutzer-/Story-Repository; Viewer, Normalisierung und Editor können dabei unverändert bleiben.
+Vollständige Story-Datensätze liegen in Supabase PostgreSQL und werden durch Row Level Security autorisiert. `riu_platform` dient weiterhin als Offline-Cache und speichert lokale Modelle, Medien und Preview-Videos, die nicht automatisch hochgeladen werden. Externe Modelle bleiben reine URL-Referenzen. Beim ersten OAuth-Login übernimmt eine idempotente Legacy-Migration die früher lokalen Carnuntum-/Heidentor- und Starhemberg-Datensätze in das authentifizierte Konto.

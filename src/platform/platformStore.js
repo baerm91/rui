@@ -4,6 +4,11 @@ import {
   deleteRecord, putRecord, readAllRecords, readMeta, readRecord, replaceAllRecords, STORES, writeMeta
 } from './platformDatabase.js';
 import { HEIDENTOR_STABLE_LIGHTING } from '../projects/projectLightingPresets.js';
+import { isSupabaseConfigured, signInWithOAuth, signOutFromSupabase } from './supabaseClient.js';
+import {
+  deleteStoryFromSupabase, fetchRemoteStories, importLegacyStories, loadSupabaseState,
+  syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile
+} from './supabaseStore.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -173,7 +178,9 @@ const persistStoriesNow = () => {
   }
   return replaceAllRecords(STORES.stories, storiesCache);
 };
-const persistStories = () => persistStoriesNow().catch(reportDatabaseError);
+const persistStories = () => {
+  persistStoriesNow().catch(reportDatabaseError);
+};
 
 function seededStories(current = storiesCache) {
   const userStories = Array.isArray(current)
@@ -236,38 +243,60 @@ function seededStories(current = storiesCache) {
 }
 
 export async function initializePlatformStore() {
+  const legacyActiveUserId = safeParse(SESSION_KEY, null)?.userId || '';
   if (typeof indexedDB === 'undefined') {
     usersCache = ensureUsernames(safeParse(USERS_KEY, []));
     storiesCache = seededStories(safeParse(STORIES_KEY, []));
-    return;
+  } else {
+    const [databaseUsers, databaseStories, ownerRecord] = await Promise.all([
+      readAllRecords(STORES.users),
+      readAllRecords(STORES.stories),
+      readMeta('demoOwnerId')
+    ]);
+    usersCache = ensureUsernames(databaseUsers.length ? databaseUsers : safeParse(USERS_KEY, []));
+    storiesCache = databaseStories.length ? databaseStories : safeParse(STORIES_KEY, []);
+    demoOwnerId = ownerRecord?.value || '';
+    if (!demoOwnerId && usersCache.some((user) => user.id === legacyActiveUserId)) {
+      demoOwnerId = legacyActiveUserId;
+      await writeMeta('demoOwnerId', demoOwnerId);
+    }
+    storiesCache = seededStories(storiesCache);
   }
-  const [databaseUsers, databaseStories, ownerRecord] = await Promise.all([
-    readAllRecords(STORES.users),
-    readAllRecords(STORES.stories),
-    readMeta('demoOwnerId')
-  ]);
-  usersCache = ensureUsernames(databaseUsers.length ? databaseUsers : safeParse(USERS_KEY, []));
-  storiesCache = databaseStories.length ? databaseStories : safeParse(STORIES_KEY, []);
-  demoOwnerId = ownerRecord?.value || '';
-  const activeUserId = safeParse(SESSION_KEY, null)?.userId;
-  if (!demoOwnerId && usersCache.some((user) => user.id === activeUserId)) {
-    demoOwnerId = activeUserId;
-    await writeMeta('demoOwnerId', demoOwnerId);
+
+  if (isSupabaseConfigured) {
+    const remoteState = await loadSupabaseState();
+    if (remoteState.authUser && remoteState.user) {
+      await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
+      const remoteStories = await fetchRemoteStories();
+      usersCache = ensureUsernames(remoteState.users);
+      demoOwnerId = remoteState.user.id;
+      storiesCache = seededStories(remoteStories);
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
+      if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      storiesCache = seededStories(remoteState.stories);
+    }
   }
-  storiesCache = seededStories(storiesCache);
-  await Promise.all([
-    replaceAllRecords(STORES.users, usersCache),
-    replaceAllRecords(STORES.stories, storiesCache)
-  ]);
-  localStorage.removeItem(USERS_KEY);
-  localStorage.removeItem(STORIES_KEY);
+
+  if (typeof indexedDB !== 'undefined') {
+    await Promise.all([
+      replaceAllRecords(STORES.users, usersCache),
+      replaceAllRecords(STORES.stories, storiesCache)
+    ]);
+    localStorage.removeItem(USERS_KEY);
+    localStorage.removeItem(STORIES_KEY);
+  } else {
+    localStorage.setItem(USERS_KEY, JSON.stringify(usersCache));
+    localStorage.setItem(STORIES_KEY, JSON.stringify(storiesCache));
+  }
 }
 
 export const platformReady = typeof window !== 'undefined'
   ? initializePlatformStore().catch((error) => {
     reportDatabaseError(error);
-    usersCache = safeParse(USERS_KEY, []);
-    storiesCache = seededStories(safeParse(STORIES_KEY, []));
+    if (!usersCache.length) usersCache = safeParse(USERS_KEY, []);
+    if (!storiesCache.length) storiesCache = seededStories(safeParse(STORIES_KEY, []));
   })
   : Promise.resolve();
 
@@ -284,6 +313,7 @@ export function readStories() {
 export function writeStories(stories) {
   storiesCache = clone(stories);
   persistStories();
+  syncStoriesToSupabase(storiesCache).catch(reportDatabaseError);
   window.dispatchEvent(new CustomEvent('riu-stories-changed'));
   return storiesCache;
 }
@@ -355,6 +385,7 @@ export async function saveStory(story) {
     storiesCache = previousStories;
     throw error;
   }
+  await syncStoryToSupabase(storiesCache.find((item) => item.id === story.id) ?? story);
   window.dispatchEvent(new CustomEvent('riu-stories-changed'));
   return storiesCache.find((item) => item.id === story.id) ?? story;
 }
@@ -517,6 +548,7 @@ export function deleteStory(storyId, ownerId) {
   const story = getStory(storyId);
   if (!story || story.ownerId !== ownerId) throw new Error('Diese Story darf nicht gelöscht werden.');
   writeStories(readStories().filter((item) => item.id !== storyId));
+  deleteStoryFromSupabase(storyId).catch(reportDatabaseError);
   if (story.previewVideoAssetId && typeof indexedDB !== 'undefined') {
     deleteRecord(STORES.previewAssets, story.previewVideoAssetId).catch(reportDatabaseError);
   }
@@ -588,56 +620,6 @@ export function readSession() {
   return user ? { id: user.id, name: user.name, username: user.username, email: user.email } : null;
 }
 
-async function hashPassword(password, salt) {
-  const data = new TextEncoder().encode(`${salt}:${password}`);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-export async function registerUser({ name, username, email, password }) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const normalizedUsername = normalizeUsername(username);
-  if (normalizedUsername.length < 3) throw new Error('Der Username muss mindestens 3 Zeichen lang sein.');
-  if (usersCache.some((user) => user.email === normalizedEmail)) throw new Error('Für diese E-Mail-Adresse besteht bereits ein Konto.');
-  if (usersCache.some((user) => normalizeUsername(user.username) === normalizedUsername)) throw new Error('Dieser Username ist bereits vergeben.');
-  const salt = crypto.randomUUID();
-  const user = {
-    id: crypto.randomUUID(),
-    name: name.trim(),
-    username: normalizedUsername,
-    email: normalizedEmail,
-    salt,
-    passwordHash: await hashPassword(password, salt),
-    createdAt: now()
-  };
-  usersCache = [...usersCache, user];
-  await putRecord(STORES.users, user);
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: user.id }));
-  await claimDemoStories(user);
-  return { id: user.id, name: user.name, username: user.username, email: user.email };
-}
-
-export async function loginUser({ email, password }) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = usersCache.find((item) => item.email === normalizedEmail);
-  if (!user || await hashPassword(password, user.salt) !== user.passwordHash) {
-    throw new Error('E-Mail-Adresse oder Passwort ist nicht korrekt.');
-  }
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: user.id }));
-  await claimDemoStories(user);
-  return { id: user.id, name: user.name, username: user.username, email: user.email };
-}
-
-async function claimDemoStories(user) {
-  if (demoOwnerId || !user) return;
-  demoOwnerId = user.id;
-  storiesCache = seededStories(storiesCache);
-  await Promise.all([
-    writeMeta('demoOwnerId', user.id),
-    replaceAllRecords(STORES.stories, storiesCache)
-  ]);
-}
-
 export async function updateUserProfile(userId, { name, username }) {
   const normalizedName = String(name || '').trim();
   const normalizedUsername = normalizeUsername(username);
@@ -659,29 +641,19 @@ export async function updateUserProfile(userId, { name, username }) {
   }));
   await Promise.all([
     putRecord(STORES.users, updatedUser),
-    replaceAllRecords(STORES.stories, storiesCache)
+    replaceAllRecords(STORES.stories, storiesCache),
+    updateSupabaseProfile(userId, { name: normalizedName, username: normalizedUsername }),
+    syncStoriesToSupabase(storiesCache)
   ]);
   return { id: updatedUser.id, name: updatedUser.name, username: updatedUser.username, email: updatedUser.email };
 }
 
-export async function resetUserPassword({ email, password }) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (String(password || '').length < 8) throw new Error('Das Passwort muss mindestens 8 Zeichen lang sein.');
-  const user = usersCache.find((item) => item.email === normalizedEmail);
-  if (!user) throw new Error('Für diese E-Mail-Adresse wurde kein lokales Konto gefunden.');
-  const salt = crypto.randomUUID();
-  const updatedUser = {
-    ...user,
-    salt,
-    passwordHash: await hashPassword(password, salt),
-    updatedAt: now()
-  };
-  usersCache = usersCache.map((item) => item.id === user.id ? updatedUser : item);
-  await putRecord(STORES.users, updatedUser);
-  return true;
+export async function loginWithOAuth() {
+  await signInWithOAuth('google');
 }
 
-export function logoutUser() {
+export async function logoutUser() {
+  await signOutFromSupabase();
   localStorage.removeItem(SESSION_KEY);
 }
 
@@ -703,6 +675,7 @@ export function updateStoryProject(projectId, project) {
   };
   storiesCache = storiesCache.map((item) => item.id === projectId ? updated : item);
   putRecord(STORES.stories, updated).catch(reportDatabaseError);
+  syncStoryToSupabase(updated).catch(reportDatabaseError);
   return updated;
 }
 

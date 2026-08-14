@@ -27,7 +27,7 @@ npm run preview
 ## Kernablauf
 
 1. In der Galerie eine Demo-Story öffnen.
-2. Ein Konto registrieren und im persönlichen Bereich „Neue Story“ wählen.
+2. Mit Google anmelden und im persönlichen Bereich „Neue Story“ wählen.
 3. Titel, Beschreibung und eine öffentliche HTTPS-URL zu `.glb` oder `.gltf` angeben.
 4. Im Studio Stationen, Kameras, Texte, Medien und Projekt-Annotationen bearbeiten.
 5. Die Scroll-Vorschau prüfen und die Story veröffentlichen.
@@ -37,15 +37,15 @@ Der Modellserver muss CORS für den Browser-Origin erlauben. Eine `.gltf`-Datei 
 
 ## Persistenz und Konten
 
-Der Prototyp speichert Konten und vollständige Story-Datensätze browserlokal in der IndexedDB-Datenbank `riu_platform`. Dazu gehören Metadaten, Eigentümer, externe Modell-URLs, Alignment, Einstellungen, Stationen, Kameras und Annotationen. Die Session enthält lediglich die aktive Benutzer-ID; ein separater Editor-Zwischenspeicher hält noch nicht abgeschlossene Änderungen lokal vor. Bereits vorhandene `localStorage`-Konten und Stories werden beim ersten Start automatisch migriert.
+Konten und vollständige Story-Datensätze liegen zentral in Supabase. Supabase Auth übernimmt die Anmeldung per Google OAuth, PostgreSQL speichert Story-Metadaten, Eigentümer, externe Modell-URLs, Alignment, Einstellungen, Stationen, Kameras und Annotationen. Row Level Security beschränkt Entwürfe und Schreibzugriffe auf Eigentümer und berechtigte Mitwirkende. IndexedDB bleibt als lokaler Cache sowie für noch nicht synchronisierte Editor- und Preview-Daten bestehen.
 
-Starhemberg und Heidentor werden dem ersten bestehenden oder neu registrierten Konto zugeordnet. Ihre glTF-Dateien werden nicht in der Datenbank gespeichert oder kopiert, sondern weiterhin direkt von den bestehenden Vercel-Websites geladen. Passwörter werden mit einem individuellen Salt und SHA-256 gespeichert und verlassen den Browser nicht.
+Beim ersten OAuth-Login werden vorhandene lokale RIU-Daten einmalig übernommen. Dazu gehört ausdrücklich der bisher unter Carnuntum geführte Heidentor-Bestand; Starhemberg wird im selben Schritt zugeordnet. Eine Importmarke verhindert doppelte Übernahmen. Die glTF-Dateien werden nicht in der Datenbank gespeichert oder kopiert, sondern weiterhin direkt von den bestehenden Vercel-Websites geladen. RIU speichert keine Passwörter.
 
-Das ist bewusst eine austauschbare Prototyp-Datenzugriffsschicht und **kein produktionsreifes Authentifizierungs-Backend**. Ein Produktionsbetrieb benötigt serverseitige Sessions, eine Datenbank, serverseitige Autorisierung, Rate Limits und eine Passwort-Hashfunktion wie Argon2id. Die UI und der Story-Editor greifen über die Funktionen in `src/platform/platformStore.js` auf Daten zu, sodass diese Schicht ersetzt werden kann.
+Für lokale Entwicklung werden `VITE_PUBLIC_SUPABASE_URL` und `VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY` benötigt; die Namen stehen in `.env.example`. In Vercel werden diese Werte durch die Supabase-Integration bereitgestellt. Es dürfen ausschließlich die öffentlichen Browser-Schlüssel in `VITE_PUBLIC_*` stehen.
 
 ## Projektstruktur
 
-- `src/platform/` – Galerie, Authentifizierung, persönlicher Bereich, Routing und browserlokale Repositories
+- `src/platform/` – Galerie, OAuth, Supabase-Synchronisierung, persönlicher Bereich und Routing
 - `src/components/` – gemeinsame Viewer- und Editor-Oberflächen
 - `src/three/` – Kamera, Rendering, Portal-/Reveal-Übergänge, Annotationen und lokale Modelle
 - `src/stations.js` – Normalisierung alter und aktueller Story-Daten
@@ -63,7 +63,7 @@ Die normalisierten Story-Inhalte sind im Repository enthalten, damit die Kompati
 
 ## Bekannte Einschränkungen
 
-- Die IndexedDB-Datenbank und Konten sind weiterhin an Browser und Origin gebunden und nicht geräteübergreifend synchronisiert.
+- Lokal hochgeladene Modelle, Medien und erzeugte Preview-Videos bleiben browsergebunden; Story-Konfigurationen werden geräteübergreifend synchronisiert.
 - Externe Modelle bleiben von Erreichbarkeit, Bandbreite und CORS-Konfiguration des fremden Hosts abhängig.
 - Eine im Editor geänderte Modell-URL wird nach einem Neuladen der Studio-Route aktiv.
 - Große glTF-Dateien mit separaten Texturen können länger laden als kompakte, optimierte GLB-Dateien.
