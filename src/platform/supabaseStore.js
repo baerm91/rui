@@ -1,6 +1,7 @@
 import { authUserToProfile, getSupabase, isSupabaseConfigured } from './supabaseClient.js';
 
 const LEGACY_SOURCE_KEY = 'riu-indexeddb-v2-carnuntum';
+const STORY_PREVIEW_BUCKET = 'story-previews';
 
 const storyToRow = (story, ownerId = story.ownerId) => ({
   id: story.id,
@@ -133,6 +134,38 @@ export async function syncStoryToSupabase(story) {
 export async function syncStoriesToSupabase(stories) {
   if (!isSupabaseConfigured) return;
   await Promise.all((stories || []).map((story) => syncStoryToSupabase(story)));
+}
+
+export async function uploadStoryPreviewToSupabase(story, previewBlob, generatedAt) {
+  const client = getSupabase();
+  if (!client || !story?.id || !(previewBlob instanceof Blob)) return null;
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  const userId = sessionData.session?.user?.id;
+  if (!userId) throw new Error('Bitte melden Sie sich erneut an, um die Preview zu speichern.');
+
+  const extension = previewBlob.type.includes('mp4') ? 'mp4' : 'webm';
+  const storagePath = `${userId}/${story.id}.${extension}`;
+  const { error } = await client.storage.from(STORY_PREVIEW_BUCKET).upload(storagePath, previewBlob, {
+    cacheControl: '60',
+    contentType: previewBlob.type || 'video/webm',
+    upsert: true
+  });
+  if (error) throw error;
+
+  const { data } = client.storage.from(STORY_PREVIEW_BUCKET).getPublicUrl(storagePath);
+  if (!data?.publicUrl) throw new Error('Supabase hat keine URL für die Preview zurückgegeben.');
+  return {
+    storagePath,
+    publicUrl: `${data.publicUrl}?v=${encodeURIComponent(generatedAt)}`
+  };
+}
+
+export async function deleteStoryPreviewFromSupabase(storagePath) {
+  const client = getSupabase();
+  if (!client || !storagePath) return;
+  const { error } = await client.storage.from(STORY_PREVIEW_BUCKET).remove([storagePath]);
+  if (error) throw error;
 }
 
 export async function deleteStoryFromSupabase(storyId) {

@@ -6,8 +6,9 @@ import {
 import { HEIDENTOR_STABLE_LIGHTING } from '../projects/projectLightingPresets.js';
 import { isSupabaseConfigured, signInWithOAuth, signOutFromSupabase } from './supabaseClient.js';
 import {
-  deleteStoryFromSupabase, fetchRemoteStories, importLegacyStories, loadSupabaseState,
-  syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile
+  deleteStoryFromSupabase, deleteStoryPreviewFromSupabase, fetchRemoteStories, importLegacyStories,
+  loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
+  uploadStoryPreviewToSupabase
 } from './supabaseStore.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
@@ -253,6 +254,38 @@ export function mergeStoryCollections(localStories = [], remoteStories = []) {
   return [...merged.values()];
 }
 
+async function migrateLocalStoryPreviews(remoteStories) {
+  if (typeof indexedDB === 'undefined') return remoteStories;
+  const previewAssets = await readAllRecords(STORES.previewAssets);
+  if (!previewAssets.length) return remoteStories;
+
+  const migratedStories = [...remoteStories];
+  for (const previewAsset of previewAssets) {
+    const storyIndex = migratedStories.findIndex((story) => story.id === previewAsset.storyId);
+    const story = migratedStories[storyIndex];
+    if (!story || story.previewVideoUrl || !(previewAsset.blob instanceof Blob) || previewAsset.blob.size === 0) continue;
+    const generatedAt = previewAsset.createdAt || now();
+    const remotePreview = await uploadStoryPreviewToSupabase(story, previewAsset.blob, generatedAt);
+    if (!remotePreview) continue;
+    const updated = {
+      ...story,
+      previewVideoAssetId: previewAsset.id,
+      previewVideoUrl: remotePreview.publicUrl,
+      previewVideoStoragePath: remotePreview.storagePath,
+      previewGeneratedAt: generatedAt,
+      previewVideoMimeType: previewAsset.mimeType || previewAsset.blob.type || 'video/webm',
+      previewDurationSeconds: previewAsset.durationSeconds || 3,
+      previewReturnDurationSeconds: previewAsset.returnDurationSeconds || 3.5,
+      previewEndStationNumber: previewAsset.endStationNumber || 2,
+      previewPlaybackMode: previewAsset.playbackMode || 'ping-pong',
+      updatedAt: generatedAt
+    };
+    await syncStoryToSupabase(updated);
+    migratedStories[storyIndex] = updated;
+  }
+  return migratedStories;
+}
+
 export async function initializePlatformStore() {
   const legacyActiveUserId = safeParse(SESSION_KEY, null)?.userId || '';
   if (typeof indexedDB === 'undefined') {
@@ -278,7 +311,7 @@ export async function initializePlatformStore() {
     const remoteState = await loadSupabaseState();
     if (remoteState.authUser && remoteState.user) {
       await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
-      const remoteStories = await fetchRemoteStories();
+      const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
       usersCache = ensureUsernames(remoteState.users);
       demoOwnerId = remoteState.user.id;
       storiesCache = seededStories(remoteStories);
@@ -562,6 +595,7 @@ export function deleteStory(storyId, ownerId) {
   if (!story || story.ownerId !== ownerId) throw new Error('Diese Story darf nicht gelöscht werden.');
   writeStories(readStories().filter((item) => item.id !== storyId));
   deleteStoryFromSupabase(storyId).catch(reportDatabaseError);
+  deleteStoryPreviewFromSupabase(story.previewVideoStoragePath).catch(reportDatabaseError);
   if (story.previewVideoAssetId && typeof indexedDB !== 'undefined') {
     deleteRecord(STORES.previewAssets, story.previewVideoAssetId).catch(reportDatabaseError);
   }
@@ -587,6 +621,7 @@ export async function saveStoryPreview(storyId, previewBlob, {
   // Eine stabile Asset-ID ersetzt das alte WebM und verhindert verwaiste Dateien.
   const assetId = `story-preview:${storyId}`;
   const generatedAt = now();
+  const remotePreview = await uploadStoryPreviewToSupabase(story, previewBlob, generatedAt);
   await putRecord(STORES.previewAssets, {
     id: assetId,
     storyId,
@@ -602,6 +637,8 @@ export async function saveStoryPreview(storyId, previewBlob, {
   const updated = {
     ...story,
     previewVideoAssetId: assetId,
+    previewVideoUrl: remotePreview?.publicUrl || story.previewVideoUrl || '',
+    previewVideoStoragePath: remotePreview?.storagePath || story.previewVideoStoragePath || '',
     previewGeneratedAt: generatedAt,
     previewVideoMimeType: previewBlob.type || 'video/webm',
     previewDurationSeconds: durationSeconds,
@@ -613,6 +650,7 @@ export async function saveStoryPreview(storyId, previewBlob, {
   storiesCache = storiesCache.map((item) => item.id === storyId ? updated : item);
   try {
     await putRecord(STORES.stories, updated);
+    await syncStoryToSupabase(updated);
   } catch (error) {
     await deleteRecord(STORES.previewAssets, assetId).catch(reportDatabaseError);
     throw error;

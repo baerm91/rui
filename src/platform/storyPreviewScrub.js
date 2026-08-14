@@ -22,3 +22,7 @@ export function resolveScrubDuration(videoDuration, storedForwardDuration) {
   if (Number.isFinite(storedForwardDuration) && storedForwardDuration > 0) return storedForwardDuration;
   return resolvePreviewDuration(videoDuration, storedForwardDuration);
 }
+
+export function storyHasPreview(story) {
+  return Boolean(story?.previewVideoUrl || story?.previewVideoAssetId);
+}

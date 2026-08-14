@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  directionalPointerProgress, pointerEntrySide, pointerProgress, resolvePreviewDuration, resolveScrubDuration
+  directionalPointerProgress, pointerEntrySide, pointerProgress, resolvePreviewDuration, resolveScrubDuration,
+  storyHasPreview
 } from '../src/platform/storyPreviewScrub.js';
 
 test('story preview maps the horizontal card position to clamped video progress', () => {
@@ -35,4 +36,10 @@ test('story preview uses the known recording duration for MediaRecorder WebMs wi
 test('ping-pong previews scrub only across their forward segment', () => {
   assert.equal(resolveScrubDuration(6.35, 3), 3);
   assert.equal(resolveScrubDuration(6.35, undefined), 6.35);
+});
+
+test('remote preview media remains available without a local browser asset', () => {
+  assert.equal(storyHasPreview({ previewVideoUrl: 'https://example.supabase.co/preview.webm' }), true);
+  assert.equal(storyHasPreview({ previewVideoAssetId: 'story-preview:demo' }), true);
+  assert.equal(storyHasPreview({}), false);
 });

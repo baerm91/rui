@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { readStoryPreviewBlob } from './platformStore.js';
 import {
-  directionalPointerProgress, pointerEntrySide, resolvePreviewDuration, resolveScrubDuration
+  directionalPointerProgress, pointerEntrySide, resolvePreviewDuration, resolveScrubDuration,
+  storyHasPreview
 } from './storyPreviewScrub.js';
 
 const RETURN_DELAY_MS = 1000;
 const RETURN_DURATION_SECONDS = 5;
 
 export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, children }) {
+  const hasPreview = storyHasPreview(story);
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const freezeCanvasRef = useRef(null);
@@ -73,14 +75,19 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   };
 
   const ensureVideoLoaded = async () => {
-    if (!story.previewVideoAssetId || loadingRef.current || videoRef.current?.getAttribute('src')) return;
+    if (!hasPreview || loadingRef.current || videoRef.current?.getAttribute('src')) return;
     loadingRef.current = true;
     const loadRequest = ++loadRequestRef.current;
     try {
-      const blob = await readStoryPreviewBlob(story.previewVideoAssetId);
-      if (loadRequest !== loadRequestRef.current || !blob || !videoRef.current) return;
-      objectUrlRef.current = URL.createObjectURL(blob);
-      videoRef.current.src = objectUrlRef.current;
+      if (story.previewVideoUrl) {
+        if (loadRequest !== loadRequestRef.current || !videoRef.current) return;
+        videoRef.current.src = story.previewVideoUrl;
+      } else {
+        const blob = await readStoryPreviewBlob(story.previewVideoAssetId);
+        if (loadRequest !== loadRequestRef.current || !blob || !videoRef.current) return;
+        objectUrlRef.current = URL.createObjectURL(blob);
+        videoRef.current.src = objectUrlRef.current;
+      }
       videoRef.current.load();
     } catch (error) {
       console.warn('Story-Preview konnte nicht geladen werden.', error);
@@ -90,7 +97,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   };
 
   const activate = async (event) => {
-    if (!story.previewVideoAssetId || event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) return;
+    if (!hasPreview || event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     entrySideRef.current = pointerEntrySide(event.clientX, bounds.left, bounds.width);
     // Die Eintrittskante ist immer Station 1. Von rechts läuft die Timeline
@@ -118,7 +125,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   };
 
   const scrub = (event) => {
-    if (!story.previewVideoAssetId || event.pointerType === 'touch') return;
+    if (!hasPreview || event.pointerType === 'touch') return;
     const bounds = event.currentTarget.getBoundingClientRect();
     targetProgressRef.current = directionalPointerProgress(
       event.clientX, bounds.left, bounds.width, entrySideRef.current
@@ -255,7 +262,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
 
   useEffect(() => {
     const element = containerRef.current;
-    if (!story.previewVideoAssetId || !element) return undefined;
+    if (!hasPreview || !element) return undefined;
     const bounds = element.getBoundingClientRect();
     if (bounds.bottom >= -200 && bounds.top <= window.innerHeight + 200
       && bounds.right >= -200 && bounds.left <= window.innerWidth + 200) {
@@ -270,15 +277,13 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     }, { rootMargin: '200px' });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [story.previewVideoAssetId]);
+  }, [hasPreview, story.previewVideoUrl, story.previewVideoAssetId]);
 
   return (
-    <div ref={containerRef} className={`${className} story-preview-media${story.previewVideoAssetId ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${(active || returning) && ready ? ' is-preview-active' : ''}`}
+    <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${(active || returning) && ready ? ' is-preview-active' : ''}`}
       onPointerEnter={activate} onPointerMove={scrub} onPointerLeave={deactivate}>
-      {!story.previewVideoAssetId && (
-        <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
-      )}
-      {story.previewVideoAssetId && (
+      <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
+      {hasPreview && (
         <>
           <video ref={videoRef} className="story-preview-video" muted playsInline preload="none"
             onLoadedMetadata={prepareVideoForSeeking} aria-hidden="true" />
