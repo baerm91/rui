@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogOut, MapPin, Menu, Plus, Search, Settings, Sparkles, Upload, UserPlus, Users, X
+  Ban, Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -12,6 +12,8 @@ import {
 import { readProjects, updateProjectListingMetadata } from '../projects/projectStore.js';
 import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
 import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
+import { canCreateStories, isAdmin, USER_ROLE_LABELS, USER_ROLES } from './accessControl.js';
+import { fetchAdminUsers, fetchPlatformAccess, updateAdminUser, updatePlatformAccess } from './supabaseStore.js';
 
 const go = (path) => { window.location.href = path; };
 const formatDate = (value) => value
@@ -158,6 +160,7 @@ function Header({ session, transparent = false }) {
               <div className="riu-account-dropdown" role="menu">
                 <a href="/account" role="menuitem"><Settings size={16} /> Einstellungen</a>
                 <a href="/dashboard" role="menuitem"><Library size={16} /> Meine Stories</a>
+                {isAdmin(session) && <a href="/admin" role="menuitem"><ShieldCheck size={16} /> Administration</a>}
                 <button type="button" role="menuitem" onClick={async () => { await logoutUser(); go('/'); }}><LogOut size={16} /> Abmelden</button>
               </div>
             )}
@@ -433,7 +436,7 @@ function Gallery({ session }) {
             <h1>Modelle zeigen.<br /><em>Geschichten erzählen.</em></h1>
             <p>RIU verwandelt 3D-Modelle in kuratierte Reisen aus Perspektiven, Texten und räumlichen Annotationen.</p>
             <div className="riu-hero-actions">
-              <button className="riu-button" onClick={() => go(session ? '/stories/new' : '/register')}>Eigene Story erstellen <ArrowRight size={17} /></button>
+              <button className="riu-button" onClick={() => go(session ? (canCreateStories(session) ? '/stories/new' : '/dashboard') : '/register')}>Eigene Story erstellen <ArrowRight size={17} /></button>
               <a href="#stories">Galerie entdecken <ChevronRight size={16} /></a>
             </div>
           </div>
@@ -469,6 +472,17 @@ function AuthPage({ mode }) {
   const isRegister = mode === 'register';
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [registrationsEnabled, setRegistrationsEnabled] = useState(!isRegister);
+  const [settingsBusy, setSettingsBusy] = useState(isRegister);
+  useEffect(() => {
+    const notice = localStorage.getItem('riu_auth_notice');
+    if (notice) { setError(notice); localStorage.removeItem('riu_auth_notice'); }
+    if (!isRegister) return;
+    fetchPlatformAccess()
+      .then((settings) => setRegistrationsEnabled(settings.registrationsEnabled))
+      .catch((cause) => setError(cause.message))
+      .finally(() => setSettingsBusy(false));
+  }, [isRegister]);
   async function authenticate() {
     setBusy(true); setError('');
     try {
@@ -492,8 +506,9 @@ function AuthPage({ mode }) {
             <div className="auth-oauth">
               <p>RIU verwendet Google OAuth. Ihr Passwort wird weder von RIU noch in diesem Browser gespeichert.</p>
               {error && <div className="form-error">{error}</div>}
-              <button type="button" className="riu-button" disabled={busy} onClick={authenticate}>
-                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : 'Mit Google fortfahren'}
+              {isRegister && !settingsBusy && !registrationsEnabled && <div className="form-error">Neue Konten sind derzeit nicht freigeschaltet. Bereits registrierte Personen können sich weiterhin anmelden.</div>}
+              <button type="button" className="riu-button" disabled={busy || settingsBusy || (isRegister && !registrationsEnabled)} onClick={authenticate}>
+                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : 'Mit Google fortfahren'}
               </button>
             </div>
             <p className="auth-switch">Beim ersten Login wird Ihr bisheriger lokaler Carnuntum-/Heidentor-Bestand sicher mit Ihrem OAuth-Konto verbunden.</p>
@@ -560,7 +575,7 @@ function Dashboard({ session, onSession }) {
     <div className="riu-page dashboard-page">
       <Header session={session} />
       <main className="dashboard-shell">
-        <div className="dashboard-heading"><div><span className="riu-overline">Persönlicher Bereich</span><h1>Meine Stories</h1><p>Guten Tag, {session.name}. Was möchten Sie heute erzählen?</p></div><button className="riu-button" onClick={() => go('/stories/new')}><Plus size={17} /> Neue Story</button></div>
+        <div className="dashboard-heading"><div><span className="riu-overline">Persönlicher Bereich</span><h1>Meine Stories</h1><p>Guten Tag, {session.name}. Was möchten Sie heute erzählen?</p></div>{canCreateStories(session) && <button className="riu-button" onClick={() => go('/stories/new')}><Plus size={17} /> Neue Story</button>}</div>
         <div className="dashboard-content">
           <div className="dashboard-main">
             <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label></div>
@@ -587,7 +602,7 @@ function Dashboard({ session, onSession }) {
               {story.ownerId === session.id && <button className="danger" onClick={() => remove(story)}>Löschen</button>}
             </div>
           </article>
-            ))}</div> : <div className="empty-state"><Box size={34} /><h2>Noch keine Story</h2><p>Verbinden Sie ein extern gehostetes 3D-Modell und legen Sie Ihre erste Station an.</p><button className="riu-button" onClick={() => go('/stories/new')}>Erste Story erstellen</button></div>}
+            ))}</div> : <div className="empty-state"><Box size={34} /><h2>Noch keine Story</h2><p>{canCreateStories(session) ? 'Verbinden Sie ein extern gehostetes 3D-Modell und legen Sie Ihre erste Station an.' : 'Mit Ihrem Light-Zugang können Sie veröffentlichte und freigegebene Stories ansehen.'}</p>{canCreateStories(session) && <button className="riu-button" onClick={() => go('/stories/new')}>Erste Story erstellen</button>}</div>}
           </div>
           <aside className="dashboard-stats" aria-label="Story-Statistik">
             <div><Eye size={18} /><span>Gesamtaufrufe</span><strong>{totalViews.toLocaleString('de-AT')}</strong></div>
@@ -673,6 +688,87 @@ function AccountPage({ session, onSession }) {
   );
 }
 
+function AdminPage({ session }) {
+  const [users, setUsers] = useState([]);
+  const [settings, setSettings] = useState({ registrationsEnabled: true, defaultRole: 'light-user' });
+  const [drafts, setDrafts] = useState({});
+  const [busyId, setBusyId] = useState('');
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState('');
+
+  async function reload() {
+    setError('');
+    try {
+      const [nextUsers, nextSettings] = await Promise.all([fetchAdminUsers(), fetchPlatformAccess()]);
+      setUsers(nextUsers);
+      setSettings(nextSettings);
+      setDrafts(Object.fromEntries(nextUsers.map((user) => [user.id, { role: user.role, isBlocked: user.isBlocked }])));
+    } catch (cause) {
+      setError(cause.message);
+    }
+  }
+
+  useEffect(() => { reload(); }, []);
+
+  async function saveUser(user) {
+    setBusyId(user.id); setError(''); setSaved('');
+    try {
+      await updateAdminUser(user.id, drafts[user.id]);
+      setSaved(`${user.name} wurde aktualisiert.`);
+      await reload();
+    } catch (cause) { setError(cause.message); }
+    finally { setBusyId(''); }
+  }
+
+  async function saveSettings() {
+    setSettingsBusy(true); setError(''); setSaved('');
+    try {
+      await updatePlatformAccess(settings);
+      setSaved('Die Zugangseinstellungen wurden gespeichert.');
+      await reload();
+    } catch (cause) { setError(cause.message); }
+    finally { setSettingsBusy(false); }
+  }
+
+  return (
+    <div className="riu-page admin-page">
+      <Header session={session} />
+      <main className="admin-shell">
+        <div className="admin-heading">
+          <div><span className="riu-overline">Administration</span><h1>Zugänge & Rollen</h1><p>Steuern Sie neue Konten, Berechtigungen und Sperren zentral.</p></div>
+          <ShieldCheck size={46} />
+        </div>
+        {error && <div className="form-error admin-message">{error}</div>}
+        {saved && <div className="form-success admin-message"><Check size={16} /> {saved}</div>}
+        <section className="admin-settings">
+          <div><span className="riu-overline">Neue Konten</span><h2>Anmeldungen freigeben</h2><p>Ist der Schalter aus, werden keine neuen Google-Konten angelegt. Bestehende Konten können sich weiterhin anmelden.</p></div>
+          <label className="admin-toggle"><input type="checkbox" checked={settings.registrationsEnabled} onChange={(event) => setSettings((current) => ({ ...current, registrationsEnabled: event.target.checked }))} /><span />{settings.registrationsEnabled ? 'Freigegeben' : 'Geschlossen'}</label>
+          <label className="admin-default-role">Standardrolle für neue Konten<select value={settings.defaultRole} onChange={(event) => setSettings((current) => ({ ...current, defaultRole: event.target.value }))}><option value="light-user">Light-User</option><option value="pro-user">Pro-User</option></select></label>
+          <button className="riu-button" disabled={settingsBusy} onClick={saveSettings}>{settingsBusy ? 'Speichern …' : 'Einstellungen speichern'}</button>
+        </section>
+        <section className="admin-users" aria-labelledby="admin-users-title">
+          <div className="admin-section-heading"><div><span className="riu-overline">Personen</span><h2 id="admin-users-title">Benutzerverwaltung</h2></div><span>{users.length} Konten</span></div>
+          <div className="admin-user-list">
+            {users.map((user) => {
+              const draft = drafts[user.id] || { role: user.role, isBlocked: user.isBlocked };
+              const changed = draft.role !== user.role || draft.isBlocked !== user.isBlocked;
+              const isSelf = user.id === session.id;
+              return <article className={`admin-user ${draft.isBlocked ? 'is-blocked' : ''}`} key={user.id}>
+                <div className="admin-user-person"><span>{(user.name || '?').slice(0, 1)}</span><div><strong>{user.name}</strong><small>@{user.username} · {user.email}</small><small>Seit {formatDate(user.createdAt)}</small></div></div>
+                <label>Rolle<select value={draft.role} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, role: event.target.value } }))}>{USER_ROLES.map((role) => <option value={role} key={role}>{USER_ROLE_LABELS[role]}</option>)}</select></label>
+                <label className="admin-block"><input type="checkbox" checked={draft.isBlocked} disabled={isSelf} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, isBlocked: event.target.checked } }))} /><Ban size={15} /> {draft.isBlocked ? 'Gesperrt' : 'Aktiv'}</label>
+                <button className="riu-button" disabled={!changed || busyId === user.id} onClick={() => saveUser(user)}>{busyId === user.id ? 'Speichern …' : 'Übernehmen'}</button>
+              </article>;
+            })}
+            {!users.length && !error && <div className="empty-state">Benutzer werden geladen …</div>}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 function NewStory({ session }) {
   const [error, setError] = useState('');
   async function submit(event) {
@@ -709,7 +805,8 @@ export default function PlatformApp() {
   if (path === '/reset-password') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" />;
   if (path === '/dashboard') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/account') return session ? <AccountPage session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
-  if (path === '/stories/new') return session ? <NewStory session={session} /> : <AuthPage mode="login" onSession={setSession} />;
+  if (path === '/admin') return isAdmin(session) ? <AdminPage session={session} /> : <NotFound session={session} />;
+  if (path === '/stories/new') return session ? (canCreateStories(session) ? <NewStory session={session} /> : <Dashboard session={session} onSession={setSession} />) : <AuthPage mode="login" onSession={setSession} />;
   return <NotFound session={session} />;
 }
 

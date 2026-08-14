@@ -39,7 +39,7 @@ async function ensureProfile(user) {
   if (error) throw error;
   const { data: storedProfile, error: profileError } = await client
     .from('profiles')
-    .select('id, email, display_name, username')
+    .select('id, email, display_name, username, role, is_blocked')
     .eq('id', profile.id)
     .single();
   if (profileError) throw profileError;
@@ -47,7 +47,9 @@ async function ensureProfile(user) {
     id: storedProfile.id,
     email: storedProfile.email || profile.email,
     name: storedProfile.display_name || profile.name,
-    username: storedProfile.username || profile.username
+    username: storedProfile.username || profile.username,
+    role: storedProfile.role || 'light-user',
+    isBlocked: Boolean(storedProfile.is_blocked)
   };
 }
 
@@ -60,7 +62,7 @@ export async function loadSupabaseState() {
   const [{ data: storyRows, error: storyError }, profileResult] = await Promise.all([
     client.from('stories').select('*').order('updated_at', { ascending: false }),
     authUser
-      ? client.from('profiles').select('id, email, display_name, username')
+      ? client.from('profiles').select('id, email, display_name, username, role, is_blocked')
       : Promise.resolve({ data: [], error: null })
   ]);
   if (storyError) throw storyError;
@@ -70,7 +72,9 @@ export async function loadSupabaseState() {
     id: profile.id,
     email: profile.email || '',
     name: profile.display_name || profile.username,
-    username: profile.username
+    username: profile.username,
+    role: profile.role || 'light-user',
+    isBlocked: Boolean(profile.is_blocked)
   }));
   if (user && !users.some((profile) => profile.id === user.id)) users.push(user);
   return { authUser, user, users, stories: (storyRows || []).map(rowToStory) };
@@ -183,5 +187,55 @@ export async function updateSupabaseProfile(userId, { name, username }) {
     username,
     updated_at: new Date().toISOString()
   }).eq('id', userId);
+  if (error) throw error;
+}
+
+export async function fetchPlatformAccess() {
+  const client = getSupabase();
+  if (!client) return { registrationsEnabled: true, defaultRole: 'light-user' };
+  const { data, error } = await client.rpc('get_platform_access');
+  if (error) throw error;
+  const settings = data?.[0] || {};
+  return {
+    registrationsEnabled: settings.registrations_enabled !== false,
+    defaultRole: settings.default_role || 'light-user'
+  };
+}
+
+export async function fetchAdminUsers() {
+  const client = getSupabase();
+  if (!client) return [];
+  const { data, error } = await client.rpc('admin_list_users');
+  if (error) throw error;
+  return (data || []).map((profile) => ({
+    id: profile.id,
+    email: profile.email || '',
+    name: profile.display_name || profile.username,
+    username: profile.username,
+    role: profile.role || 'light-user',
+    isBlocked: Boolean(profile.is_blocked),
+    createdAt: profile.created_at,
+    updatedAt: profile.updated_at
+  }));
+}
+
+export async function updateAdminUser(userId, { role, isBlocked }) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase ist nicht konfiguriert.');
+  const { error } = await client.rpc('admin_update_user', {
+    target_user_id: userId,
+    new_role: role,
+    new_is_blocked: isBlocked
+  });
+  if (error) throw error;
+}
+
+export async function updatePlatformAccess({ registrationsEnabled, defaultRole }) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase ist nicht konfiguriert.');
+  const { error } = await client.rpc('admin_update_platform_settings', {
+    new_registrations_enabled: registrationsEnabled,
+    new_default_role: defaultRole
+  });
   if (error) throw error;
 }

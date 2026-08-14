@@ -10,6 +10,7 @@ import {
   loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
   uploadStoryPreviewToSupabase
 } from './supabaseStore.js';
+import { normalizeUserRole } from './accessControl.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -310,6 +311,12 @@ export async function initializePlatformStore() {
   if (isSupabaseConfigured) {
     const remoteState = await loadSupabaseState();
     if (remoteState.authUser && remoteState.user) {
+      if (remoteState.user.isBlocked) {
+        await signOutFromSupabase();
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.setItem('riu_auth_notice', 'Dieses Konto wurde von einem Administrator gesperrt.');
+        storiesCache = seededStories(mergeStoryCollections(storiesCache, remoteState.stories));
+      } else {
       await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
       const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
       usersCache = ensureUsernames(remoteState.users);
@@ -317,6 +324,7 @@ export async function initializePlatformStore() {
       storiesCache = seededStories(remoteStories);
       localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
       if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
+      }
     } else {
       // Keep the pre-OAuth browser data until the user has signed in and the
       // authenticated migration can claim it. Public rows still win on ID
@@ -668,7 +676,14 @@ export function readSession() {
   const session = safeParse(SESSION_KEY, null);
   if (!session?.userId) return null;
   const user = usersCache.find((item) => item.id === session.userId);
-  return user ? { id: user.id, name: user.name, username: user.username, email: user.email } : null;
+  return user ? {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    role: normalizeUserRole(user.role),
+    isBlocked: Boolean(user.isBlocked)
+  } : null;
 }
 
 export async function updateUserProfile(userId, { name, username }) {
@@ -696,7 +711,14 @@ export async function updateUserProfile(userId, { name, username }) {
     updateSupabaseProfile(userId, { name: normalizedName, username: normalizedUsername }),
     syncStoriesToSupabase(storiesCache)
   ]);
-  return { id: updatedUser.id, name: updatedUser.name, username: updatedUser.username, email: updatedUser.email };
+  return {
+    id: updatedUser.id,
+    name: updatedUser.name,
+    username: updatedUser.username,
+    email: updatedUser.email,
+    role: normalizeUserRole(updatedUser.role),
+    isBlocked: Boolean(updatedUser.isBlocked)
+  };
 }
 
 export async function loginWithOAuth() {
