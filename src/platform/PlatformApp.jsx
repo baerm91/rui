@@ -1,0 +1,779 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
+  Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogOut, MapPin, Menu, Plus, Search, Settings, Sparkles, Upload, UserPlus, Users, X
+} from 'lucide-react';
+import {
+  canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
+  isValidModelUrl, loginUser, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
+  readSession, readStories, registerUser, removeStoryCollaborator, resetUserPassword, respondToCollaboration,
+  saveStory, unpublishStory, updateStoryCollaboratorRole, updateStoryMetadata, updateUserProfile, writeStories
+} from './platformStore.js';
+import { readProjects, updateProjectListingMetadata } from '../projects/projectStore.js';
+import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
+import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
+
+const go = (path) => { window.location.href = path; };
+const formatDate = (value) => value
+  ? new Intl.DateTimeFormat('de-AT', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value))
+  : 'Entwurf';
+
+const STORY_LANGUAGES = {
+  de: 'Deutsch',
+  en: 'Englisch',
+  fr: 'Französisch',
+  it: 'Italienisch',
+  es: 'Spanisch'
+};
+
+const STORY_CATEGORIES = ['Archäologie', 'Architektur', 'Kulturerbe', 'Kunst', 'Natur', 'Sonstiges'];
+const getStoryLanguage = (story) => story.metadata?.language || story.language || 'de';
+const getStoryCategories = (story) => normalizeStoryCategories(
+  story.metadata?.categories,
+  story.metadata?.category || story.category
+);
+const getEditorNames = (story) => getStoryEditors(story).map((editor) => editor.name || `@${editor.username}`);
+function CategoryPicker({ defaultCategories = ['Kulturerbe'] }) {
+  const selected = new Set(normalizeStoryCategories(defaultCategories));
+  return (
+    <fieldset className="story-category-picker">
+      <legend>Kategorien <span>Mehrfachauswahl möglich</span></legend>
+      <div>
+        {STORY_CATEGORIES.map((category) => (
+          <label key={category}>
+            <input
+              type="checkbox"
+              name="categories"
+              value={category}
+              defaultChecked={selected.has(category)}
+            />
+            <span>{category}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+const getStoryAnnotationCount = (story) => {
+  const annotations = [
+    ...(Array.isArray(story.annotations) ? story.annotations : []),
+    ...(Array.isArray(story.stations)
+      ? story.stations.flatMap((station) => Array.isArray(station.annotations) ? station.annotations : [])
+      : [])
+  ];
+  const identified = new Set(annotations.map((annotation) => annotation?.id).filter(Boolean));
+  return identified.size + annotations.filter((annotation) => !annotation?.id).length;
+};
+
+const createCoverImageFromFile = async (file) => {
+  if (!file?.type?.startsWith('image/')) throw new Error('Bitte wählen Sie eine Bilddatei aus.');
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = 960;
+    canvas.height = 540;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Das Bild konnte nicht verarbeitet werden.');
+    const sourceRatio = image.naturalWidth / image.naturalHeight;
+    const targetRatio = canvas.width / canvas.height;
+    let sourceX = 0;
+    let sourceY = 0;
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+    if (sourceRatio > targetRatio) {
+      sourceWidth = image.naturalHeight * targetRatio;
+      sourceX = (image.naturalWidth - sourceWidth) / 2;
+    } else {
+      sourceHeight = image.naturalWidth / targetRatio;
+      sourceY = (image.naturalHeight - sourceHeight) / 2;
+    }
+    context.fillStyle = '#080907';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+function Brand({ compact = false, onClick = () => go('/') }) {
+  return (
+    <button className="riu-brand" onClick={onClick} aria-label="RIU Startseite">
+      <span className="riu-mark"><span /></span>
+      {!compact && <span>RIU</span>}
+    </button>
+  );
+}
+
+function Header({ session, transparent = false }) {
+  const [open, setOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountMenuRef = useRef(null);
+  const path = window.location.pathname;
+
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+
+    const closeAccountMenu = (event) => {
+      if (event.key === 'Escape' || !accountMenuRef.current?.contains(event.target)) {
+        setAccountOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeAccountMenu);
+    document.addEventListener('keydown', closeAccountMenu);
+    return () => {
+      document.removeEventListener('pointerdown', closeAccountMenu);
+      document.removeEventListener('keydown', closeAccountMenu);
+    };
+  }, [accountOpen]);
+
+  return (
+    <header className={`riu-header ${transparent ? 'is-transparent' : ''}`}>
+      <Brand />
+      <button className="riu-menu" onClick={() => setOpen(!open)} aria-label="Menü öffnen">
+        {open ? <X /> : <Menu />}
+      </button>
+      <nav className={open ? 'is-open' : ''}>
+        <a className={path === '/' ? 'is-active' : ''} href="/">Home</a>
+        <a className={path === '/discover' ? 'is-active' : ''} href="/discover">Discover</a>
+        <a href="/#about">Über RIU</a>
+        {session ? (
+          <div className="riu-account-menu" ref={accountMenuRef}>
+            <button
+              className="riu-account"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((current) => !current)}
+            >
+              <CircleUserRound size={17} />
+              <span>{session.name}</span>
+              <ChevronDown className="riu-account-chevron" size={14} />
+            </button>
+            {accountOpen && (
+              <div className="riu-account-dropdown" role="menu">
+                <a href="/account" role="menuitem"><Settings size={16} /> Einstellungen</a>
+                <a href="/dashboard" role="menuitem"><Library size={16} /> Meine Stories</a>
+                <button type="button" role="menuitem" onClick={() => { logoutUser(); go('/'); }}><LogOut size={16} /> Abmelden</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <a href="/login">Anmelden</a>
+            <button className="riu-button riu-button-small" onClick={() => go('/register')}>Story erstellen</button>
+          </>
+        )}
+      </nav>
+    </header>
+  );
+}
+
+function DiscoverCard({ story, featured = false }) {
+  return (
+    <article
+      className={`discover-card ${featured ? 'is-featured' : ''}`}
+      onClick={() => go(`/stories/${story.slug || story.id}`)}
+    >
+      <StoryPreviewMedia story={story} className="discover-card-image" mediaClassName="discover-card-media" fallbackImage="/star_sky_bg.png">
+        <span>{STORY_LANGUAGES[getStoryLanguage(story)] || getStoryLanguage(story)}</span>
+        <button aria-label={`${story.name} öffnen`}><ArrowRight /></button>
+      </StoryPreviewMedia>
+      <div className="discover-card-author">
+        <span>Erstellt von</span>
+        <button
+          type="button"
+          className="discover-author-link"
+          onClick={(event) => {
+            event.stopPropagation();
+            go(`/discover?author=${encodeURIComponent(story.ownerId)}`);
+          }}
+        >
+          {story.authorName || 'RIU Autor:in'}
+        </button>
+        {getEditorNames(story).length > 0 && (
+          <small>Editor:innen: {getEditorNames(story).join(', ')}</small>
+        )}
+      </div>
+      <div className="discover-card-copy">
+        <div>{getStoryCategories(story).join(' · ')}</div>
+        <h2>{story.name}</h2>
+        {featured && <p>{story.description}</p>}
+      </div>
+    </article>
+  );
+}
+
+function Discover({ session }) {
+  const published = readStories().filter((story) => story.status === 'published');
+  const authorId = new URLSearchParams(window.location.search).get('author') || '';
+  const selectedAuthor = published.find((story) => story.ownerId === authorId)?.authorName || '';
+  const [query, setQuery] = useState('');
+  const [language, setLanguage] = useState('');
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('latest');
+  const [featuredId] = useState(() => published[Math.floor(Math.random() * published.length)]?.id);
+  const availableLanguages = [...new Set(published.map(getStoryLanguage))];
+  const availableCategories = [...new Set(published.flatMap(getStoryCategories))].sort();
+  const normalizedQuery = query.trim().toLocaleLowerCase('de');
+  const filtered = published
+    .filter((story) => !authorId || story.ownerId === authorId)
+    .filter((story) => !language || getStoryLanguage(story) === language)
+    .filter((story) => !category || getStoryCategories(story).includes(category))
+    .filter((story) => !normalizedQuery || [story.name, story.description, story.authorName, getEditorNames(story).join(' '), story.location, getStoryCategories(story).join(' ')]
+      .some((value) => String(value || '').toLocaleLowerCase('de').includes(normalizedQuery)))
+    .sort((left, right) => sort === 'oldest'
+      ? new Date(left.publishedAt || left.createdAt) - new Date(right.publishedAt || right.createdAt)
+      : new Date(right.publishedAt || right.createdAt) - new Date(left.publishedAt || left.createdAt));
+  const featuredStoryId = filtered.some((story) => story.id === featuredId) ? featuredId : filtered[0]?.id;
+  const displayedStories = featuredStoryId
+    ? [
+        filtered.find((story) => story.id === featuredStoryId),
+        ...filtered.filter((story) => story.id !== featuredStoryId)
+      ]
+    : filtered;
+
+  return (
+    <div className="riu-page discover-page">
+      <Header session={session} />
+      <main className="discover-shell">
+        <div className="discover-heading">
+          <span className="riu-overline">Discover</span>
+          <h1>Kuratierte digitale<br />Ausstellungen</h1>
+        </div>
+        <div className="discover-tools">
+          <label className="discover-search">
+            <Search size={20} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories, Autor:innen oder Epochen suchen …" />
+          </label>
+          <div className="discover-filters">
+            <label><span>Kategorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Alle</option>{availableCategories.map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={14} /></label>
+            <label><span>Sprache</span><select value={language} onChange={(event) => setLanguage(event.target.value)}><option value="">Alle</option>{availableLanguages.map((code) => <option value={code} key={code}>{STORY_LANGUAGES[code] || code}</option>)}</select><ChevronDown size={14} /></label>
+            <label><ListFilter size={15} /><select aria-label="Sortierung" value={sort} onChange={(event) => setSort(event.target.value)}><option value="latest">Neueste</option><option value="oldest">Älteste</option></select><ChevronDown size={14} /></label>
+          </div>
+        </div>
+        {authorId && (
+          <div className="discover-author-filter">
+            <span>Kuratiert von <strong>{selectedAuthor || 'Unbekannte Autor:in'}</strong></span>
+            <button type="button" onClick={() => go('/discover')}>Alle Autor:innen anzeigen <X size={13} /></button>
+          </div>
+        )}
+        <div className="discover-results"><span>{filtered.length} {filtered.length === 1 ? 'Story' : 'Stories'}</span></div>
+        {filtered.length ? (
+          <div className="discover-grid">
+            {displayedStories.map((story) => <DiscoverCard key={story.id} story={story} featured={story.id === featuredStoryId} />)}
+          </div>
+        ) : (
+          <div className="empty-state"><Search size={34} /><h2>Keine Stories gefunden</h2><p>Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.</p><button className="riu-button" onClick={() => { if (authorId) go('/discover'); else { setQuery(''); setLanguage(''); setCategory(''); } }}>Filter zurücksetzen</button></div>
+        )}
+      </main>
+      <footer><Brand /><span>Interaktive 3D-Stories, sorgfältig erzählt.</span><span>Prototyp · 2026</span></footer>
+    </div>
+  );
+}
+
+function CollaborationDialog({ story, session, onClose, onChange }) {
+  const [currentStory, setCurrentStory] = useState(story);
+  const [error, setError] = useState('');
+  const collaborators = normalizeStoryCollaborators(currentStory.collaborators);
+
+  function apply(action) {
+    setError('');
+    try {
+      const updated = action();
+      setCurrentStory(updated);
+      onChange(updated);
+      return true;
+    } catch (cause) {
+      setError(cause.message);
+      return false;
+    }
+  }
+
+  function invite(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const invited = apply(() => inviteStoryCollaborator(currentStory.id, session.id, {
+      username: form.get('username'),
+      role: form.get('role')
+    }));
+    if (invited) event.currentTarget.reset();
+  }
+
+  return (
+    <div className="metadata-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="metadata-dialog collaboration-dialog" role="dialog" aria-modal="true" aria-labelledby="collaboration-title">
+        <div className="metadata-dialog-header"><div><span className="riu-overline">Gemeinsam erzählen</span><h2 id="collaboration-title">Zusammenarbeit</h2></div><button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button></div>
+        <p className="collaboration-intro">Laden Sie eine Person über ihren Username ein und legen Sie vorab fest, ob sie bearbeiten oder nur ansehen darf.</p>
+        <form className="collaboration-invite" onSubmit={invite}>
+          <label>Username<input name="username" required placeholder="username" autoComplete="off" /></label>
+          <label>Rolle<select name="role" defaultValue="editor"><option value="editor">Editor · darf bearbeiten</option><option value="viewer">Viewer · darf ansehen</option></select></label>
+          <button className="riu-button"><UserPlus size={16} /> Anfrage senden</button>
+        </form>
+        {error && <div className="form-error">{error}</div>}
+        <div className="collaborator-list">
+          <div className="collaborator-owner"><span className="collaborator-avatar">{(session.name || '?')[0]}</span><div><strong>{session.name}</strong><small>@{session.username} · Ersteller:in</small></div></div>
+          {collaborators.map((collaborator) => (
+            <div className="collaborator-row" key={collaborator.userId}>
+              <span className="collaborator-avatar">{(collaborator.name || collaborator.username || '?')[0]}</span>
+              <div><strong>{collaborator.name || collaborator.username}</strong><small>@{collaborator.username} · {collaborator.status === 'pending' ? 'Anfrage offen' : collaborator.status === 'declined' ? 'Abgelehnt' : 'Aktiv'}</small></div>
+              <select aria-label={`Rolle von ${collaborator.name}`} value={collaborator.role} onChange={(event) => apply(() => updateStoryCollaboratorRole(currentStory.id, session.id, collaborator.userId, event.target.value))}><option value="editor">Editor</option><option value="viewer">Viewer</option></select>
+              <button type="button" onClick={() => apply(() => removeStoryCollaborator(currentStory.id, session.id, collaborator.userId))}>Entfernen</button>
+            </div>
+          ))}
+          {!collaborators.length && <p className="collaboration-empty">Noch niemand eingeladen.</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StoryMetadataDialog({ story, onClose, onSave }) {
+  const [coverImage, setCoverImage] = useState(story.coverImage || '');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  async function uploadCover(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setError('');
+    try {
+      setCoverImage(await createCoverImageFromFile(file));
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  }
+
+  function submit(event) {
+    event.preventDefault();
+    setError('');
+    const form = new FormData(event.currentTarget);
+    const categories = form.getAll('categories').map(String);
+    try {
+      if (!categories.length) throw new Error('Bitte wählen Sie mindestens eine Kategorie aus.');
+      onSave({
+        name: form.get('name'),
+        description: form.get('description'),
+        coverImage,
+        language: form.get('language'),
+        categories,
+        license: form.get('license')
+      });
+      onClose();
+    } catch (cause) {
+      setError(cause.message);
+    }
+  }
+
+  return (
+    <div className="metadata-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="metadata-dialog" role="dialog" aria-modal="true" aria-labelledby="metadata-dialog-title">
+        <div className="metadata-dialog-header"><div><span className="riu-overline">Story bearbeiten</span><h2 id="metadata-dialog-title">Metadaten</h2></div><button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button></div>
+        <form onSubmit={submit}>
+          <div className="metadata-cover" style={{ backgroundImage: `url("${coverImage || '/roman_blueprint_bg.png'}")` }}><span>Vorschau · 16:9</span></div>
+          <div className="metadata-cover-actions">
+            <label><Upload size={15} /> Eigenes Bild hochladen<input type="file" accept="image/*" onChange={uploadCover} /></label>
+            {coverImage && <button type="button" onClick={() => setCoverImage('')}>Bild entfernen</button>}
+          </div>
+          <label>Vorschaubild-URL <span>(alternativ)</span><input type="url" value={coverImage.startsWith('data:') ? '' : coverImage} onChange={(event) => setCoverImage(event.target.value)} placeholder="https://example.org/cover.jpg" /></label>
+          <label>Name der Story<input name="name" required defaultValue={story.name} /></label>
+          <label>Kurzbeschreibung<textarea name="description" rows="3" defaultValue={story.description} /></label>
+          <div className="metadata-form-row"><label>Sprache<select name="language" defaultValue={getStoryLanguage(story)}>{Object.entries(STORY_LANGUAGES).map(([code, label]) => <option value={code} key={code}>{label}</option>)}</select></label><CategoryPicker defaultCategories={getStoryCategories(story)} /></div>
+          <label>Lizenzangabe<textarea name="license" rows="2" defaultValue={story.metadata?.license || ''} placeholder="z. B. CC BY 4.0 · Modell: Museum Musterstadt" /><small>Wird für die korrekte Wiedergabe und Quellenzuordnung der Story gespeichert.</small></label>
+          {error && <div className="form-error">{error}</div>}
+          <div className="metadata-dialog-actions"><button type="button" onClick={onClose}>Abbrechen</button><button className="riu-button" disabled={busy}>{busy ? 'Bild wird verarbeitet …' : 'Metadaten speichern'}</button></div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function StoryCard({ story, featured = false }) {
+  return (
+    <article className={`story-card ${featured ? 'is-featured' : ''}`} onClick={() => go(`/stories/${story.slug || story.id}`)}>
+      <div className="story-card-image" style={{ backgroundImage: `url("${story.coverImage || '/star_sky_bg.png'}")` }}>
+        <div className="story-card-shade" />
+        <span className="story-stations"><Layers3 size={13} /> {story.stations?.length || 0} Stationen</span>
+        <button className="story-open" aria-label={`${story.name} öffnen`}><ArrowRight /></button>
+      </div>
+      <div className="story-card-copy">
+        <div className="story-kicker">{story.location || 'Digitale Ausstellung'}</div>
+        <h3>{story.name}</h3>
+        <p>{story.description}</p>
+        <div className="story-meta"><span>von {story.authorName || 'RIU Autor:in'}</span><span>{formatDate(story.publishedAt)}</span></div>
+      </div>
+    </article>
+  );
+}
+
+function Gallery({ session }) {
+  const published = readStories().filter((story) => story.status === 'published');
+  return (
+    <div className="riu-page">
+      <Header session={session} transparent />
+      <main>
+        <section className="riu-hero">
+          <div className="riu-hero-art" aria-hidden="true"><div className="hero-orbit" /><div className="hero-stone" /></div>
+          <div className="riu-hero-copy">
+            <div className="riu-eyebrow"><Sparkles size={14} /> Räumliche Geschichten</div>
+            <h1>Modelle zeigen.<br /><em>Geschichten erzählen.</em></h1>
+            <p>RIU verwandelt 3D-Modelle in kuratierte Reisen aus Perspektiven, Texten und räumlichen Annotationen.</p>
+            <div className="riu-hero-actions">
+              <button className="riu-button" onClick={() => go(session ? '/stories/new' : '/register')}>Eigene Story erstellen <ArrowRight size={17} /></button>
+              <a href="#stories">Galerie entdecken <ChevronRight size={16} /></a>
+            </div>
+          </div>
+          <div className="riu-scroll-note">Ausgewählte Stories <span /></div>
+        </section>
+
+        <section className="riu-gallery" id="stories">
+          <div className="section-heading">
+            <div><span className="riu-overline">Öffentliche Galerie</span><h2>Räume, die etwas erzählen</h2></div>
+            <div className="gallery-count">{String(published.length).padStart(2, '0')} Stories</div>
+          </div>
+          <div className="story-grid">
+            {published.map((story, index) => <StoryCard key={story.id} story={story} featured={index === 0} />)}
+          </div>
+        </section>
+
+        <section className="riu-manifesto" id="about">
+          <span className="riu-overline">Das Prinzip</span>
+          <blockquote>„Eine Story ist eine Abfolge räumlicher Zustände mit einer erzählerischen Absicht.“</blockquote>
+          <div className="manifesto-grid">
+            <div><span>01</span><h3>Extern verbinden</h3><p>Ihr GLB- oder glTF-Modell bleibt dort, wo Sie es hosten.</p></div>
+            <div><span>02</span><h3>Räumlich inszenieren</h3><p>Speichern Sie Kamerapositionen, Texte und Annotationen als Stationen.</p></div>
+            <div><span>03</span><h3>Als Story teilen</h3><p>Veröffentlichen Sie eine geführte Reise statt eines isolierten Modells.</p></div>
+          </div>
+        </section>
+      </main>
+      <footer><Brand /><span>Interaktive 3D-Stories, sorgfältig erzählt.</span><span>Prototyp · 2026</span></footer>
+    </div>
+  );
+}
+
+function AuthPage({ mode, onSession }) {
+  const isRegister = mode === 'register';
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true); setError('');
+    const form = new FormData(event.currentTarget);
+    try {
+      const payload = { name: form.get('name'), username: form.get('username'), email: form.get('email'), password: form.get('password') };
+      if (isRegister && String(payload.password).length < 8) throw new Error('Das Passwort muss mindestens 8 Zeichen lang sein.');
+      const user = isRegister ? await registerUser(payload) : await loginUser(payload);
+      onSession(user);
+      go('/dashboard');
+    } catch (cause) { setError(cause.message); setBusy(false); }
+  }
+  return (
+    <div className="riu-page auth-page">
+      <Header session={null} />
+      <main className="auth-layout">
+        <section className="auth-intro">
+          <span className="riu-overline">RIU Studio</span>
+          <h1>{isRegister ? 'Erzählen Sie mit Raum.' : 'Willkommen zurück.'}</h1>
+          <p>{isRegister ? 'Ein Modell ist der Ort. Sie bestimmen Blick, Rhythmus und Bedeutung.' : 'Ihre Stories, Stationen und Entwürfe warten auf Sie.'}</p>
+          <div className="auth-quote">Perspektive wird zu Dramaturgie.<br />Geometrie wird zu Erinnerung.</div>
+        </section>
+        <section className="auth-panel">
+          <div className="auth-card">
+            <span className="riu-overline">{isRegister ? 'Kostenlos beginnen' : 'Anmelden'}</span>
+            <h2>{isRegister ? 'Konto erstellen' : 'Zum Studio'}</h2>
+            <form onSubmit={submit}>
+              {isRegister && <label>Name<input name="name" required autoComplete="name" placeholder="Ihr Name" /></label>}
+              {isRegister && <label>Username<input name="username" required minLength="3" pattern="[A-Za-z0-9._-]+" autoComplete="username" placeholder="z. B. anna-museum" /><small>Damit können andere Sie zu Stories einladen.</small></label>}
+              <label>E-Mail<input name="email" required type="email" autoComplete="email" placeholder="name@beispiel.at" /></label>
+              <label>Passwort<input name="password" required type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} placeholder="Mindestens 8 Zeichen" /></label>
+              {error && <div className="form-error">{error}</div>}
+              <button className="riu-button" disabled={busy}>{busy ? 'Einen Moment …' : isRegister ? 'Konto erstellen' : 'Anmelden'} <ArrowRight size={17} /></button>
+            </form>
+            <p className="auth-switch">{isRegister ? 'Bereits registriert?' : 'Noch kein Konto?'} <a href={isRegister ? '/login' : '/register'}>{isRegister ? 'Anmelden' : 'Konto erstellen'}</a></p>
+            {!isRegister && <p className="auth-switch"><a href="/reset-password">Passwort vergessen?</a></p>}
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function ResetPasswordPage() {
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setSaved(false);
+    const form = new FormData(event.currentTarget);
+    try {
+      await resetUserPassword({ email: form.get('email'), password: form.get('password') });
+      setSaved(true);
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="riu-page auth-page">
+      <Header session={null} />
+      <main className="auth-layout">
+        <section className="auth-intro">
+          <span className="riu-overline">Kontozugang</span>
+          <h1>Neues Passwort.</h1>
+          <p>Setzen Sie das Passwort Ihres lokal in diesem Browser gespeicherten Kontos neu.</p>
+        </section>
+        <section className="auth-panel">
+          <div className="auth-card">
+            <span className="riu-overline">Lokale Wiederherstellung</span>
+            <h2>Zugang erneuern</h2>
+            <form onSubmit={submit}>
+              <label>E-Mail<input name="email" required type="email" autoComplete="email" /></label>
+              <label>Neues Passwort<input name="password" required type="password" minLength="8" autoComplete="new-password" placeholder="Mindestens 8 Zeichen" /></label>
+              {error && <div className="form-error">{error}</div>}
+              {saved && <div className="form-success"><Check size={16} /> Passwort gespeichert. Sie können sich jetzt anmelden.</div>}
+              <button className="riu-button" disabled={busy}>{busy ? 'Speichern …' : 'Passwort neu setzen'}</button>
+            </form>
+            <p className="auth-switch"><a href="/login">Zurück zur Anmeldung</a></p>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function Dashboard({ session, onSession }) {
+  const readDashboardStories = () => {
+    const projectCovers = new Map(readProjects()
+      .filter((project) => project.coverImage)
+      .map((project) => [project.id, project.coverImage]));
+    return readStories()
+      .filter((story) => story.ownerId === session.id || !!getStoryPermission(story, session.id))
+      .map((story) => projectCovers.has(story.id) ? { ...story, coverImage: projectCovers.get(story.id) } : story);
+  };
+  const [stories, setStories] = useState(readDashboardStories);
+  const [query, setQuery] = useState('');
+  const [metadataStory, setMetadataStory] = useState(null);
+  const [collaborationStory, setCollaborationStory] = useState(null);
+  const filtered = stories.filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
+  const totalViews = stories.reduce((sum, story) => sum + (Number(story.stats?.views) || 0), 0);
+  const publishedCount = stories.filter((story) => story.status === 'published').length;
+
+  useEffect(() => {
+    const mergedStories = readDashboardStories();
+    const covers = new Map(mergedStories.map((story) => [story.id, story.coverImage]));
+    const currentStories = readStories();
+    const nextStories = currentStories.map((story) => (
+      covers.has(story.id) && covers.get(story.id) !== story.coverImage
+        ? { ...story, coverImage: covers.get(story.id) }
+        : story
+    ));
+    if (nextStories.some((story, index) => story.coverImage !== currentStories[index]?.coverImage)) {
+      writeStories(nextStories);
+    }
+    setStories(mergedStories);
+  }, [session.id]);
+
+  function remove(story) {
+    if (!window.confirm(`„${story.name}“ wirklich löschen?`)) return;
+    deleteStory(story.id, session.id);
+    setStories(readDashboardStories());
+  }
+  function toggleRelease(story) {
+    if (story.status === 'published') unpublishStory(story.id, session.id);
+    else publishStory(story.id, session.id);
+    setStories(readDashboardStories());
+  }
+  function saveMetadata(metadata) {
+    const updated = updateStoryMetadata(metadataStory.id, session.id, metadata);
+    updateProjectListingMetadata(metadataStory.id, {
+      name: updated.name,
+      description: updated.description,
+      coverImage: updated.coverImage,
+      metadata: updated.metadata
+    });
+    setStories(readDashboardStories());
+  }
+  return (
+    <div className="riu-page dashboard-page">
+      <Header session={session} />
+      <main className="dashboard-shell">
+        <div className="dashboard-heading"><div><span className="riu-overline">Persönlicher Bereich</span><h1>Meine Stories</h1><p>Guten Tag, {session.name}. Was möchten Sie heute erzählen?</p></div><button className="riu-button" onClick={() => go('/stories/new')}><Plus size={17} /> Neue Story</button></div>
+        <div className="dashboard-content">
+          <div className="dashboard-main">
+            <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label></div>
+            {filtered.length ? <div className="dashboard-grid">{filtered.map((story) => (
+          <article className="dashboard-card" key={story.id}>
+            <StoryPreviewMedia story={story} className="dashboard-cover" mediaClassName="dashboard-cover-media" fallbackImage="/roman_blueprint_bg.png"><span className={`status-pill ${story.status}`}>{story.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}</span></StoryPreviewMedia>
+            <div className="dashboard-card-copy">
+              <span>Geändert {formatDate(story.updatedAt)} · {story.ownerId === session.id ? 'Eigene Story' : getStoryPermission(story, session.id) === 'editor' ? 'Als Editor:in' : 'Als Viewer:in'}</span>
+              <h3>{story.name}</h3>
+              <p>{story.description || 'Noch keine Beschreibung.'}</p>
+              <div className="dashboard-card-dates">
+                <span><CalendarDays size={14} /><span><small>Erstellt am</small><strong>{formatDate(getStoryCreatedAt(story))}</strong></span></span>
+                <span><Globe2 size={14} /><span><small>Veröffentlicht seit</small><strong>{getStoryPublishedAt(story) ? formatDate(getStoryPublishedAt(story)) : 'Noch nicht veröffentlicht'}</strong></span></span>
+              </div>
+              <div className="dashboard-card-facts"><span><Layers3 size={14} /><strong>{story.stations?.length || 0}</strong> Stationen</span><span><MapPin size={14} /><strong>{getStoryAnnotationCount(story)}</strong> Annotationen</span></div>
+              <div className="dashboard-card-views"><Eye size={14} /><strong>{Number(story.stats?.views) || 0}</strong> Aufrufe</div>
+            </div>
+            <div className="dashboard-actions">
+              {canEditStory(story, session.id) && <button onClick={() => go(`/studio/${story.id}`)}>Bearbeiten <ArrowRight size={15} /></button>}
+              {canEditStory(story, session.id) && <button onClick={() => setMetadataStory(story)}><FilePenLine size={15} /> Metadaten</button>}
+              <button onClick={() => go(`/stories/${story.slug || story.id}`)}><Eye size={15} /> Vorschau</button>
+              {story.ownerId === session.id && <button onClick={() => setCollaborationStory(story)}><Users size={15} /> Team</button>}
+              {story.ownerId === session.id && <button className="release" onClick={() => toggleRelease(story)}>{story.status === 'published' ? <><LockKeyhole size={15} /> Freigabe aufheben</> : <><Globe2 size={15} /> Story freigeben</>}</button>}
+              {story.ownerId === session.id && <button className="danger" onClick={() => remove(story)}>Löschen</button>}
+            </div>
+          </article>
+            ))}</div> : <div className="empty-state"><Box size={34} /><h2>Noch keine Story</h2><p>Verbinden Sie ein extern gehostetes 3D-Modell und legen Sie Ihre erste Station an.</p><button className="riu-button" onClick={() => go('/stories/new')}>Erste Story erstellen</button></div>}
+          </div>
+          <aside className="dashboard-stats" aria-label="Story-Statistik">
+            <div><Eye size={18} /><span>Gesamtaufrufe</span><strong>{totalViews.toLocaleString('de-AT')}</strong></div>
+            <div><Check size={18} /><span>Veröffentlicht</span><strong>{publishedCount}</strong></div>
+            <div><BarChart3 size={18} /><span>Stories gesamt</span><strong>{stories.length}</strong></div>
+          </aside>
+        </div>
+      </main>
+      {metadataStory && <StoryMetadataDialog story={metadataStory} onClose={() => setMetadataStory(null)} onSave={saveMetadata} />}
+      {collaborationStory && <CollaborationDialog story={collaborationStory} session={session} onClose={() => setCollaborationStory(null)} onChange={(updated) => { setCollaborationStory(updated); setStories(readDashboardStories()); }} />}
+    </div>
+  );
+}
+
+function AccountPage({ session, onSession }) {
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [, setCollaborationRevision] = useState(0);
+  const collaborationStories = readStories().filter((story) => normalizeStoryCollaborators(story.collaborators)
+    .some((collaborator) => collaborator.userId === session.id));
+  const pendingInvites = collaborationStories.filter((story) => normalizeStoryCollaborators(story.collaborators)
+    .some((collaborator) => collaborator.userId === session.id && collaborator.status === 'pending'));
+  const activeCollaborations = collaborationStories.filter((story) => normalizeStoryCollaborators(story.collaborators)
+    .some((collaborator) => collaborator.userId === session.id && collaborator.status === 'accepted'));
+
+  async function submit(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setSaved(false);
+    try {
+      const form = new FormData(event.currentTarget);
+      const updated = await updateUserProfile(session.id, { name: form.get('name'), username: form.get('username') });
+      onSession(updated);
+      setSaved(true);
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="riu-page account-page">
+      <Header session={session} />
+      <main className="account-layout">
+        <section className="account-intro">
+          <span className="riu-overline">Persönlicher Bereich</span>
+          <h1>Ihr Konto.</h1>
+          <p>Ändern Sie hier den Namen, der im Studio und als Autor Ihrer Stories angezeigt wird.</p>
+          <button className="account-dashboard-link" onClick={() => go('/dashboard')}>
+            Zu meinen Stories <ArrowRight size={16} />
+          </button>
+        </section>
+        <section className="account-panel">
+          <div className="account-content">
+          <form className="account-form" onSubmit={submit}>
+            <span className="riu-overline">Profil</span>
+            <h2>Kontodaten</h2>
+            <label>Name<input name="name" required defaultValue={session.name} autoComplete="name" /></label>
+            <label>Username<input name="username" required minLength="3" pattern="[A-Za-z0-9._-]+" defaultValue={session.username} autoComplete="username" /><small>Über diesen eindeutigen Namen erhalten Sie Einladungen.</small></label>
+            <label>E-Mail<input value={session.email} disabled type="email" /></label>
+            <small>Die E-Mail-Adresse kann in diesem Prototyp nicht geändert werden.</small>
+            {error && <div className="form-error">{error}</div>}
+            {saved && <div className="form-success"><Check size={16} /> Profil gespeichert</div>}
+            <button className="riu-button" disabled={busy}>{busy ? 'Speichern …' : 'Änderungen speichern'}</button>
+          </form>
+          <section className="account-collaborations" aria-labelledby="collaboration-settings-title">
+            <span className="riu-overline">Zusammenarbeit</span>
+            <h2 id="collaboration-settings-title">Story-Anfragen</h2>
+            {pendingInvites.map((story) => {
+              const invitation = normalizeStoryCollaborators(story.collaborators).find((item) => item.userId === session.id);
+              return <article className="account-invite" key={story.id}><div><strong>{story.name}</strong><span>{story.authorName} lädt Sie als {invitation.role === 'editor' ? 'Editor:in' : 'Viewer:in'} ein.</span></div><div><button onClick={() => { respondToCollaboration(story.id, session.id, 'declined'); setCollaborationRevision((current) => current + 1); }}>Ablehnen</button><button className="riu-button" onClick={() => { respondToCollaboration(story.id, session.id, 'accepted'); setCollaborationRevision((current) => current + 1); }}>Annehmen</button></div></article>;
+            })}
+            {!pendingInvites.length && <p className="collaboration-empty">Keine offenen Anfragen.</p>}
+            {activeCollaborations.length > 0 && <><h3>Aktive Stories</h3><div className="account-active-stories">{activeCollaborations.map((story) => { const permission = getStoryPermission(story, session.id); return <button key={story.id} onClick={() => go(permission === 'editor' ? `/studio/${story.id}` : `/stories/${story.slug || story.id}`)}><span><strong>{story.name}</strong><small>{permission === 'editor' ? 'Editor:in' : 'Viewer:in'} · von {story.authorName}</small></span><ArrowRight size={15} /></button>; })}</div></>}
+          </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function NewStory({ session }) {
+  const [error, setError] = useState('');
+  async function submit(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const modelUrl = String(form.get('modelUrl'));
+    const categories = form.getAll('categories').map(String);
+    if (!categories.length) { setError('Bitte wählen Sie mindestens eine Kategorie aus.'); return; }
+    if (!isValidModelUrl(modelUrl)) { setError('Bitte geben Sie eine vollständige HTTP(S)-URL zu einer .fbx-, .glb- oder .gltf-Datei ein.'); return; }
+    const story = createStory({ ownerId: session.id, authorName: session.name, name: String(form.get('name')), description: String(form.get('description')), modelUrl, coverImage: String(form.get('coverImage')), language: String(form.get('language')), categories });
+    try {
+      await saveStory(story);
+      go(`/studio/${story.id}`);
+    } catch (saveError) {
+      setError(`Die Story konnte nicht gespeichert werden: ${saveError.message}`);
+    }
+  }
+  return (
+    <div className="riu-page create-page"><Header session={session} /><main className="create-layout"><section><span className="riu-overline">Neue Story</span><h1>Ein Ort für Ihre Erzählung.</h1><p>RIU speichert Story und Dramaturgie. Das 3D-Modell bleibt auf Ihrem Server und wird im Browser direkt von dort geladen.</p><div className="cors-note"><ExternalLink size={19} /><div><strong>Vor dem Start</strong><span>Der Modellserver muss Browserzugriffe per CORS erlauben. Externe Texturen und Begleitdateien von glTF- und FBX-Modellen müssen ebenfalls öffentlich erreichbar sein.</span></div></div></section><form className="create-form" onSubmit={submit}><label>Titel der Story<input required name="name" placeholder="Zum Beispiel: Spuren einer Stadt" /></label><label>Kurzbeschreibung<textarea required name="description" rows="4" placeholder="Worum geht es in dieser räumlichen Erzählung?" /></label><div className="create-form-row"><label>Sprache<select required name="language" defaultValue="de">{Object.entries(STORY_LANGUAGES).map(([code, label]) => <option value={code} key={code}>{label}</option>)}</select></label><CategoryPicker /></div><label>URL zum 3D-Modell<input required name="modelUrl" type="url" placeholder="https://example.org/model.fbx" /><small>Unterstützt werden FBX, GLB und glTF über HTTP(S).</small></label><label>Vorschaubild URL <span>(optional)</span><input name="coverImage" type="url" placeholder="https://example.org/cover.jpg" /></label>{error && <div className="form-error">{error}</div>}<div className="create-actions"><button type="button" onClick={() => go('/dashboard')}>Abbrechen</button><button className="riu-button">Story anlegen <ArrowRight size={17} /></button></div></form></main></div>
+  );
+}
+
+function NotFound({ session }) {
+  return <div className="riu-page"><Header session={session} /><main className="not-found"><span>404</span><h1>Diese Seite erzählt noch nichts.</h1><button className="riu-button" onClick={() => go('/')}>Zur Galerie</button></main></div>;
+}
+
+export default function PlatformApp() {
+  const [session, setSession] = useState(() => readSession());
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/') return <Gallery session={session} />;
+  if (path === '/discover') return <Discover session={session} />;
+  if (path === '/login') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
+  if (path === '/register') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="register" onSession={setSession} />;
+  if (path === '/reset-password') return session ? <Dashboard session={session} onSession={setSession} /> : <ResetPasswordPage />;
+  if (path === '/dashboard') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
+  if (path === '/account') return session ? <AccountPage session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
+  if (path === '/stories/new') return session ? <NewStory session={session} /> : <AuthPage mode="login" onSession={setSession} />;
+  return <NotFound session={session} />;
+}
+
+export function getExperienceAccess() {
+  const story = getStory(window.location.pathname.split('/')[2] || '');
+  const session = readSession();
+  const isEditor = window.location.pathname.startsWith('/studio/');
+  const allowed = !!story && (isEditor ? canEditStory(story, session?.id) : (story.status === 'published' || !!getStoryPermission(story, session?.id)));
+  return { story, session, isEditor, allowed, editors: getStoryEditors(story) };
+}

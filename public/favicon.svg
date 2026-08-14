@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Heidentor">
+  <rect width="64" height="64" rx="14" fill="#17110b"/>
+  <path d="M13 52h38v-7h-4V19h-9v26H26V19h-9v26h-4z" fill="#d9a35f"/>
+  <path d="M16 14h32v8H16z" fill="#f0c17a"/>
+  <path d="M22 45V26h8v19zm12 0V26h8v19z" fill="#17110b" opacity=".72"/>
+</svg>

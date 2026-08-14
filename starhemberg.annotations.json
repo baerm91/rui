@@ -1,0 +1,557 @@
+{
+  "annotationRevision": 20260802,
+  "annotations": [
+    {
+      "id": "annotation_starhemberg_01",
+      "title": "Burgtor",
+      "text": "Das heute auffällig hohe Spitzbogen-Tor stammt aus dem Jahr 1833/34. Es ist somit eine historistische Ergänzung. Unbekannt bleibt, wie das mittelalterliche Original-Tor ausgesehen hat. Am ehesten war es – wie so oft – ein mit Eisen beschlagendes Doppelflügeltor, das innen verriegelt werden konnte.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_02",
+      "title": "Äußerer Zwinger",
+      "text": "Der Zwinger war ein von Mauern umgrenzter Zugangs- und Verteidigungsbereich. Er verlangsamte von außen Eindringende und zwang sie („zwingen“ – „Zwinger“) auf eine kleineren Fläche zusammen, sodass sie dadurch besser bekämpft werden konnten.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_03",
+      "title": "Rundkapelle",
+      "text": "Die romanische Rundkapelle wurde am Ostersonntag 1159 gegründet, um ihren außergewöhnlichen Bau perfekt auf den Sonnenaufgang (als Symbol der Auferstehung Christi) auszurichten. Ihr Haupt-Raum, an den östlich die Apsis angeschlossen ist, hat ein erstaunliches Bienenkorb-Gewölbe. Über eine freitragende Innentreppe gelangte man einst in das erste Obergeschoß.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_04",
+      "title": "Rundturm",
+      "text": "Auf der Kapelle war ein Rundturm aufgesetzt, der aus zwei Geschoßen bestand. Das Geschoß oberhalb der Kapelle wies Rundfenster („Oculi“) auf. Das oberste Geschoß verfügte über 12 Ausgänge, durch die man höchstwahrscheinlich auf eine außen herumgeführte hölzerne „Wehrlaube“ (überdachter, vorkragender Vorbau) trat.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_05",
+      "title": "Pfeiler",
+      "text": "Der Pfeiler im äußeren Zwinger diente vermutlich als Stütze für einen hölzernen Übergang, der es der Burgmannschaft ermöglichte, sich vom frei stehenden Rundturm zum kleinen Turm des zweiten Tores und damit in den inneren Zwinger zurückzuziehen.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_06",
+      "title": "Süd-Rondell",
+      "text": "Das Rondell am südlichen Ende des äußeren Zwingers wurde erst um 1580/1600 erbaut. Es ist im Vergleich zu den beiden großen Rondellen der (nördlich gelegenen) Vorburg deutlich kleiner dimensioniert. Von einer Holz-Plattform aus konnte man Angreifer, die den Südhang heraufmarschierten oder solche, die das Tor umgingen, bekämpfen.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_07",
+      "title": "Innerer Zwinger",
+      "text": "Der innere Zwinger führte weiter bergauf in Richtung der Kernburg. Er war militär-strategisch so angelegt, dass Angreifer diese Strecke zurücklegen mussten, während sie auf ihrer rechten Seite (der „Schwertseite“) von den Verteidigern besser zu attackieren waren (weil sie ihren Schild mit der linken Hand zu tragen hatten).",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_08",
+      "title": "Wohnturm",
+      "text": "Der Wohnturm – der zweite von drei Hochtürmen – begrenzte die südöstliche Ecke der Kernburg. Seine nördliche Mauerwand und der Überrest einer Türlaibung sind heute noch erkennbar. Ursprünglich verlief eine seiner Ecken wie eine Spitze gegen Osten.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_09",
+      "title": "Bastion",
+      "text": "Um 1580/1600 war an der südlichen Seite des inneren Zwingers eine Bastion errichtet worden. Sie diente als Basis für zumindest ein Artillerie-Geschütz, das von diesem Standort aus den gesamten Südhang und insofern auch den Zugangsweg ideal unter Feuer nehmen konnte. Wahrscheinlich stand das Geschütz hier regen- und schneesicher unter einer Holz-Überdachung.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_10",
+      "title": "Torhalle",
+      "text": "Als Übergang vom inneren Zwinger in die Kernburg musste man eine Torhalle passieren, welche baulich schon in den Südtrakt integriert war. Sie stellte eine wirksame Sperre dar, weil man sich darin um 90 Grad nach rechts zu wenden hatte und wenig Platz fand. So wurden Eindringlinge nicht nur verlangsamt, sondern wohl auch in dieser „Mausefalle“ zusammengedrängt und bekämpft.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_11",
+      "title": "Innenhof",
+      "text": "Die Kernburg brauchte einen entsprechenden Innenhof, der auf Starhemberg von beachtlicher Ausdehnung ist. Wahrscheinlich war der Boden mit einem Steinbelag versehen bzw. gepflastert. Im Mittelalter und der frühen Neuzeit bildete dieses Areal eine ökonomische Verwaltungszentrale. Abgaben und Güter wurden hierher gebracht, um sie anschließend trocken und sicher zu lagern – ein Umschlagplatz der Versorgungsgüter vor allem zur Erntezeit.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_12",
+      "title": "Zisterne",
+      "text": "Unter dem Bodenniveau des Innenhofs stößt man auf eine noch erhaltene Zisterne, in der man das von den Dächern ringsum abgeleitete lebensnotwendige Trinkwasser sammelte. Freilich wurde das kostbare Regenwasser gefiltert. Die Starhemberg-Zisterne ist angesichts der Größe der Burganlage auch ihrerseits groß bemessen und hat einen Durchmesser von rund acht Metern.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_13",
+      "title": "Süd-Palas",
+      "text": "Nur noch auf alten Abbildungen lässt sich der südliche Palast (Palas) erkennen, der sich zweckmäßiger Weise auf der wärmeren Sonnenseite der Burganlage befand. Er hatte anno dazumal nachweislich zumindest kunstvolle Doppel-/Biforen-Fenster, eine Wendeltreppe, einen Kamin und einen „Abtritt“ (Toilette). Hier lebte der Burgherr; zur Mitte des 13. Jahrhunderts war dies Herzog Friedrich II. der Streitbare.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_14",
+      "title": "Annen-Kapelle",
+      "text": "1230/40 ließ Herzog Friedrich II. eine Kapelle anlegen, die der Heiligen Anna (der Mutter Marias) geweiht war. Das Gotteshaus konnte vom Süd-Palas aus rasch erreicht werden, war zweigeschoßig und gegen Norden vom früher dort stehenden Bergfried (Hauptturm) begrenzt. Angeblich wurde dort ein Span der Dornenkrone von Jesus Christus aufbewahrt.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_15",
+      "title": "Bergfried",
+      "text": "Wie in fast allen Burgen des Hochmittelalters ragte in der Kernburg der Starhemberg (ab ca. 1200/1230) ein massiver Turm in die Höhe: der Bergfried. Er diente stets als letzter Rückzugsort, wenn es zum Eindringen von Feinden gekommen war. Durch einen Hocheingang gesichert konnten sich dort die Burgbewohner und Menschen, die in die Festung geflüchtet waren, verschanzen.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_16",
+      "title": "Westtrakt",
+      "text": "Der kleine Westtrakt zeigt zum Innenhof noch Reste von steinernen Stützen, auf denen eine Galerie aus Holz ruhte und über eine bestimmte Länge an den Innenhof-Fronten entlanglief. Der Durchgang stammt aus dem 20. Jahrhundert, als dieser Trakt außerdem mit äußeren Abstützungen stabilisiert wurde. Dass es in diesem Bereich eine versteckte Fluchttüre (in den Schindergraben) gab, ist nicht belegt.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_17",
+      "title": "Schatzgewölbe",
+      "text": "Der sogenannte „Schatzgewölbe“-Raum trägt seinen Namen, weil man vermutet hatte, dass hier der „Schatz der Babenberger“ versteckt gewesen wäre. Zweifellos haben wir es mit einem sehr sicheren Raum zu tun, der am weitesten vom Burgzugang entfernt ist. Hier könnten die Urkunden – wie das berühmte „Privilegium Minus“ – gelagert worden sein.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_18",
+      "title": "Einstützenraum",
+      "text": "Der „Einstützenraum“ (auch „Säulenraum“ oder „Pfeilerraum“ genannt) zählt zu den architektonisch besonderen Räumlichkeiten der Burg. Auf dem in der Mitte stehenden Pfeiler ruhte ein Gewölbe. Nachdem dieser zu einem unbekannten Zeitpunkt umgestürzt war, baute ihn der Burgenforscher Felix Halmer in den 1930er Jahren wieder in ähnlicher Form auf. Auch der „Graffiti“-Pionier Kyselak soll 1825 seinen Namen als Schriftzug am Pfeiler hinterlassen haben.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_19",
+      "title": "Nordtrakt",
+      "text": "Am Nordtrakt erkennt man am besten den Ausbau der Burg zu einem Renaissance-Schloss durch die Familie Heussenstein ab 1577. Er enthielt einen großen Saal, zu dem man über ein Stiegenhaus gelangte, und hatte umfangreiche Lagerräume im Kellerbereich und im dritten (weniger hohen) Ober- bzw. Dachgeschoß.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_20",
+      "title": "Küche",
+      "text": "Die ca. 1450/1530 errichtete Küche (aus spätgotischer Zeit bzw. der Renaissance) ist ein wahres Schmuckstück der Burg. Ihr Schlot fasziniert aufgrund seiner beachtlich großen Dimension, der ungewöhnlichen Form und des klug gewählten leichten Steinmaterials (Kalktuff). Seitliche Öffnungen im Schlot sind keine Schäden, sondern dienten der Zirkulation, sodass der Betrieb der Rauchküche gelang.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_21",
+      "title": "Vorburg",
+      "text": "Die ausgedehnte Vorburg war nie ein „Turnierplatz“, sondern eine wirtschaftlich genutzte Fläche. Hier standen einst wahrscheinlich Stallgebäude,  Gesindehäuser (für Knechte und Mägde) und eine Schmiede, die man wegen der Feuergefahr auslagerte. In Vorburgen legte man gerne Obst-, Gemüse- oder Kräutergärten an.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_22",
+      "title": "Nord-West-Rondell",
+      "text": "Starhemberg zeichnet sich durch insgesamt drei Rondelle (Rundtürme) aus – baulich um 1580/1600 hochwertig ausgeführt: das kleine Süd-Rondell beim äußeren Zwinger und die beiden großen Rondelle der Vorburg. Von den dreigeschoßigen Türmen der Vorburg aus konnte man den Zugangsweg überwachen und mit Hilfe von Artilleriegeschützen und Armbrüsten den gesamten nördlichen Vorbereich verteidigen.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_23",
+      "title": "Nord-Ost-Rondell",
+      "text": "Beide Rondelle der Vorburg verfügen über breite Schießscharten, sogenannte „Maulscharten“, die Armbrust-Schützen dienten. Dazu gibt es auch Funde von Metallspitzen der Armbrust-Bolzen. Beide Rondelle liegen jeweils am Ende eines Grabens (Graben-Wall-Anlage), sodass über den Erdwall in den Graben hineinlaufende Angreifer „bestrichen“ (beschossen) werden konnten.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    },
+    {
+      "id": "annotation_starhemberg_24",
+      "title": "Doppel-Abtritt",
+      "text": "Blickt man von der Vorburg auf die hohen Außenmauern der Kernburg, sieht man eine vermeintliche Stütze. Tatsächlich ist dies aber eine steinerne Verbauung von sogar zwei „Abtritten“ (Toiletten) in unterschiedlichen Geschoßen. Der erstaunliche Doppel-Abtritt verschwand insofern aus dem Sichtfeld.",
+      "position": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "positionExplicitlySet": false,
+      "cameraExplicitlySet": false,
+      "cameraPos": {
+        "x": 0,
+        "y": 10,
+        "z": 22
+      },
+      "cameraTarget": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0
+      },
+      "images": []
+    }
+  ]
+}

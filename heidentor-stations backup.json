@@ -1,0 +1,275 @@
+{
+  "alignment": {
+    "reconstructionMatrix": [
+      0.21628828512896428,
+      -0.004245704971464692,
+      -0.4068317644553304,
+      0,
+      0.40680541987841656,
+      0.009370693442418697,
+      0.21617648652553273,
+      0,
+      0.0062817941774188975,
+      -0.4606570274708439,
+      0.008147083417337445,
+      0,
+      -2.228539125658278,
+      2.5051756315285054,
+      -0.9533914919303281,
+      1
+    ]
+  },
+  "stations": [
+    {
+      "id": "station_0",
+      "title": "Alter Ego",
+      "description": "Das Heidentor ist das größte erhaltene römische Bauwerk Österreichs und ein weithin sichtbares Zeichen des antiken Carnuntum. Mehrere 3D-Modelle machen dieses außergewöhnliche Monument nun in unterschiedlichen Zeitebenen erfahrbar: als heutige Ruine, als rekonstruierter Bau des 4. Jahrhunderts und als digitales Gegenüber zwischen Bestand und Ergänzung.",
+      "viewMode": "ruin",
+      "cameraPos": {
+        "x": 5.688742049148474,
+        "y": 1.5295840719695002,
+        "z": -1.6084834887211485
+      },
+      "cameraTarget": {
+        "x": 2.3056693965160195,
+        "y": 1.7402880055120253,
+        "z": 0.18056794912292418
+      },
+      "revealRadius": 0.26,
+      "revealSoftness": 0.05,
+      "bgImage": "",
+      "textX": 10,
+      "textY": 24,
+      "subTitle": "",
+      "subDescription": "",
+      "videoUrl": "",
+      "videoX": 58,
+      "videoY": 22,
+      "videoWidth": 28,
+      "videoHeight": 18,
+      "textLayer": "behind",
+      "milkyBg": false,
+      "lightIntensity": 1,
+      "shadowDiffuse": 1,
+      "images": [
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        }
+      ]
+    },
+    {
+      "id": "station_1",
+      "title": "Der Zahn der Zeit",
+      "description": "Seit dem 4. Jahrhundert n. Chr. hat es mehr als 1600 Jahre Geschichte überdauert: Verfall, Steinraub, Kriege, Witterung und Erdbeben.\n\nAuch wenn große Teile des monumentalen Torbaus verschwunden sind, blieb sein westliches Pfeilerpaar mit dem markanten Ziegelbogen erhalten. So steht das Heidentor bis heute als eindrucksvolles Fragment römischer Baukunst — und als eines der wichtigsten sichtbaren Zeugnisse der Antike in Österreich.",
+      "viewMode": "ruin",
+      "cameraPos": {
+        "x": -0.2160913707856551,
+        "y": 1.4773022060286645,
+        "z": 6.059523706454253
+      },
+      "cameraTarget": {
+        "x": 1.1725811864615843,
+        "y": 1.769405468878142,
+        "z": 0.2520937783550091
+      },
+      "revealRadius": 0.26,
+      "revealSoftness": 0.05,
+      "bgImage": "roman_blueprint_bg.png",
+      "textX": 49,
+      "textY": 20,
+      "subTitle": "",
+      "subDescription": "",
+      "videoUrl": "",
+      "videoX": 58,
+      "videoY": 22,
+      "videoWidth": 28,
+      "videoHeight": 18,
+      "textLayer": "behind",
+      "milkyBg": false,
+      "lightIntensity": 1,
+      "shadowDiffuse": 1,
+      "images": [
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        }
+      ]
+    },
+    {
+      "id": "station_2",
+      "title": "TWIN-IT",
+      "description": "Im Rahmen des EU-Projekts TWIN-IT haben die Landessammlungen Niederösterreich sich mit verschiedenen 3D-Modellen beworben und damit Österreich auf einem internationalen Parkett vertreten.  ",
+      "viewMode": "portal",
+      "cameraPos": {
+        "x": -4.857224523354747,
+        "y": 0.3547162565176043,
+        "z": -1.936398469318072
+      },
+      "cameraTarget": {
+        "x": -0.29503191010693014,
+        "y": 3.5917080877290872,
+        "z": 0.17268399847421897
+      },
+      "revealRadius": 1.4,
+      "revealSoftness": 0.05,
+      "portalRadius": 3.2,
+      "portalSoftness": 0.2,
+      "portalTransitionDuration": 2.8,
+      "portalMouseStart": 0.2,
+      "portalRuinFadeEnd": 0.22,
+      "portalRevealRuinFadeStart": 0.18,
+      "portalRevealRuinFadeEnd": 0.85,
+      "portalReconFadeStart": 0.08,
+      "portalReconFadeEnd": 0.46,
+      "bgImage": "",
+      "textX": 9,
+      "textY": 48,
+      "subTitle": "",
+      "subDescription": "",
+      "videoUrl": "https://iframe.mediadelivery.net/embed/269044/f0807cdd-efaf-4fb2-b8da-bae26ba7f161?autoplay=false",
+      "videoX": 60,
+      "videoY": 48,
+      "videoWidth": 32,
+      "videoHeight": 18,
+      "textLayer": "front",
+      "milkyBg": true,
+      "lightIntensity": 1,
+      "shadowDiffuse": 1,
+      "images": [
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        }
+      ]
+    },
+    {
+      "id": "station_3",
+      "title": "Der sichtbare Wandel",
+      "description": "Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.",
+      "viewMode": "reveal",
+      "cameraPos": {
+        "x": -7.744003428600381,
+        "y": 2.4002913551501686,
+        "z": -8.704833717267801
+      },
+      "cameraTarget": {
+        "x": -2.8606284256177745,
+        "y": 1.9050987773561392,
+        "z": 1.8560708135446788
+      },
+      "revealRadius": 0.28,
+      "revealSoftness": 0.01,
+      "portalRadius": 3.2,
+      "portalSoftness": 0.2,
+      "portalTransitionDuration": 2.8,
+      "portalMouseStart": 0.2,
+      "portalRuinFadeEnd": 0.22,
+      "portalRevealRuinFadeStart": 0.18,
+      "portalRevealRuinFadeEnd": 0.85,
+      "portalReconFadeStart": 0.08,
+      "portalReconFadeEnd": 0.46,
+      "bgImage": "",
+      "textX": 66,
+      "textY": 21,
+      "subTitle": "",
+      "subDescription": "",
+      "videoUrl": "",
+      "videoX": 58,
+      "videoY": 22,
+      "videoWidth": 28,
+      "videoHeight": 18,
+      "textLayer": "behind",
+      "milkyBg": false,
+      "freeNavigation": true,
+      "lightIntensity": 1,
+      "shadowDiffuse": 1,
+      "images": [
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        },
+        {
+          "url": "",
+          "posX": 0,
+          "posY": 3.5,
+          "posZ": 0,
+          "scale": 1,
+          "fixToCamera": false
+        }
+      ]
+    }
+  ]
+}

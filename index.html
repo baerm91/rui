@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Interaktive 3D-Präsentation des aktiven Projekts." />
+  <title>RIU — Räumliche Geschichten</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loading-content">
+      <div class="spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
+      <h1 class="loading-title">RIU</h1>
+      <p class="loading-subtitle">Die räumliche Story wird vorbereitet …</p>
+      <div class="loading-bar-container">
+        <div class="loading-bar" id="loading-bar"></div>
+      </div>
+      <p class="loading-percent" id="loading-percent">0%</p>
+    </div>
+  </div>
+
+  <!-- Three.js Canvas -->
+  <div id="bg-root" class="absolute inset-0 pointer-events-none" style="background:#010101;"></div>
+  <canvas id="scene-canvas"></canvas>
+
+  <!-- Alignment Overlay -->
+  <div id="alignment-overlay" class="overlay hidden">
+    <div class="overlay-panel glass-panel">
+      <h2>Modell-Ausrichtung</h2>
+      <p class="overlay-description">
+        Setzen Sie <strong>3 korrespondierende Punkte</strong> auf beiden Modellen, 
+        um die Rekonstruktion passgenau über die Ruine zu legen.
+      </p>
+      <div class="alignment-steps">
+        <div class="step" id="step-1">
+          <div class="step-number">1</div>
+          <div class="step-info">
+            <span class="step-label">Punkt 1</span>
+            <span class="step-status" id="step-1-status">Warte auf Klick…</span>
+          </div>
+        </div>
+        <div class="step" id="step-2">
+          <div class="step-number">2</div>
+          <div class="step-info">
+            <span class="step-label">Punkt 2</span>
+            <span class="step-status" id="step-2-status">—</span>
+          </div>
+        </div>
+        <div class="step" id="step-3">
+          <div class="step-number">3</div>
+          <div class="step-info">
+            <span class="step-label">Punkt 3</span>
+            <span class="step-status" id="step-3-status">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="alignment-model-indicator">
+        <span id="alignment-model-label">Klicken Sie auf die <strong>Ruine</strong></span>
+      </div>
+      <div class="alignment-actions">
+        <button id="btn-skip-alignment" class="btn-secondary">Überspringen</button>
+        <button id="btn-reset-alignment" class="btn-secondary">Zurücksetzen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Overlay (bottom) -->
+  <div id="info-bar" class="hidden">
+    <div class="info-content glass-panel-subtle">
+      <p>
+        <span class="info-icon">👁</span>
+        Bewegen Sie die Maus über das Modell — im Umkreis des Cursors erscheint die <strong>Rekonstruktion</strong>.
+      </p>
+    </div>
+  </div>
+
+  <!-- React UI Root -->
+  <div id="react-root" class="absolute inset-0 pointer-events-none"></div>
+  <!-- Dedicated sibling mount for the editor; never overlays the 3D stage. -->
+  <div id="editor-root"></div>
+
+  <script type="module" src="/src/experience-entry.js"></script>
+</body>
+</html>
