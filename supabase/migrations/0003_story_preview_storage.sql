@@ -11,6 +11,14 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "authors read own preview objects" on storage.objects;
+create policy "authors read own preview objects"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'story-previews'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 drop policy if exists "authors upload story previews" on storage.objects;
 create policy "authors upload story previews"
   on storage.objects for insert to authenticated
