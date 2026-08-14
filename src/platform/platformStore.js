@@ -242,6 +242,17 @@ function seededStories(current = storiesCache) {
   ];
 }
 
+export function mergeStoryCollections(localStories = [], remoteStories = []) {
+  const merged = new Map();
+  for (const story of Array.isArray(localStories) ? localStories : []) {
+    if (story?.id) merged.set(story.id, story);
+  }
+  for (const story of Array.isArray(remoteStories) ? remoteStories : []) {
+    if (story?.id) merged.set(story.id, story);
+  }
+  return [...merged.values()];
+}
+
 export async function initializePlatformStore() {
   const legacyActiveUserId = safeParse(SESSION_KEY, null)?.userId || '';
   if (typeof indexedDB === 'undefined') {
@@ -274,8 +285,10 @@ export async function initializePlatformStore() {
       localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
       if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
     } else {
-      localStorage.removeItem(SESSION_KEY);
-      storiesCache = seededStories(remoteState.stories);
+      // Keep the pre-OAuth browser data until the user has signed in and the
+      // authenticated migration can claim it. Public rows still win on ID
+      // collisions, but must never erase private local drafts.
+      storiesCache = seededStories(mergeStoryCollections(storiesCache, remoteState.stories));
     }
   }
 

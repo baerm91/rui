@@ -86,11 +86,11 @@ export async function importLegacyStories(stories, authUser, legacyOwnerIds = []
     .eq('source_key', LEGACY_SOURCE_KEY)
     .maybeSingle();
   if (importReadError) throw importReadError;
-  if (imported) return imported.story_ids || [];
+  const previouslyImportedIds = new Set(imported?.story_ids || []);
 
   const ownerIds = new Set([...legacyOwnerIds.filter(Boolean), 'riu-curatorial']);
   const claimed = (stories || [])
-    .filter((story) => ownerIds.has(story.ownerId))
+    .filter((story) => ownerIds.has(story.ownerId) && !previouslyImportedIds.has(story.id))
     .map((story) => ({ ...story, ownerId: authUser.id, authorName: profile.name }));
 
   if (claimed.length) {
@@ -101,13 +101,14 @@ export async function importLegacyStories(stories, authUser, legacyOwnerIds = []
     if (storyError) throw storyError;
   }
 
-  const { error: markerError } = await client.from('legacy_imports').insert({
+  const storyIds = [...new Set([...previouslyImportedIds, ...claimed.map((story) => story.id)])];
+  const { error: markerError } = await client.from('legacy_imports').upsert({
     user_id: authUser.id,
     source_key: LEGACY_SOURCE_KEY,
-    story_ids: claimed.map((story) => story.id)
-  });
+    story_ids: storyIds
+  }, { onConflict: 'user_id,source_key' });
   if (markerError) throw markerError;
-  return claimed.map((story) => story.id);
+  return storyIds;
 }
 
 export async function fetchRemoteStories() {
