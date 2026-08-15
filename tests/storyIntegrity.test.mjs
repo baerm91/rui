@@ -12,3 +12,9 @@ test('cross-story station contamination is detected by station ids', () => {
   );
   assert.equal(findCrossStoryStationSource(heidentor.stations, heidentor.id, demoStories), null);
 });
+
+test('Heidentor seed data does not reuse the retired blueprint as its cover', () => {
+  const heidentor = demoStories.find((story) => story.id === 'demo-heidentor');
+
+  assert.equal(heidentor.coverImage, '');
+});

@@ -129,7 +129,7 @@ const demoStories = [
     createdAt: '2026-07-10T10:00:00.000Z',
     updatedAt: '2026-07-13T16:18:22.000Z',
     stationRevision: 1,
-    coverImage: 'https://heidentor.vercel.app/roman_blueprint_bg.png',
+    coverImage: '',
     location: 'Petronell-Carnuntum, Österreich',
     metadata: { language: 'de', category: 'Archäologie', categories: ['Archäologie'] },
     stats: { views: 0, lastViewedAt: null },
