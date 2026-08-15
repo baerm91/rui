@@ -20,3 +20,9 @@ test('legacy lighting is lifted out of serialized stations without losing narrat
   assert.equal('lightIntensity' in stored[0], false);
   assert.equal('annotations' in stored[0], false);
 });
+
+test('retired blueprint backgrounds are not rendered in the Heidentor story', () => {
+  const normalized = normalizeStationConfig(heidentorConfig);
+  assert.equal(normalized.stations[0].bgImage, '');
+  assert.equal(normalized.stations[1].bgImage, '');
+});
