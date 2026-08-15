@@ -408,11 +408,11 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
 function StoryCard({ story, featured = false }) {
   return (
     <article className={`story-card ${featured ? 'is-featured' : ''}`} onClick={() => go(`/stories/${story.slug || story.id}`)}>
-      <div className="story-card-image" style={{ backgroundImage: `url("${story.coverImage || '/star_sky_bg.png'}")` }}>
+      <StoryPreviewMedia story={story} className="story-card-image" mediaClassName="story-card-media" fallbackImage="/star_sky_bg.png">
         <div className="story-card-shade" />
         <span className="story-stations"><Layers3 size={13} /> {story.stations?.length || 0} Stationen</span>
         <button className="story-open" aria-label={`${story.name} öffnen`}><ArrowRight /></button>
-      </div>
+      </StoryPreviewMedia>
       <div className="story-card-copy">
         <div className="story-kicker">{story.location || 'Digitale Ausstellung'}</div>
         <h3>{story.name}</h3>
