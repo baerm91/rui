@@ -1,6 +1,7 @@
 :root { --riu-bg:#11120f; --riu-panel:#181a16; --riu-ink:#f2efe7; --riu-muted:#a7a79d; --riu-line:rgba(238,235,222,.13); --riu-accent:#c7a66a; --riu-accent-soft:#ddc28f; }
 * { box-sizing:border-box; }
-body.platform-page { margin:0; background:var(--riu-bg); color:var(--riu-ink); overflow:auto; font-family:Inter, sans-serif; }
+html.platform-page { overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto; touch-action:pan-y; }
+body.platform-page { margin:0; min-height:100%; background:var(--riu-bg); color:var(--riu-ink); overflow:visible; overscroll-behavior-y:auto; touch-action:pan-y; font-family:Inter, sans-serif; }
 body.platform-page #loading-screen, body.platform-page #scene-canvas, body.platform-page #bg-root, body.platform-page #alignment-overlay, body.platform-page #info-bar, body.platform-page #editor-root { display:none !important; }
 body.platform-page #react-root { position:relative !important; inset:auto !important; pointer-events:auto !important; min-height:100vh; }
 button, input, textarea { font:inherit; }

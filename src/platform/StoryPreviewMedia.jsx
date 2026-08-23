@@ -282,7 +282,9 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   return (
     <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${(active || returning) && ready ? ' is-preview-active' : ''}`}
       onPointerEnter={activate} onPointerMove={scrub} onPointerLeave={deactivate}>
-      <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
+      {!ready && (
+        <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
+      )}
       {hasPreview && (
         <>
           <video ref={videoRef} className="story-preview-video" muted playsInline preload="none"

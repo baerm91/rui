@@ -7,6 +7,8 @@ import { ensureSeedStories, platformReady } from './platform/platformStore.js';
 await platformReady;
 ensureSeedStories();
 const isExperiencePath = /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(window.location.pathname);
+document.documentElement.classList.toggle('experience-page', isExperiencePath);
+document.documentElement.classList.toggle('platform-page', !isExperiencePath);
 document.body.classList.toggle('experience-page', isExperiencePath);
 document.body.classList.toggle('platform-page', !isExperiencePath);
 if (!isExperiencePath) document.title = 'RIU — Räumliche Geschichten';
