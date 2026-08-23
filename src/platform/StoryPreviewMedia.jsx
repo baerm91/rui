@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { readStoryPreviewBlob } from './platformStore.js';
 import {
-  directionalPointerProgress, pointerEntrySide, resolvePreviewDuration, resolveScrubDuration,
-  storyHasPreview
+  pointerEntrySide, relativePointerProgress, resolvePreviewDuration, resolveScrubDuration,
+  resolveVisualPreviewProgress, storyHasPreview
 } from './storyPreviewScrub.js';
 
 const RETURN_DELAY_MS = 1000;
@@ -19,6 +19,8 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const returnDelayRef = useRef(0);
   const targetProgressRef = useRef(0);
   const entrySideRef = useRef('left');
+  const entryXRef = useRef(0);
+  const entryProgressRef = useRef(0);
   const loadRequestRef = useRef(0);
   const returningRef = useRef(false);
   const [active, setActive] = useState(false);
@@ -100,25 +102,30 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     if (!hasPreview || event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     entrySideRef.current = pointerEntrySide(event.clientX, bounds.left, bounds.width);
-    // Die Eintrittskante ist immer Station 1. Von rechts läuft die Timeline
-    // deshalb beim Bewegen nach links vorwärts, von links entsprechend nach rechts.
-    targetProgressRef.current = directionalPointerProgress(
-      event.clientX, bounds.left, bounds.width, entrySideRef.current
-    );
+    entryXRef.current = event.clientX;
+    // A re-entry anchors the timeline at the frame that is currently visible.
+    // Pointer movement continues from there in the direction of the entry edge.
+    const video = videoRef.current;
+    const currentProgress = video?.getAttribute('src')
+      ? resolveVisualPreviewProgress(
+          video.currentTime,
+          story.previewDurationSeconds || 3,
+          video.duration,
+          story.previewReturnDurationSeconds
+        )
+      : targetProgressRef.current;
+    entryProgressRef.current = currentProgress;
+    targetProgressRef.current = currentProgress;
     window.clearTimeout(returnDelayRef.current);
     returnDelayRef.current = 0;
     returningRef.current = false;
     setReturning(false);
     setBridgingReturn(false);
     setActive(true);
-    if (videoRef.current?.getAttribute('src')) {
-      videoRef.current.pause();
-      videoRef.current.playbackRate = 1;
-      videoRef.current.onended = null;
-      const duration = resolveScrubDuration(
-        videoRef.current.duration, story.previewDurationSeconds
-      );
-      videoRef.current.currentTime = targetProgressRef.current * Math.max(0, duration - 0.001);
+    if (video?.getAttribute('src')) {
+      video.pause();
+      video.playbackRate = 1;
+      video.onended = null;
       return;
     }
     await ensureVideoLoaded();
@@ -127,8 +134,12 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const scrub = (event) => {
     if (!hasPreview || event.pointerType === 'touch') return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    targetProgressRef.current = directionalPointerProgress(
-      event.clientX, bounds.left, bounds.width, entrySideRef.current
+    targetProgressRef.current = relativePointerProgress(
+      event.clientX,
+      entryXRef.current,
+      bounds.width,
+      entryProgressRef.current,
+      entrySideRef.current
     );
     startSeeking();
   };
@@ -213,7 +224,6 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     // Rücklauf aus, noch bevor der eigentliche Rückweg gestartet wird.
     cancelAnimationFrame(frameRef.current);
     frameRef.current = 0;
-    targetProgressRef.current = 0;
     if (ready && videoRef.current?.getAttribute('src')) {
       window.clearTimeout(returnDelayRef.current);
       returnDelayRef.current = window.setTimeout(() => {
