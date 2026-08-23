@@ -1,33 +1,14 @@
-export function pointerProgress(clientX, left, width) {
+export function resolvePreviewLookOffset(clientX, left, width, maximumOffset = 2.2) {
   if (!Number.isFinite(width) || width <= 0) return 0;
-  return Math.max(0, Math.min(1, (clientX - left) / width));
-}
-
-export function directionalPointerProgress(clientX, left, width, entrySide = 'left') {
-  const absoluteProgress = pointerProgress(clientX, left, width);
-  return entrySide === 'right' ? 1 - absoluteProgress : absoluteProgress;
-}
-
-export function relativePointerProgress(clientX, entryX, width, entryProgress = 0, entrySide = 'left') {
-  if (!Number.isFinite(width) || width <= 0) return Math.max(0, Math.min(1, entryProgress));
-  const direction = entrySide === 'right' ? -1 : 1;
-  const delta = ((clientX - entryX) / width) * direction;
-  return Math.max(0, Math.min(1, entryProgress + delta));
-}
-
-export function pointerEntrySide(clientX, left, width) {
-  return pointerProgress(clientX, left, width) > 0.5 ? 'right' : 'left';
+  const horizontalPosition = Math.max(-1, Math.min(1, ((clientX - left) / width - 0.5) * 2));
+  const offset = horizontalPosition * -maximumOffset;
+  return Math.abs(offset) < 0.0001 ? 0 : offset;
 }
 
 export function resolvePreviewDuration(videoDuration, storedDuration, fallbackDuration = 3) {
   if (Number.isFinite(videoDuration) && videoDuration > 0) return videoDuration;
   if (Number.isFinite(storedDuration) && storedDuration > 0) return storedDuration;
   return fallbackDuration;
-}
-
-export function resolveScrubDuration(videoDuration, storedForwardDuration) {
-  if (Number.isFinite(storedForwardDuration) && storedForwardDuration > 0) return storedForwardDuration;
-  return resolvePreviewDuration(videoDuration, storedForwardDuration);
 }
 
 export function resolveVisualPreviewProgress(currentTime, forwardDuration, totalDuration, storedReturnDuration) {

@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { readStoryPreviewBlob } from './platformStore.js';
 import {
-  pointerEntrySide, relativePointerProgress, resolvePreviewDuration, resolveScrubDuration,
-  resolveVisualPreviewProgress, storyHasPreview
+  resolvePreviewLookOffset, resolveVisualPreviewProgress, storyHasPreview
 } from './storyPreviewScrub.js';
 
 const RETURN_DELAY_MS = 1000;
@@ -17,11 +16,8 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const loadingRef = useRef(false);
   const frameRef = useRef(0);
   const returnDelayRef = useRef(0);
-  const targetProgressRef = useRef(0);
-  const entrySideRef = useRef('left');
-  const entryXRef = useRef(0);
-  const entryProgressRef = useRef(0);
   const loadRequestRef = useRef(0);
+  const activeRef = useRef(false);
   const returningRef = useRef(false);
   const [active, setActive] = useState(false);
   const [ready, setReady] = useState(false);
@@ -44,6 +40,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     }
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = '';
+    activeRef.current = false;
     returningRef.current = false;
     setReturning(false);
     setBridgingReturn(false);
@@ -52,28 +49,51 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
 
   useEffect(() => releaseVideo, []);
 
-  const seekTowardTarget = () => {
-    // Der angeforderte Frame läuft gerade; ohne Reset würde ein früher Frame
-    // vor loadedmetadata alle späteren Seek-Versuche dauerhaft blockieren.
-    frameRef.current = 0;
+  const startForwardPlayback = () => {
     const video = videoRef.current;
     if (!video || video.readyState < HTMLMediaElement.HAVE_METADATA) return;
-    // Chrome liefert für MediaRecorder-WebMs häufig Infinity als duration.
-    // Die bekannte Aufnahmedauer hält auch diese Dateien direkt seekbar.
-    // Bei Ping-Pong-Dateien gehört nur der erste Abschnitt zur Maus-Timeline.
-    const duration = resolveScrubDuration(video.duration, story.previewDurationSeconds);
-    const targetTime = targetProgressRef.current * Math.max(0, duration - 0.001);
-    const difference = targetTime - video.currentTime;
-    if (Math.abs(difference) < 0.012) {
+    cancelAnimationFrame(frameRef.current);
+    frameRef.current = 0;
+    video.pause();
+    video.playbackRate = 1;
+    video.onended = null;
+    const forwardDuration = story.previewDurationSeconds || 3;
+    const currentProgress = resolveVisualPreviewProgress(
+      video.currentTime,
+      forwardDuration,
+      video.duration,
+      story.previewReturnDurationSeconds
+    );
+    const targetTime = currentProgress * Math.max(0, forwardDuration - 0.001);
+    const watchForwardPlayback = () => {
+      if (!activeRef.current || !video.getAttribute('src')) {
+        frameRef.current = 0;
+        return;
+      }
+      if (video.currentTime >= forwardDuration - 0.025) {
+        video.pause();
+        video.currentTime = Math.max(0, forwardDuration - 0.001);
+        frameRef.current = 0;
+        return;
+      }
+      frameRef.current = requestAnimationFrame(watchForwardPlayback);
+    };
+    const playForward = () => {
+      if (!activeRef.current || !video.getAttribute('src')) return;
+      video.play().then(() => {
+        if (!activeRef.current) {
+          video.pause();
+          return;
+        }
+        frameRef.current = requestAnimationFrame(watchForwardPlayback);
+      }).catch(() => releaseVideo());
+    };
+    if (Math.abs(video.currentTime - targetTime) > 0.025) {
+      video.addEventListener('seeked', playForward, { once: true });
       video.currentTime = targetTime;
-      return;
+    } else {
+      playForward();
     }
-    if (!video.seeking) video.currentTime += difference * 0.24;
-    frameRef.current = requestAnimationFrame(seekTowardTarget);
-  };
-
-  const startSeeking = () => {
-    if (!frameRef.current) frameRef.current = requestAnimationFrame(seekTowardTarget);
   };
 
   const ensureVideoLoaded = async () => {
@@ -100,48 +120,26 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
 
   const activate = async (event) => {
     if (!hasPreview || event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    entrySideRef.current = pointerEntrySide(event.clientX, bounds.left, bounds.width);
-    entryXRef.current = event.clientX;
-    // A re-entry anchors the timeline at the frame that is currently visible.
-    // Pointer movement continues from there in the direction of the entry edge.
     const video = videoRef.current;
-    const currentProgress = video?.getAttribute('src')
-      ? resolveVisualPreviewProgress(
-          video.currentTime,
-          story.previewDurationSeconds || 3,
-          video.duration,
-          story.previewReturnDurationSeconds
-        )
-      : targetProgressRef.current;
-    entryProgressRef.current = currentProgress;
-    targetProgressRef.current = currentProgress;
     window.clearTimeout(returnDelayRef.current);
     returnDelayRef.current = 0;
+    activeRef.current = true;
     returningRef.current = false;
     setReturning(false);
     setBridgingReturn(false);
     setActive(true);
     if (video?.getAttribute('src')) {
-      video.pause();
-      video.playbackRate = 1;
-      video.onended = null;
+      startForwardPlayback();
       return;
     }
     await ensureVideoLoaded();
   };
 
-  const scrub = (event) => {
+  const updatePreviewLook = (event) => {
     if (!hasPreview || event.pointerType === 'touch') return;
     const bounds = event.currentTarget.getBoundingClientRect();
-    targetProgressRef.current = relativePointerProgress(
-      event.clientX,
-      entryXRef.current,
-      bounds.width,
-      entryProgressRef.current,
-      entrySideRef.current
-    );
-    startSeeking();
+    const lookOffset = resolvePreviewLookOffset(event.clientX, bounds.left, bounds.width);
+    event.currentTarget.style.setProperty('--preview-look-x', `${lookOffset}%`);
   };
 
   const startSmoothReturn = () => {
@@ -217,13 +215,13 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     video.currentTime = Math.min(totalDuration - 0.01, returnStartTime);
   };
 
-  const deactivate = () => {
+  const deactivate = (event) => {
+    event.currentTarget.style.setProperty('--preview-look-x', '0%');
+    activeRef.current = false;
     setActive(false);
-    // Die Maus-Scrub-Schleife muss während der Wartezeit vollständig stehen.
-    // Würde sie mit Ziel 0 weiterlaufen, sähe das wie ein sofortiger, schneller
-    // Rücklauf aus, noch bevor der eigentliche Rückweg gestartet wird.
     cancelAnimationFrame(frameRef.current);
     frameRef.current = 0;
+    videoRef.current?.pause();
     if (ready && videoRef.current?.getAttribute('src')) {
       window.clearTimeout(returnDelayRef.current);
       returnDelayRef.current = window.setTimeout(() => {
@@ -235,24 +233,22 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     }
   };
 
-  const prepareVideoForSeeking = () => {
+  const prepareVideoForPlayback = () => {
     const video = videoRef.current;
     if (!video) return;
     const finish = () => {
-      const duration = resolveScrubDuration(video.duration, story.previewDurationSeconds);
-      const entryTime = targetProgressRef.current * Math.max(0, duration - 0.001);
       const reveal = () => {
         if (!video.getAttribute('src')) return;
         setReady(true);
-        startSeeking();
+        if (activeRef.current) startForwardPlayback();
       };
-      if (Math.abs(video.currentTime - entryTime) < 0.012) {
-        video.currentTime = entryTime;
+      if (video.currentTime < 0.012) {
+        video.currentTime = 0;
         reveal();
         return;
       }
       video.addEventListener('seeked', reveal, { once: true });
-      video.currentTime = entryTime;
+      video.currentTime = 0;
     };
     if (Number.isFinite(video.duration)) {
       finish();
@@ -291,14 +287,14 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
 
   return (
     <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${(active || returning) && ready ? ' is-preview-active' : ''}`}
-      onPointerEnter={activate} onPointerMove={scrub} onPointerLeave={deactivate}>
+      onPointerEnter={activate} onPointerMove={updatePreviewLook} onPointerLeave={deactivate}>
       {!ready && (
         <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
       )}
       {hasPreview && (
         <>
           <video ref={videoRef} className="story-preview-video" muted playsInline preload="none"
-            onLoadedMetadata={prepareVideoForSeeking} aria-hidden="true" />
+            onLoadedMetadata={prepareVideoForPlayback} aria-hidden="true" />
           <canvas ref={freezeCanvasRef}
             className={`story-preview-freeze${bridgingReturn ? ' is-visible' : ''}`} aria-hidden="true" />
         </>
