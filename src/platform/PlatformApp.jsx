@@ -14,6 +14,7 @@ import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
 import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
 import { canCreateStories, isAdmin, USER_ROLE_LABELS, USER_ROLES } from './accessControl.js';
 import { fetchAdminUsers, fetchPlatformAccess, updateAdminUser, updatePlatformAccess } from './supabaseStore.js';
+import { readRememberLoginPreference } from './supabaseClient.js';
 
 const go = (path) => { window.location.href = path; };
 const formatDate = (value) => value
@@ -490,6 +491,7 @@ function AuthPage({ mode }) {
   const isRegister = mode === 'register';
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(() => readRememberLoginPreference());
   const [registrationsEnabled, setRegistrationsEnabled] = useState(!isRegister);
   const [settingsBusy, setSettingsBusy] = useState(isRegister);
   useEffect(() => {
@@ -504,7 +506,7 @@ function AuthPage({ mode }) {
   async function authenticate() {
     setBusy(true); setError('');
     try {
-      await loginWithOAuth(isRegister ? 'register' : 'login');
+      await loginWithOAuth(isRegister ? 'register' : 'login', isRegister || rememberLogin);
     } catch (cause) { setError(cause.message); setBusy(false); }
   }
   return (
@@ -527,6 +529,13 @@ function AuthPage({ mode }) {
                 : 'Melden Sie sich mit demselben Google-Konto an, das Sie bei der Registrierung verwendet haben.'}</p>
               {error && <div className="form-error">{error}</div>}
               {isRegister && !settingsBusy && !registrationsEnabled && <div className="form-error">Neue Konten sind derzeit nicht freigeschaltet. Bereits registrierte Personen können sich weiterhin anmelden.</div>}
+              {!isRegister && (
+                <label className="auth-remember">
+                  <input type="checkbox" checked={rememberLogin} onChange={(event) => setRememberLogin(event.target.checked)} />
+                  <span className="auth-remember-box" aria-hidden="true"><Check size={12} /></span>
+                  <span>Angemeldet bleiben</span>
+                </label>
+              )}
               <button type="button" className="riu-button" disabled={busy || settingsBusy || (isRegister && !registrationsEnabled)} onClick={authenticate}>
                 <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : (isRegister ? 'Mit Google registrieren' : 'Mit Google anmelden')}
               </button>

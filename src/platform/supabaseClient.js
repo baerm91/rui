@@ -9,6 +9,37 @@ const supabaseKey = viteEnv.VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   || viteEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
+export const REMEMBER_LOGIN_KEY = 'riu_remember_login';
+
+export function readRememberLoginPreference(storage = globalThis.localStorage) {
+  return storage?.getItem(REMEMBER_LOGIN_KEY) !== 'false';
+}
+
+export function writeRememberLoginPreference(remember, storage = globalThis.localStorage) {
+  storage?.setItem(REMEMBER_LOGIN_KEY, remember ? 'true' : 'false');
+}
+
+export function createAuthStorage(persistentStorage, tabStorage, rememberLogin) {
+  const preferredStores = () => rememberLogin()
+    ? [persistentStorage, tabStorage]
+    : [tabStorage, persistentStorage];
+
+  return {
+    getItem(key) {
+      const [preferred, fallback] = preferredStores();
+      return preferred?.getItem(key) ?? fallback?.getItem(key) ?? null;
+    },
+    setItem(key, value) {
+      const [preferred, fallback] = preferredStores();
+      fallback?.removeItem(key);
+      preferred?.setItem(key, value);
+    },
+    removeItem(key) {
+      persistentStorage?.removeItem(key);
+      tabStorage?.removeItem(key);
+    }
+  };
+}
 
 let supabaseClient = null;
 
@@ -19,7 +50,12 @@ export function getSupabase() {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        storage: createAuthStorage(
+          globalThis.localStorage,
+          globalThis.sessionStorage,
+          () => readRememberLoginPreference()
+        )
       }
     });
   }
@@ -55,10 +91,11 @@ export function readOAuthCallbackError(location = window.location) {
     : 'Die Google-Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
 }
 
-export async function signInWithOAuth(provider = 'google', { mode = 'login' } = {}) {
+export async function signInWithOAuth(provider = 'google', { mode = 'login', rememberLogin = true } = {}) {
   const client = getSupabase();
   if (!client) throw new Error('Supabase ist für diese Umgebung noch nicht konfiguriert.');
   const redirectTo = `${window.location.origin}/dashboard`;
+  writeRememberLoginPreference(rememberLogin);
   localStorage.setItem('riu_auth_attempt', JSON.stringify({ mode, startedAt: Date.now() }));
   const { error } = await client.auth.signInWithOAuth({
     provider,

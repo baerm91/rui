@@ -732,8 +732,8 @@ export async function updateUserProfile(userId, { name, username }) {
   };
 }
 
-export async function loginWithOAuth(mode = 'login') {
-  await signInWithOAuth('google', { mode });
+export async function loginWithOAuth(mode = 'login', rememberLogin = true) {
+  await signInWithOAuth('google', { mode, rememberLogin });
 }
 
 export async function logoutUser() {
