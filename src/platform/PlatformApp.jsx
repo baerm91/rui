@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Ban, Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Upload, UserPlus, Users, X
+  Ban, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Timer, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -13,9 +13,13 @@ import { readProjects, updateProjectListingMetadata } from '../projects/projectS
 import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
 import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
 import { canCreateStories, isAdmin, USER_ROLE_LABELS, USER_ROLES } from './accessControl.js';
-import { fetchAdminUsers, fetchPlatformAccess, updateAdminUser, updatePlatformAccess } from './supabaseStore.js';
+import {
+  fetchAdminUsers, fetchPlatformAccess, fetchStoryAnalytics, fetchStoryVersions, restoreStoryVersion,
+  updateAdminUser, updatePlatformAccess
+} from './supabaseStore.js';
 import { readRememberLoginPreference } from './supabaseClient.js';
 import { filterOwnedStories } from './dashboardStories.js';
+import { formatAnalyticsDuration } from './storyAnalytics.js';
 
 const go = (path) => { window.location.href = path; };
 const formatDate = (value) => value
@@ -67,6 +71,14 @@ const getStoryAnnotationCount = (story) => {
   ];
   const identified = new Set(annotations.map((annotation) => annotation?.id).filter(Boolean));
   return identified.size + annotations.filter((annotation) => !annotation?.id).length;
+};
+
+const VERSION_REASON_LABELS = {
+  autosave: 'Automatischer Stand',
+  published: 'Veröffentlichung',
+  unpublished: 'Freigabe aufgehoben',
+  before_restore: 'Vor Wiederherstellung',
+  restored: 'Wiederhergestellt'
 };
 
 const createCoverImageFromFile = async (file) => {
@@ -425,6 +437,129 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
   );
 }
 
+function StoryVersionDialog({ story, onClose, onRestored }) {
+  const [versions, setVersions] = useState([]);
+  const [busy, setBusy] = useState(true);
+  const [restoringId, setRestoringId] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetchStoryVersions(story.id)
+      .then((items) => { if (active) setVersions(items); })
+      .catch((cause) => { if (active) setError(cause.message); })
+      .finally(() => { if (active) setBusy(false); });
+    return () => { active = false; };
+  }, [story.id]);
+
+  async function restore(version) {
+    if (confirmId !== version.id) {
+      setConfirmId(version.id);
+      return;
+    }
+    setRestoringId(version.id);
+    setError('');
+    try {
+      const restored = await restoreStoryVersion(version.id);
+      if (!restored) throw new Error('Die wiederhergestellte Story konnte nicht geladen werden.');
+      writeStories(readStories().map((item) => item.id === restored.id ? restored : item));
+      onRestored(restored);
+    } catch (cause) {
+      setError(cause.message);
+      setRestoringId(null);
+      setConfirmId(null);
+    }
+  }
+
+  return (
+    <div className="metadata-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="metadata-dialog version-dialog" role="dialog" aria-modal="true" aria-labelledby="version-dialog-title">
+        <div className="metadata-dialog-header">
+          <div><span className="riu-overline">Sicher bearbeiten</span><h2 id="version-dialog-title">Versionsverlauf</h2></div>
+          <button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button>
+        </div>
+        <p className="version-intro">RIU legt bei Änderungen gebündelte Zwischenstände und bei Veröffentlichungen eigene Versionen an. Vor einer Wiederherstellung wird der aktuelle Stand zusätzlich gesichert.</p>
+        {error && <div className="form-error">{error}</div>}
+        {busy ? <div className="version-empty">Versionen werden geladen …</div> : versions.length ? (
+          <div className="version-list">
+            {versions.map((version) => (
+              <article key={version.id}>
+                <span className="version-number">v{version.versionNumber}</span>
+                <div><strong>{VERSION_REASON_LABELS[version.reason] || 'Gespeicherter Stand'}</strong><small>{new Intl.DateTimeFormat('de-AT', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(version.createdAt))}</small></div>
+                <button type="button" className={confirmId === version.id ? 'is-confirming' : ''} disabled={restoringId !== null} onClick={() => restore(version)}>
+                  <RotateCcw size={14} /> {restoringId === version.id ? 'Wird wiederhergestellt …' : confirmId === version.id ? 'Jetzt bestätigen' : 'Wiederherstellen'}
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : <div className="version-empty">Noch keine ältere Version vorhanden. Der erste Stand entsteht automatisch bei der nächsten Änderung.</div>}
+      </section>
+    </div>
+  );
+}
+
+function StoryAnalyticsPage({ story, session }) {
+  const [analytics, setAnalytics] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    fetchStoryAnalytics(story.id)
+      .then((result) => { if (active) setAnalytics(result); })
+      .catch((cause) => { if (active) setError(cause.message); });
+    return () => { active = false; };
+  }, [story.id]);
+
+  const maximumStationViews = Math.max(1, ...(analytics?.stations || []).map((station) => station.views));
+  const totalDeviceViews = Math.max(1, (analytics?.devices || []).reduce((sum, device) => sum + device.views, 0));
+  const deviceLabels = { desktop: 'Desktop', tablet: 'Tablet', mobile: 'Mobil' };
+
+  return (
+    <div className="riu-page analytics-page">
+      <Header session={session} />
+      <main className="analytics-shell">
+        <button className="analytics-back" onClick={() => go('/dashboard')}><ArrowRight size={15} /> Zurück zu meinen Stories</button>
+        <div className="analytics-heading">
+          <div><span className="riu-overline">Nur für Autor:innen</span><h1>Analytics</h1><p>{story.name}</p></div>
+          <BarChart3 size={44} />
+        </div>
+        {error && <div className="form-error">Die Auswertung konnte nicht geladen werden: {error}</div>}
+        {!analytics && !error && <div className="analytics-loading">Auswertung wird geladen …</div>}
+        {analytics && <>
+          <section className="analytics-kpis" aria-label="Kennzahlen">
+            <article><Eye size={18} /><span>Aufrufe</span><strong>{analytics.summary.views.toLocaleString('de-AT')}</strong></article>
+            <article><Check size={18} /><span>Abgeschlossen</span><strong>{analytics.summary.completionRate.toLocaleString('de-AT')} %</strong><small>{analytics.summary.completed} Durchläufe</small></article>
+            <article><Timer size={18} /><span>Ø Verweildauer</span><strong>{formatAnalyticsDuration(analytics.summary.averageDurationSeconds)}</strong></article>
+            <article><MapPin size={18} /><span>Annotationen geöffnet</span><strong>{analytics.summary.annotationOpens.toLocaleString('de-AT')}</strong></article>
+            <article><Sparkles size={18} /><span>Ø Ladezeit</span><strong>{(analytics.summary.averageLoadMs / 1000).toLocaleString('de-AT', { maximumFractionDigits: 1 })} Sek.</strong></article>
+          </section>
+          <div className="analytics-grid">
+            <section className="analytics-panel">
+              <div className="analytics-panel-heading"><div><span className="riu-overline">Story-Verlauf</span><h2>Besuche je Station</h2></div><small>Eindeutige Sitzungen</small></div>
+              <div className="station-analytics-list">
+                {analytics.stations.map((station, index) => {
+                  const nextViews = analytics.stations[index + 1]?.views;
+                  const dropOff = nextViews === undefined || station.views === 0
+                    ? null
+                    : Math.max(0, Math.round(((station.views - nextViews) / station.views) * 100));
+                  return <div key={station.stationId}><span>{String(station.position).padStart(2, '0')}</span><strong>{station.title}</strong><div><i style={{ width: `${(station.views / maximumStationViews) * 100}%` }} /></div><b>{station.views}{dropOff !== null && <small>{dropOff} % Abbruch</small>}</b></div>;
+                })}
+                {!analytics.stations.length && <p>Noch keine Stationsdaten vorhanden.</p>}
+              </div>
+            </section>
+            <section className="analytics-panel device-panel">
+              <div className="analytics-panel-heading"><div><span className="riu-overline">Geräte</span><h2>Nutzung</h2></div></div>
+              {analytics.devices.map((device) => <div className="device-row" key={device.device}><span>{deviceLabels[device.device] || device.device}</span><div><i style={{ width: `${(device.views / totalDeviceViews) * 100}%` }} /></div><strong>{Math.round((device.views / totalDeviceViews) * 100)} %</strong></div>)}
+              {!analytics.devices.length && <p>Noch keine Gerätedaten vorhanden.</p>}
+              <small className="analytics-privacy">Datensparsam: RIU speichert dafür keine IP-Adressen, Namen oder E-Mail-Adressen.</small>
+            </section>
+          </div>
+        </>}
+      </main>
+    </div>
+  );
+}
+
 function StoryCard({ story, featured = false }) {
   return (
     <article className={`story-card ${featured ? 'is-featured' : ''}`} onClick={() => go(`/stories/${story.slug || story.id}`)}>
@@ -563,6 +698,7 @@ function Dashboard({ session, onSession }) {
   const [query, setQuery] = useState('');
   const [metadataStory, setMetadataStory] = useState(null);
   const [collaborationStory, setCollaborationStory] = useState(null);
+  const [versionStory, setVersionStory] = useState(null);
   const filtered = stories.filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
   const totalViews = stories.reduce((sum, story) => sum + (Number(story.stats?.views) || 0), 0);
   const publishedCount = stories.filter((story) => story.status === 'published').length;
@@ -629,6 +765,8 @@ function Dashboard({ session, onSession }) {
               {canEditStory(story, session.id) && <button onClick={() => setMetadataStory(story)}><FilePenLine size={15} /> Metadaten</button>}
               <button onClick={() => go(`/stories/${story.slug || story.id}`)}><Eye size={15} /> Vorschau</button>
               {story.ownerId === session.id && <button onClick={() => setCollaborationStory(story)}><Users size={15} /> Team</button>}
+              {story.ownerId === session.id && <button onClick={() => setVersionStory(story)}><History size={15} /> Versionen</button>}
+              {story.ownerId === session.id && <button onClick={() => go(`/analytics/${story.id}`)}><BarChart3 size={15} /> Analytics</button>}
               {story.ownerId === session.id && <button className="release" onClick={() => toggleRelease(story)}>{story.status === 'published' ? <><LockKeyhole size={15} /> Freigabe aufheben</> : <><Globe2 size={15} /> Story freigeben</>}</button>}
               {story.ownerId === session.id && <button className="danger" onClick={() => remove(story)}>Löschen</button>}
             </div>
@@ -644,6 +782,7 @@ function Dashboard({ session, onSession }) {
       </main>
       {metadataStory && <StoryMetadataDialog story={metadataStory} onClose={() => setMetadataStory(null)} onSave={saveMetadata} />}
       {collaborationStory && <CollaborationDialog story={collaborationStory} session={session} onClose={() => setCollaborationStory(null)} onChange={(updated) => { setCollaborationStory(updated); setStories(readDashboardStories()); }} />}
+      {versionStory && <StoryVersionDialog story={versionStory} onClose={() => setVersionStory(null)} onRestored={() => { setVersionStory(null); setStories(readDashboardStories()); }} />}
     </div>
   );
 }
@@ -837,6 +976,12 @@ export default function PlatformApp() {
   if (path === '/dashboard') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/account') return session ? <AccountPage session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/admin') return isAdmin(session) ? <AdminPage session={session} /> : <NotFound session={session} />;
+  if (path.startsWith('/analytics/')) {
+    const story = getStory(decodeURIComponent(path.slice('/analytics/'.length)));
+    return session && story?.ownerId === session.id
+      ? <StoryAnalyticsPage story={story} session={session} />
+      : <NotFound session={session} />;
+  }
   if (path === '/stories/new') return session ? (canCreateStories(session) ? <NewStory session={session} /> : <Dashboard session={session} onSession={setSession} />) : <AuthPage mode="login" onSession={setSession} />;
   return <NotFound session={session} />;
 }

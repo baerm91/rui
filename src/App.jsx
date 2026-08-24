@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppState } from './hooks/useAppState.js';
 import { useScrollMode } from './hooks/useScrollMode.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
@@ -21,6 +21,8 @@ import { recordStoryView, saveStoryPreview } from './platform/platformStore.js';
 import { resolveStoryWatermarkOpacity } from './utils/storyWatermark.js';
 import { SketchfabViewer } from './components/SketchfabViewer.jsx';
 import { isSketchfabModelUrl } from './utils/modelSource.js';
+import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
+import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
 
 function ExperienceApp({
   hasInitialStoryPreview = false,
@@ -30,7 +32,8 @@ function ExperienceApp({
   storyEditors = [],
   storyId,
   storyModelUrl,
-  viewerId
+  viewerId,
+  analyticsEnabled = false
 }) {
   const {
     appState,
@@ -50,10 +53,55 @@ function ExperienceApp({
   const [previewStatus, setPreviewStatus] = useState('idle');
   const [hasStoryPreview, setHasStoryPreview] = useState(hasInitialStoryPreview);
   const [previewEndStation, setPreviewEndStation] = useState(Math.max(2, initialPreviewEndStation));
+  const analyticsStartedAt = useRef(performance.now());
+  const analyticsSessionId = useRef(analyticsEnabled ? getAnalyticsSessionId(storyId) : '');
+  const trackedStations = useRef(new Set());
+  const analyticsViewRecorded = useRef(false);
+
+  const trackAnalytics = (eventType, details = {}) => {
+    if (!analyticsEnabled || !analyticsSessionId.current) return;
+    recordStoryAnalyticsEvent(storyId, analyticsSessionId.current, eventType, {
+      deviceClass: getDeviceClass(),
+      ...details
+    }).catch(() => {});
+  };
 
   useEffect(() => {
     recordStoryView(storyId, viewerId);
   }, [storyId, viewerId]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || appState.mode === 'loading' || analyticsViewRecorded.current) return;
+    analyticsViewRecorded.current = true;
+    trackAnalytics('story_view', { loadMs: Math.round(performance.now() - analyticsStartedAt.current) });
+  }, [analyticsEnabled, appState.mode]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || appState.mode === 'loading' || appState.stationMode !== 'scroll') return;
+    const station = appState.stations?.[appState.currentStationIndex];
+    if (!station?.id || trackedStations.current.has(station.id)) return;
+    trackedStations.current.add(station.id);
+    trackAnalytics('station_view', { stationId: station.id });
+    if (appState.currentStationIndex === appState.stations.length - 1 && appState.stations.length > 1) {
+      trackAnalytics('story_complete', {
+        durationSeconds: Math.round((performance.now() - analyticsStartedAt.current) / 1000)
+      });
+    }
+  }, [analyticsEnabled, appState.currentStationIndex, appState.mode, appState.stationMode, appState.stations]);
+
+  useEffect(() => {
+    if (!analyticsEnabled) return undefined;
+    const recordExit = () => trackAnalytics('story_exit', {
+      durationSeconds: Math.round((performance.now() - analyticsStartedAt.current) / 1000)
+    });
+    const handleVisibility = () => { if (document.visibilityState === 'hidden') recordExit(); };
+    window.addEventListener('pagehide', recordExit);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('pagehide', recordExit);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [analyticsEnabled]);
 
   const toggleMute = () => {
     const nextMute = !isMuted;
@@ -288,6 +336,10 @@ function ExperienceApp({
             appState={appState}
             isEditorMode={isEditorInteractionMode}
             onDragAnnotation={editor.handleDragAnnotation}
+            onAnnotationOpen={(annotation) => trackAnalytics('annotation_open', {
+              stationId: activeStation?.id || null,
+              annotationId: annotation?.id || null
+            })}
           />
         </>
       )}
@@ -408,6 +460,7 @@ function App() {
       storyId={access.story.id}
       storyModelUrl={access.story.models?.primary}
       viewerId={access.isEditor ? access.story.ownerId : access.session?.id}
+      analyticsEnabled={!access.isEditor && access.story.status === 'published'}
     />
   );
 }

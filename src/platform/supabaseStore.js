@@ -1,4 +1,5 @@
 import { authUserToProfile, getSupabase, isSupabaseConfigured } from './supabaseClient.js';
+import { normalizeAnalyticsResult } from './storyAnalytics.js';
 
 const LEGACY_SOURCE_KEY = 'riu-indexeddb-v2-carnuntum';
 const STORY_PREVIEW_BUCKET = 'story-previews';
@@ -246,4 +247,66 @@ export async function updatePlatformAccess({ registrationsEnabled, defaultRole }
     new_default_role: defaultRole
   });
   if (error) throw error;
+}
+
+export async function fetchStoryVersions(storyId) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase ist nicht konfiguriert.');
+  const { data, error } = await client
+    .from('story_versions')
+    .select('id, version_number, reason, created_at, created_by')
+    .eq('story_id', storyId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((version) => ({
+    id: version.id,
+    versionNumber: version.version_number,
+    reason: version.reason,
+    createdAt: version.created_at,
+    createdBy: version.created_by
+  }));
+}
+
+export async function restoreStoryVersion(versionId) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase ist nicht konfiguriert.');
+  const { data, error } = await client.rpc('restore_story_version', {
+    target_version_id: versionId
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? rowToStory(row) : null;
+}
+
+export async function recordStoryAnalyticsEvent(storyId, sessionId, eventType, {
+  stationId = null,
+  annotationId = null,
+  deviceClass = 'desktop',
+  durationSeconds = null,
+  loadMs = null
+} = {}) {
+  const client = getSupabase();
+  if (!client || !storyId || !sessionId) return false;
+  const { data, error } = await client.rpc('record_story_analytics_event', {
+    target_story_id: storyId,
+    target_session_id: sessionId,
+    target_event_type: eventType,
+    target_station_id: stationId,
+    target_annotation_id: annotationId,
+    target_device_class: deviceClass,
+    target_duration_seconds: durationSeconds,
+    target_load_ms: loadMs
+  });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function fetchStoryAnalytics(storyId) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase ist nicht konfiguriert.');
+  const { data, error } = await client.rpc('get_story_analytics', {
+    target_story_id: storyId
+  });
+  if (error) throw error;
+  return normalizeAnalyticsResult(data);
 }

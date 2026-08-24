@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, X } from 'lucide-react';
 
-export function AnnotationOverlay({ activeStation, annotations: projectAnnotations = [], appState, isEditorMode, onDragAnnotation }) {
+export function AnnotationOverlay({ activeStation, annotations: projectAnnotations = [], appState, isEditorMode, onDragAnnotation, onAnnotationOpen }) {
   const modelIsVisible = isEditorMode
     || (appState.mode === 'reveal' && !['idle', 'title'].includes(appState.introPhase || 'idle'));
   const annotations = useMemo(() => (
@@ -177,12 +177,14 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
     setNavigationListOpen(false);
     setActiveAnnotationId(nextAnnotation.id);
     focusAnnotationCamera(nextAnnotation);
+    if (!isEditorMode) onAnnotationOpen?.(nextAnnotation);
   };
 
   const selectAnnotation = (annotation) => {
     setNavigationListOpen(false);
     setActiveAnnotationId(annotation.id);
     focusAnnotationCamera(annotation);
+    if (!isEditorMode) onAnnotationOpen?.(annotation);
   };
 
   return (
@@ -248,6 +250,7 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
               }
               setActiveAnnotationId(annotation.id);
               focusAnnotationCamera(annotation);
+              if (!isEditorMode) onAnnotationOpen?.(annotation);
             }}
             title={isEditorMode ? 'Ziehen: Position · Strg + Ziehen: Höhe' : (annotation.title || 'Annotation')}
           >
