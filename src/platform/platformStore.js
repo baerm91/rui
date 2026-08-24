@@ -10,7 +10,7 @@ import {
   loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
   uploadStoryPreviewToSupabase
 } from './supabaseStore.js';
-import { normalizeUserRole } from './accessControl.js';
+import { canCreateStories, normalizeUserRole } from './accessControl.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -321,7 +321,9 @@ export async function initializePlatformStore() {
         storiesCache = seededStories(mergeStoryCollections(storiesCache, remoteState.stories));
       } else {
         localStorage.removeItem('riu_auth_attempt');
-        await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
+        if (canCreateStories(remoteState.user)) {
+          await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
+        }
         const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
         usersCache = ensureUsernames(remoteState.users);
         demoOwnerId = remoteState.user.id;
