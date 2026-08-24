@@ -265,7 +265,7 @@ function ExperienceApp({
             isIntroActive={isIntroActive}
             introPhase={introPhase}
             onDragStart={editor.setDragState}
-            isEditorMode={isEditorInteractionMode && !usesSketchfabViewer}
+            isEditorMode={isEditorInteractionMode}
             isEditorWorkspace={isEditorInteractionMode}
             textAnimation={projectWorkspace.activeProject?.settings?.presentation?.textAnimation}
           />
