@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 const viteEnv = import.meta.env ?? {};
-const supabaseUrl = viteEnv.VITE_PUBLIC_SUPABASE_URL;
+const supabaseUrl = viteEnv.VITE_PUBLIC_SUPABASE_URL
+  || viteEnv.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = viteEnv.VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  || viteEnv.VITE_PUBLIC_SUPABASE_ANON_KEY;
+  || viteEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  || viteEnv.VITE_PUBLIC_SUPABASE_ANON_KEY
+  || viteEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 

@@ -67,6 +67,9 @@ function activeProjectPlugin() {
 }
 
 export default defineConfig({
+  // Supabase's Vercel Marketplace integration provisions NEXT_PUBLIC_* names.
+  // Keep VITE_* for local development and expose both public-only prefixes.
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   plugins: [activeProjectPlugin(), react()],
   server: {
     port: 3005,
