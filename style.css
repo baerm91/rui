@@ -1661,6 +1661,14 @@ body.annotation-placement-mode #scene-canvas {
   transform: translateZ(0);
 }
 
+/* The contrast panel is already almost opaque. Disabling backdrop-filter here
+   avoids Chromium's rectangular compositing surface showing through outside
+   the rounded border without materially changing readability. */
+.station-text-panel-visitor .station-content-card.high-contrast-text-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .station-content-card.high-contrast-text-panel::before {
   content: '';
   position: absolute;
