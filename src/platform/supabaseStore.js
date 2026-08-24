@@ -190,6 +190,9 @@ export async function updateSupabaseProfile(userId, { name, username }) {
     username,
     updated_at: new Date().toISOString()
   }).eq('id', userId);
+  if (error?.code === '23505' || error?.message?.includes('profiles_username_lower_idx')) {
+    throw new Error('Dieser Username ist bereits vergeben.');
+  }
   if (error) throw error;
 }
 

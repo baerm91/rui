@@ -12,6 +12,7 @@ import {
 } from './supabaseStore.js';
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
 import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
+import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -708,21 +709,36 @@ export async function updateUserProfile(userId, { name, username }) {
   if (usersCache.some((item) => item.id !== userId && normalizeUsername(item.username) === normalizedUsername)) {
     throw new Error('Dieser Username ist bereits vergeben.');
   }
-  const updatedUser = { ...user, name: normalizedName, username: normalizedUsername, updatedAt: now() };
-  usersCache = usersCache.map((item) => item.id === userId ? updatedUser : item);
-  storiesCache = storiesCache.map((story) => ({
-    ...story,
-    ...(story.ownerId === userId ? { authorName: normalizedName, updatedAt: now() } : {}),
-    collaborators: normalizeStoryCollaborators(story.collaborators).map((collaborator) => collaborator.userId === userId
-      ? { ...collaborator, name: normalizedName, username: normalizedUsername }
-      : collaborator)
-  }));
+  const updatedAt = now();
+  const updatedUser = { ...user, name: normalizedName, username: normalizedUsername, updatedAt };
+  const nextUsers = usersCache.map((item) => item.id === userId ? updatedUser : item);
+  const nextStories = applyProfileIdentityToStories(storiesCache, {
+    userId,
+    previousName: user.name,
+    name: normalizedName,
+    username: normalizedUsername,
+    updatedAt
+  });
+
+  // The profile is the authoritative record. Story JSON is only a denormalized
+  // display copy and must never make an otherwise valid username change fail.
+  await updateSupabaseProfile(userId, { name: normalizedName, username: normalizedUsername });
   await Promise.all([
     putRecord(STORES.users, updatedUser),
-    replaceAllRecords(STORES.stories, storiesCache),
-    updateSupabaseProfile(userId, { name: normalizedName, username: normalizedUsername }),
-    syncStoriesToSupabase(storiesCache)
+    replaceAllRecords(STORES.stories, nextStories)
   ]);
+  usersCache = nextUsers;
+  storiesCache = nextStories;
+
+  const ownedStoryUpdates = getOwnedProfileStoryUpdates(nextStories, {
+    userId,
+    previousName: user.name,
+    name: normalizedName,
+    canWriteStories: canCreateStories(updatedUser)
+  });
+  if (ownedStoryUpdates.length) {
+    syncStoriesToSupabase(ownedStoryUpdates).catch(reportDatabaseError);
+  }
   return {
     id: updatedUser.id,
     name: updatedUser.name,
