@@ -62,6 +62,10 @@ export function positionKey(position) {
   return ['x', 'y', 'z'].map((axis) => (Number(position?.[axis]) || 0).toFixed(5)).join(':');
 }
 
-export function shouldSketchfabCapturePointer(stationMode, isPlacingAnnotation = false) {
-  return stationMode !== 'scroll' || isPlacingAnnotation;
+export function shouldSketchfabCapturePointer(
+  stationMode,
+  isPlacingAnnotation = false,
+  freeNavigationIsActive = false
+) {
+  return stationMode !== 'scroll' || isPlacingAnnotation || freeNavigationIsActive;
 }

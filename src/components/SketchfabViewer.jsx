@@ -3,7 +3,16 @@ import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { getSketchfabCamera, getSketchfabScreenshot, loadSketchfabViewerApi, positionKey, setSketchfabCamera, shouldSketchfabCapturePointer, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
 import { interpolateStationCameras } from '../utils/cameraInterpolation.js';
 
-export function SketchfabViewer({ modelUrl, title, activeStation, annotations = [], stations = [], scrollProgress = 0, stationMode = 'scroll' }) {
+export function SketchfabViewer({
+  modelUrl,
+  title,
+  activeStation,
+  annotations = [],
+  stations = [],
+  scrollProgress = 0,
+  stationMode = 'scroll',
+  freeNavigationIsActive = false
+}) {
   const iframeRef = useRef(null);
   const apiRef = useRef(null);
   const annotationsRef = useRef(annotations);
@@ -50,6 +59,12 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
             });
             replace('flyToStation', (station) => station?.cameraExplicitlySet ? setSketchfabCamera(api, station, 1.2) : Promise.resolve());
             replace('snapToStation', (station) => station?.cameraExplicitlySet ? setSketchfabCamera(api, station, 0) : Promise.resolve());
+            replace('resetFreeView', () => {
+              const station = bridge.stations?.[bridge.currentStationIndex];
+              return station?.freeNavigation && station?.cameraExplicitlySet
+                ? setSketchfabCamera(api, station, 0.85)
+                : Promise.resolve();
+            });
             replace('focusAnnotation', async (annotation) => {
               if (!annotation?.position) return;
               const current = await getSketchfabCamera(api);
@@ -138,6 +153,12 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
 
   useEffect(() => {
     if (stationMode !== 'scroll' || status !== 'ready' || !apiRef.current) return undefined;
+    if (freeNavigationIsActive) {
+      pendingScrollCameraRef.current = null;
+      window.cancelAnimationFrame(scrollCameraFrameRef.current);
+      scrollCameraFrameRef.current = 0;
+      return undefined;
+    }
     pendingScrollCameraRef.current = interpolateStationCameras(stations, scrollProgress);
     if (!pendingScrollCameraRef.current || scrollCameraFrameRef.current) return undefined;
 
@@ -151,10 +172,10 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
     });
 
     return undefined;
-  }, [scrollProgress, stationMode, stations, status]);
+  }, [freeNavigationIsActive, scrollProgress, stationMode, stations, status]);
 
   if (!uid) return null;
-  const capturesPointer = shouldSketchfabCapturePointer(stationMode, isPlacing);
+  const capturesPointer = shouldSketchfabCapturePointer(stationMode, isPlacing, freeNavigationIsActive);
   return <div
     className={`sketchfab-viewer ${capturesPointer ? 'is-interactive' : 'is-timeline-controlled'}`}
     data-testid="sketchfab-viewer"

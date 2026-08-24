@@ -185,6 +185,10 @@ function ExperienceApp({
   const isEditorMode = appState.stationMode === 'editor';
   const isEditorInteractionMode = editorWorkspace.isEditing;
   const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
+  const freeNavigationIsActive = appState.stationMode === 'scroll'
+    && !!activeStation?.freeNavigation
+    && appState.freeNavigationActive
+    && appState.freeNavigationStationId === activeStation.id;
   const projectNeedsLocalModel = !!projectWorkspace.activeProject
     && !usesSketchfabViewer
     && projectWorkspace.activeProject.id !== appState.projectConfig?.id
@@ -210,6 +214,7 @@ function ExperienceApp({
         stations={appState.stations}
         scrollProgress={appState.scrollProgress}
         stationMode={appState.stationMode}
+        freeNavigationIsActive={freeNavigationIsActive}
       />
       <EditorWorkspaceChrome
         appState={appState}

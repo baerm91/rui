@@ -17,6 +17,7 @@ test('normalizes Sketchfab camera data for RIU stations', () => {
 test('yields pointer input to the RIU station timeline outside placement mode', () => {
   assert.equal(shouldSketchfabCapturePointer('scroll'), false);
   assert.equal(shouldSketchfabCapturePointer('scroll', true), true);
+  assert.equal(shouldSketchfabCapturePointer('scroll', false, true), true);
   assert.equal(shouldSketchfabCapturePointer('editor'), true);
 });
 
