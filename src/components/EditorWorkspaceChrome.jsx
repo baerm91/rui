@@ -73,10 +73,10 @@ export function EditorWorkspaceChrome({
       )}
 
       <a
-        href="/discover"
+        href="/dashboard"
         className="fixed left-4 top-4 z-50 pointer-events-auto flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-zinc-950/80 text-zinc-300 shadow-xl backdrop-blur-xl transition-all hover:border-amber-400/60 hover:bg-zinc-900 hover:text-amber-300 active:scale-95"
-        title="Zur Galerie"
-        aria-label="Zur Galerie"
+        title="Zu Meine Stories"
+        aria-label="Zu Meine Stories"
       >
         <Home size={15} />
       </a>
