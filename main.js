@@ -31,6 +31,7 @@ import {
 } from './src/three/freeOrbit.js';
 import { normalizeProjectCameraFov, normalizeProjectOrbitTarget } from './src/projects/projectSettings.js';
 import { isSketchfabModelUrl } from './src/utils/modelSource.js';
+import { interpolateCameraView } from './src/utils/cameraInterpolation.js';
 
 // ─── DOM & CANVAS ─────────────────────────────────────
 const canvas = document.getElementById('scene-canvas');
@@ -1076,16 +1077,16 @@ function applyScrollProgress(progress) {
     !portalRevealTransition &&
     (currentStation.viewMode === 'portal' || nextStation.viewMode === 'portal');
 
+  const interpolatedCamera = interpolateCameraView(currentCamera, nextCamera, t);
   ctx.targetCameraPos.set(
-    THREE.MathUtils.lerp(currentCamera.cameraPos.x, nextCamera.cameraPos.x, t),
-    THREE.MathUtils.lerp(currentCamera.cameraPos.y, nextCamera.cameraPos.y, t),
-    THREE.MathUtils.lerp(currentCamera.cameraPos.z, nextCamera.cameraPos.z, t)
+    interpolatedCamera.cameraPos.x,
+    interpolatedCamera.cameraPos.y,
+    interpolatedCamera.cameraPos.z
   );
-
   ctx.targetCameraTarget.set(
-    THREE.MathUtils.lerp(currentCamera.cameraTarget.x, nextCamera.cameraTarget.x, t),
-    THREE.MathUtils.lerp(currentCamera.cameraTarget.y, nextCamera.cameraTarget.y, t),
-    THREE.MathUtils.lerp(currentCamera.cameraTarget.z, nextCamera.cameraTarget.z, t)
+    interpolatedCamera.cameraTarget.x,
+    interpolatedCamera.cameraTarget.y,
+    interpolatedCamera.cameraTarget.z
   );
 
   if (portalRevealTransition) {

@@ -79,12 +79,13 @@ function ExperienceApp({
   const capturePreview = async () => {
     setPreviewStatus('saving');
     try {
-      if ((editor.editingStations?.filter(Boolean).length || 0) < 2) {
+      const stationSnapshot = await editor.getEditingStationsSnapshot();
+      if ((stationSnapshot?.filter(Boolean).length || 0) < 2) {
         throw new Error('Für eine Preview werden mindestens zwei Stationen benötigt.');
       }
-      window.appState?.saveStations?.(editor.editingStations);
+      window.appState?.saveStations?.(stationSnapshot);
       await new Promise((resolve) => requestAnimationFrame(resolve));
-      const endStationNumber = Math.max(2, Math.min(editor.editingStations.length, previewEndStation));
+      const endStationNumber = Math.max(2, Math.min(stationSnapshot.length, previewEndStation));
       const intervalCount = endStationNumber - 1;
       const durationMs = 3000 * intervalCount;
       const returnDurationMs = 3500 * intervalCount;
@@ -204,6 +205,9 @@ function ExperienceApp({
         title={activeProjectName}
         activeStation={activeStation}
         annotations={isEditorMode ? editor.editingAnnotations : appState.annotations}
+        stations={appState.stations}
+        scrollProgress={appState.scrollProgress}
+        stationMode={appState.stationMode}
       />
       <EditorWorkspaceChrome
         appState={appState}
@@ -328,6 +332,7 @@ function ExperienceApp({
           onMoveStation={editor.handleMoveStation}
           onDeleteStation={editor.handleDeleteStation}
           onCaptureCamera={editor.handleCaptureCamera}
+          cameraCapturePending={editor.cameraCapturePending}
           onPlaceOriginPoint={() => editor.handlePlaceOriginPoint((position) => {
             projectWorkspace.updateProject({ settings: { orbitTarget: position } });
             window.appState?.setProjectOrbitTarget?.(position);

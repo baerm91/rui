@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FIELD_TO_STATE_SETTER, KNOWN_BG_IMAGES } from '../constants.js';
 import { defaultStationConfig, defaultStations } from '../stations.js';
 import {
@@ -20,6 +20,14 @@ export function useEditorActions(appState) {
   const [localModelPickerError, setLocalModelPickerError] = useState('');
   const [placingAnnotationId, setPlacingAnnotationId] = useState(null);
   const [placingOriginPoint, setPlacingOriginPoint] = useState(false);
+  const [cameraCapturePending, setCameraCapturePending] = useState(false);
+  const editingStationsRef = useRef(editingStations);
+  const pendingCameraCaptureRef = useRef(Promise.resolve());
+  const cameraCaptureSequenceRef = useRef(0);
+
+  useEffect(() => {
+    editingStationsRef.current = editingStations;
+  }, [editingStations]);
 
   // `/edits` can enter editor mode before the large 3D assets are ready.
   // Hydrate the lightweight station draft as soon as station data arrives.
@@ -80,12 +88,18 @@ export function useEditorActions(appState) {
     window.appState?.setStationMode?.('editor');
   };
 
-  const saveAndExitEditor = () => {
+  const getEditingStationsSnapshot = async () => {
+    await pendingCameraCaptureRef.current;
+    return cloneStationData(editingStationsRef.current);
+  };
+
+  const saveAndExitEditor = async () => {
     window.appState?.cancelAnnotationPlacement?.();
     setPlacingAnnotationId(null);
     setPlacingOriginPoint(false);
     try {
-      window.appState?.saveStations?.(editingStations);
+      const stationSnapshot = await getEditingStationsSnapshot();
+      window.appState?.saveStations?.(stationSnapshot);
       window.appState?.update?.({ annotations: cloneStationData(editingAnnotations) });
     } catch (error) {
       alert(error.message);
@@ -113,15 +127,23 @@ export function useEditorActions(appState) {
       window.appState?.cancelAnnotationPlacement?.();
       setPlacingOriginPoint(false);
     }
-    const coords = await Promise.resolve(window.appState?.captureCamera?.());
-    if (coords) {
-      setEditingStations((currentStations) => updateStationAt(currentStations, index, (station) => ({
+    const captureSequence = ++cameraCaptureSequenceRef.current;
+    setCameraCapturePending(true);
+    const capturePromise = Promise.resolve(window.appState?.captureCamera?.()).then((coords) => {
+      if (!coords) return;
+      const updated = updateStationAt(editingStationsRef.current, index, (station) => ({
         ...station,
         cameraPos: coords.cameraPos,
         cameraTarget: coords.cameraTarget,
         cameraExplicitlySet: true
-      })));
-    }
+      }));
+      editingStationsRef.current = updated;
+      setEditingStations(updated);
+    }).finally(() => {
+      if (cameraCaptureSequenceRef.current === captureSequence) setCameraCapturePending(false);
+    });
+    pendingCameraCaptureRef.current = capturePromise;
+    await capturePromise;
   };
 
   const handleAddAnnotation = async () => {
@@ -445,6 +467,7 @@ export function useEditorActions(appState) {
     placingAnnotationId, placingOriginPoint,
     dragState, setDragState,
     enterEditorMode, saveAndExitEditor, cancelEditor,
+    getEditingStationsSnapshot, cameraCapturePending,
     handleCaptureCamera, handlePlaceOriginPoint, handleTestStation,
     handleAddStation, handleDeleteStation, handleMoveStation,
     handleUpdateStationText,

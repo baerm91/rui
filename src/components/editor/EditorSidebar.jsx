@@ -25,6 +25,7 @@ export function EditorSidebar({
   onMoveStation,
   onDeleteStation,
   onCaptureCamera,
+  cameraCapturePending = false,
   onPlaceOriginPoint,
   onUpdateText,
   onUpdateImage,
@@ -493,6 +494,7 @@ export function EditorSidebar({
             onExpandedChange={(isOpen) => setOpenSettingsPanel(isOpen ? 'station' : null)}
             onTestStation={onTestStation}
             onCaptureCamera={onCaptureCamera}
+            cameraCapturePending={cameraCapturePending}
             onUpdateText={onUpdateText}
             onUpdateImage={onUpdateImage}
             onUploadImage={onUploadImage}
@@ -525,9 +527,9 @@ export function EditorSidebar({
           <button onClick={onCancel} className="flex-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl py-2.5 text-xs font-semibold text-zinc-300 transition-all">
             Abbrechen
           </button>
-          <button onClick={onSave} className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-zinc-950 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-lg transition-all">
+          <button onClick={onSave} disabled={cameraCapturePending} className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 disabled:cursor-wait disabled:opacity-60 text-zinc-950 py-2.5 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-lg transition-all">
             <Save size={14} />
-            <span>Speichern & Schließen</span>
+            <span>{cameraCapturePending ? 'Kamera wird übernommen …' : 'Speichern & Schließen'}</span>
           </button>
         </div>
       </div>

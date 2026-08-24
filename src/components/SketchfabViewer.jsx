@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { getSketchfabCamera, getSketchfabScreenshot, loadSketchfabViewerApi, positionKey, setSketchfabCamera, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
+import { interpolateStationCameras } from '../utils/cameraInterpolation.js';
 
-export function SketchfabViewer({ modelUrl, title, activeStation, annotations = [] }) {
+export function SketchfabViewer({ modelUrl, title, activeStation, annotations = [], stations = [], scrollProgress = 0, stationMode = 'scroll' }) {
   const iframeRef = useRef(null);
   const apiRef = useRef(null);
   const annotationsRef = useRef(annotations);
   const projectionCacheRef = useRef(new Map());
   const placementCallbackRef = useRef(null);
+  const scrollCameraFrameRef = useRef(0);
+  const pendingScrollCameraRef = useRef(null);
   const [status, setStatus] = useState('loading');
   const [isPlacing, setIsPlacing] = useState(false);
   const uid = getSketchfabModelUid(modelUrl);
@@ -106,6 +109,7 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
     return () => {
       disposed = true;
       window.clearInterval(projectionTimer);
+      window.cancelAnimationFrame(scrollCameraFrameRef.current);
       placementCallbackRef.current = null;
       apiRef.current = null;
       Object.entries(originalMethods).forEach(([name, method]) => { bridge[name] = method; });
@@ -114,9 +118,26 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
   }, [uid]);
 
   useEffect(() => {
-    if (status !== 'ready' || !activeStation?.cameraExplicitlySet || !apiRef.current) return;
+    if (stationMode === 'scroll' || status !== 'ready' || !activeStation?.cameraExplicitlySet || !apiRef.current) return;
     setSketchfabCamera(apiRef.current, activeStation, 1.2).catch((error) => console.error('Sketchfab camera:', error));
-  }, [activeStation?.id, activeStation?.cameraExplicitlySet, status]);
+  }, [activeStation?.id, activeStation?.cameraExplicitlySet, stationMode, status]);
+
+  useEffect(() => {
+    if (stationMode !== 'scroll' || status !== 'ready' || !apiRef.current) return undefined;
+    pendingScrollCameraRef.current = interpolateStationCameras(stations, scrollProgress);
+    if (!pendingScrollCameraRef.current || scrollCameraFrameRef.current) return undefined;
+
+    scrollCameraFrameRef.current = window.requestAnimationFrame(() => {
+      scrollCameraFrameRef.current = 0;
+      const camera = pendingScrollCameraRef.current;
+      pendingScrollCameraRef.current = null;
+      if (!camera || !apiRef.current) return;
+      setSketchfabCamera(apiRef.current, camera, 0)
+        .catch((error) => console.error('Sketchfab scroll camera:', error));
+    });
+
+    return undefined;
+  }, [scrollProgress, stationMode, stations, status]);
 
   if (!uid) return null;
   return <div className="sketchfab-viewer" data-testid="sketchfab-viewer">

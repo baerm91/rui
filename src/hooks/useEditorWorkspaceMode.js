@@ -10,17 +10,18 @@ function clampStationIndex(index, stationCount) {
 export function useEditorWorkspaceMode({ appState, editor }) {
   const [mode, setMode] = useState(EDIT_MODE);
 
-  const showPreview = useCallback(() => {
+  const showPreview = useCallback(async () => {
     window.appState?.cancelAnnotationPlacement?.();
     if (document.pointerLockElement) document.exitPointerLock?.();
 
-    const previewIndex = clampStationIndex(editor.editingIndex, editor.editingStations.length);
-    const previewProgress = editor.editingStations.length > 1
-      ? previewIndex / (editor.editingStations.length - 1)
+    const stationSnapshot = await editor.getEditingStationsSnapshot();
+    const previewIndex = clampStationIndex(editor.editingIndex, stationSnapshot.length);
+    const previewProgress = stationSnapshot.length > 1
+      ? previewIndex / (stationSnapshot.length - 1)
       : 0;
 
     window.appState?.update?.({
-      stations: editor.editingStations,
+      stations: stationSnapshot,
       annotations: editor.editingAnnotations,
       currentStationIndex: previewIndex,
       scrollProgress: previewProgress,
@@ -32,12 +33,12 @@ export function useEditorWorkspaceMode({ appState, editor }) {
     });
     setMode(PREVIEW_MODE);
     window.appState?.setStationMode?.('scroll');
-    window.appState?.snapToStation?.(editor.editingStations[previewIndex], previewIndex);
+    window.appState?.snapToStation?.(stationSnapshot[previewIndex], previewIndex);
     window.requestAnimationFrame(() => {
       const maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
       window.scrollTo({ top: previewProgress * maxScroll, behavior: 'auto' });
     });
-  }, [editor.editingAnnotations, editor.editingIndex, editor.editingStations]);
+  }, [editor.editingAnnotations, editor.editingIndex, editor.getEditingStationsSnapshot]);
 
   const showEditor = useCallback(() => {
     editor.setEditingIndex(clampStationIndex(

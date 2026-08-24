@@ -21,6 +21,7 @@ export function StationEditorCard({
   onExpandedChange,
   onTestStation,
   onCaptureCamera,
+  cameraCapturePending = false,
   onUpdateText,
   onUpdateImage,
   onUploadImage,
@@ -382,10 +383,11 @@ export function StationEditorCard({
         </div>
         <button 
           onClick={() => onCaptureCamera(index)}
-          className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg px-2.5 py-1 text-[10px] font-semibold tracking-wide shrink-0 transition-colors"
+          disabled={cameraCapturePending}
+          className="bg-amber-500/10 hover:bg-amber-500/20 disabled:cursor-wait disabled:opacity-60 text-amber-400 border border-amber-500/20 rounded-lg px-2.5 py-1 text-[10px] font-semibold tracking-wide shrink-0 transition-colors"
           title="Aktuelle Position und Blickrichtung explizit in diese Station übernehmen"
         >
-          Kamera übernehmen
+          {cameraCapturePending ? 'Wird übernommen …' : 'Kamera übernehmen'}
         </button>
       </div>
 
