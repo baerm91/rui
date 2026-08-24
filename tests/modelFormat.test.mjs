@@ -39,6 +39,12 @@ test('accepts copied Sketchfab model-page and embed URLs', () => {
   assert.match(getSketchfabEmbedUrl(pageUrl), new RegExp(`^https://sketchfab\\.com/models/${uid}/embed\\?`));
 });
 
+test('accepts official Sketchfab alphanumeric viewer UIDs', () => {
+  const uid = '7w7pAfrCfjovwykkEeRFLGw5SXS';
+  assert.equal(getSketchfabModelUid(`https://sketchfab.com/models/${uid}`), uid.toLowerCase());
+  assert.equal(isValidModelUrl(`https://sketchfab.com/models/${uid}/embed`), true);
+});
+
 test('rejects Sketchfab profile, collection and malformed model URLs', () => {
   assert.equal(isValidModelUrl('https://sketchfab.com/landessammlungen-noe'), false);
   assert.equal(isValidModelUrl('https://sketchfab.com/collections/museum'), false);

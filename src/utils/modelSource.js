@@ -1,5 +1,5 @@
 const SKETCHFAB_HOSTS = new Set(['sketchfab.com', 'www.sketchfab.com']);
-const SKETCHFAB_UID_PATTERN = /^[a-f0-9]{32}$/i;
+const SKETCHFAB_UID_PATTERN = /^[a-z0-9]{20,40}$/i;
 
 function parseHttpUrl(value) {
   try {
@@ -20,7 +20,7 @@ export function getSketchfabModelUid(value) {
   }
 
   if (parts[0]?.toLowerCase() === '3d-models') {
-    const match = parts[1]?.match(/-([a-f0-9]{32})$/i);
+    const match = parts[1]?.match(/-([a-z0-9]{20,40})$/i);
     return match?.[1]?.toLowerCase() || '';
   }
 

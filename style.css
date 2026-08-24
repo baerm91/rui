@@ -278,6 +278,27 @@ html, body {
   border: 0;
 }
 
+.sketchfab-viewer-status,
+.sketchfab-placement-hint {
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  border: 1px solid rgba(201, 169, 110, 0.35);
+  border-radius: 999px;
+  background: rgba(10, 11, 10, 0.86);
+  color: #e4d09e;
+  padding: 0.65rem 1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.sketchfab-viewer-status { top: 50%; transform: translate(-50%, -50%); }
+.sketchfab-viewer-status.is-error { color: #ffad9f; border-color: rgba(255, 109, 87, 0.45); }
+.sketchfab-placement-hint { top: 5rem; }
+
 @media (min-width: 640px) {
   body.editor-workspace-mode .sketchfab-viewer {
     top: var(--editor-stage-top);

@@ -199,10 +199,17 @@ function ExperienceApp({
   // 2. MAIN MODES (SCROLL, EDITOR, EXPLORE)
   return (
     <div className="w-full relative text-white">
-      <SketchfabViewer modelUrl={storyModelUrl} title={activeProjectName} />
+      <SketchfabViewer
+        modelUrl={storyModelUrl}
+        title={activeProjectName}
+        activeStation={activeStation}
+        annotations={isEditorMode ? editor.editingAnnotations : appState.annotations}
+      />
       <EditorWorkspaceChrome
         appState={appState}
-        canCaptureThumbnail={hasRenderableEditorModel && !usesSketchfabViewer}
+        canCaptureThumbnail={usesSketchfabViewer
+          ? appState.externalViewerStatus === 'ready'
+          : hasRenderableEditorModel}
         hasRenderableModel={hasRenderableEditorModel}
         isEditorMode={isEditorMode}
         isEditing={isEditorInteractionMode}
@@ -252,7 +259,7 @@ function ExperienceApp({
             isIntroActive={isIntroActive}
             introPhase={introPhase}
             onDragStart={editor.setDragState}
-            isEditorMode={isEditorInteractionMode}
+            isEditorMode={isEditorInteractionMode && !usesSketchfabViewer}
             isEditorWorkspace={isEditorInteractionMode}
             textAnimation={projectWorkspace.activeProject?.settings?.presentation?.textAnimation}
           />

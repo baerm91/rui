@@ -108,12 +108,12 @@ export function useEditorActions(appState) {
     document.body.style.overflow = 'auto';
   };
 
-  const handleCaptureCamera = (index) => {
+  const handleCaptureCamera = async (index) => {
     if (placingOriginPoint) {
       window.appState?.cancelAnnotationPlacement?.();
       setPlacingOriginPoint(false);
     }
-    const coords = window.appState?.captureCamera?.();
+    const coords = await Promise.resolve(window.appState?.captureCamera?.());
     if (coords) {
       setEditingStations((currentStations) => updateStationAt(currentStations, index, (station) => ({
         ...station,
@@ -124,8 +124,10 @@ export function useEditorActions(appState) {
     }
   };
 
-  const handleAddAnnotation = () => {
-    const capture = window.appState?.captureAnnotationContext?.() || window.appState?.captureCamera?.();
+  const handleAddAnnotation = async () => {
+    const capture = await Promise.resolve(
+      window.appState?.captureAnnotationContext?.() || window.appState?.captureCamera?.()
+    );
     const station = editingStations[editingIndex];
     setEditingAnnotations((annotations) => [
       ...annotations,
@@ -162,8 +164,8 @@ export function useEditorActions(appState) {
     ));
   };
 
-  const handleCaptureAnnotation = (annotationId) => {
-    const camera = window.appState?.captureCamera?.();
+  const handleCaptureAnnotation = async (annotationId) => {
+    const camera = await Promise.resolve(window.appState?.captureCamera?.());
     if (!camera) return;
     setEditingAnnotations((annotations) => updateAnnotationById(
       annotations,
@@ -245,8 +247,8 @@ export function useEditorActions(appState) {
     }
   };
 
-  const handleAddStation = () => {
-    const coords = window.appState?.captureCamera?.() || {
+  const handleAddStation = async () => {
+    const coords = await Promise.resolve(window.appState?.captureCamera?.()) || {
       cameraPos: { x: 0, y: 10, z: 22 },
       cameraTarget: { x: 0, y: 3.5, z: 0 }
     };

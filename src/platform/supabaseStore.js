@@ -104,7 +104,9 @@ export async function importLegacyStories(stories, authUser, legacyOwnerIds = []
   if (claimed.length) {
     const { error: storyError } = await client.from('stories').upsert(
       claimed.map((story) => storyToRow(story, authUser.id)),
-      { onConflict: 'id' }
+      // A browser can contain seeded story IDs that already belong to another
+      // account. Never turn a login migration into an UPDATE of those rows.
+      { onConflict: 'id', ignoreDuplicates: true }
     );
     if (storyError) throw storyError;
   }

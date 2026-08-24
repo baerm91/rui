@@ -142,7 +142,7 @@ export function EditorWorkspaceChrome({
           onClick={onCaptureThumbnail}
           disabled={!canCaptureThumbnail || thumbnailStatus === 'saving'}
           className="fixed left-[32rem] top-4 z-50 pointer-events-auto flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/80 px-3.5 text-[10px] font-semibold text-zinc-300 shadow-xl backdrop-blur-xl transition-colors hover:border-amber-400/60 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-45"
-          title={usesExternalViewer ? 'Für Sketchfab bitte ein eigenes Vorschaubild in den Story-Metadaten hinterlegen' : 'Aktuelle Kameraperspektive als Story-Vorschaubild speichern'}
+          title="Aktuelle Kameraperspektive als Story-Vorschaubild speichern"
         >
           {thumbnailStatus === 'saving'
             ? <LoaderCircle size={14} className="animate-spin" />
