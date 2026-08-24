@@ -4,7 +4,7 @@ import {
   deleteRecord, putRecord, readAllRecords, readMeta, readRecord, replaceAllRecords, STORES, writeMeta
 } from './platformDatabase.js';
 import { HEIDENTOR_STABLE_LIGHTING } from '../projects/projectLightingPresets.js';
-import { isSupabaseConfigured, signInWithOAuth, signOutFromSupabase } from './supabaseClient.js';
+import { isSupabaseConfigured, readOAuthCallbackError, signInWithOAuth, signOutFromSupabase } from './supabaseClient.js';
 import {
   deleteStoryFromSupabase, deleteStoryPreviewFromSupabase, fetchRemoteStories, importLegacyStories,
   loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
@@ -289,6 +289,8 @@ async function migrateLocalStoryPreviews(remoteStories) {
 }
 
 export async function initializePlatformStore() {
+  const callbackError = readOAuthCallbackError();
+  if (callbackError) localStorage.setItem('riu_auth_notice', callbackError);
   const legacyActiveUserId = safeParse(SESSION_KEY, null)?.userId || '';
   if (typeof indexedDB === 'undefined') {
     usersCache = ensureUsernames(safeParse(USERS_KEY, []));
@@ -318,15 +320,17 @@ export async function initializePlatformStore() {
         localStorage.setItem('riu_auth_notice', 'Dieses Konto wurde von einem Administrator gesperrt.');
         storiesCache = seededStories(mergeStoryCollections(storiesCache, remoteState.stories));
       } else {
-      await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
-      const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
-      usersCache = ensureUsernames(remoteState.users);
-      demoOwnerId = remoteState.user.id;
-      storiesCache = seededStories(remoteStories);
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
-      if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
+        localStorage.removeItem('riu_auth_attempt');
+        await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
+        const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
+        usersCache = ensureUsernames(remoteState.users);
+        demoOwnerId = remoteState.user.id;
+        storiesCache = seededStories(remoteStories);
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
+        if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
       }
     } else {
+      localStorage.removeItem(SESSION_KEY);
       // Keep the pre-OAuth browser data until the user has signed in and the
       // authenticated migration can claim it. Public rows still win on ID
       // collisions, but must never erase private local drafts.
@@ -350,6 +354,10 @@ export async function initializePlatformStore() {
 export const platformReady = typeof window !== 'undefined'
   ? initializePlatformStore().catch((error) => {
     reportDatabaseError(error);
+    if (window.location.pathname === '/dashboard' || readOAuthCallbackError()) {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.setItem('riu_auth_notice', error?.message || 'Die Anmeldung konnte nicht abgeschlossen werden.');
+    }
     if (!usersCache.length) usersCache = safeParse(USERS_KEY, []);
     if (!storiesCache.length) storiesCache = seededStories(safeParse(STORIES_KEY, []));
   })
@@ -722,13 +730,14 @@ export async function updateUserProfile(userId, { name, username }) {
   };
 }
 
-export async function loginWithOAuth() {
-  await signInWithOAuth('google');
+export async function loginWithOAuth(mode = 'login') {
+  await signInWithOAuth('google', { mode });
 }
 
 export async function logoutUser() {
   await signOutFromSupabase();
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem('riu_auth_attempt');
 }
 
 export function updateStoryProject(projectId, project) {

@@ -41,8 +41,11 @@ async function ensureProfile(user) {
     .from('profiles')
     .select('id, email, display_name, username, role, is_blocked')
     .eq('id', profile.id)
-    .single();
+    .maybeSingle();
   if (profileError) throw profileError;
+  if (!storedProfile) {
+    throw new Error('Das Google-Konto ist vorhanden, aber das RIU-Profil fehlt. Bitte lassen Sie das Konto durch die RIU-Administration reparieren.');
+  }
   return {
     id: storedProfile.id,
     email: storedProfile.email || profile.email,

@@ -36,11 +36,31 @@ export function authUserToProfile(user) {
   return { id: user.id, name, username, email: user.email || '' };
 }
 
-export async function signInWithOAuth(provider = 'google') {
+export function readOAuthCallbackError(location = window.location) {
+  const search = new URLSearchParams(location.search || '');
+  const hash = new URLSearchParams(String(location.hash || '').replace(/^#/, ''));
+  const error = search.get('error') || hash.get('error');
+  if (!error) return '';
+  const code = search.get('error_code') || hash.get('error_code') || error;
+  const description = search.get('error_description') || hash.get('error_description') || '';
+  if (code === 'access_denied') return 'Die Google-Anmeldung wurde abgebrochen. Bitte versuchen Sie es erneut.';
+  if (/registrier|registration|signup|saving new user/i.test(description)) {
+    return 'Das Konto konnte nicht freigeschaltet werden. Bitte wenden Sie sich an die RIU-Administration.';
+  }
+  return description
+    ? `Die Google-Anmeldung ist fehlgeschlagen: ${description}`
+    : 'Die Google-Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
+}
+
+export async function signInWithOAuth(provider = 'google', { mode = 'login' } = {}) {
   const client = getSupabase();
   if (!client) throw new Error('Supabase ist für diese Umgebung noch nicht konfiguriert.');
   const redirectTo = `${window.location.origin}/dashboard`;
-  const { error } = await client.auth.signInWithOAuth({ provider, options: { redirectTo } });
+  localStorage.setItem('riu_auth_attempt', JSON.stringify({ mode, startedAt: Date.now() }));
+  const { error } = await client.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo, queryParams: { prompt: 'select_account' } }
+  });
   if (error) throw error;
 }
 

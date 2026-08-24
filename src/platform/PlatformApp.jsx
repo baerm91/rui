@@ -486,7 +486,7 @@ function AuthPage({ mode }) {
   async function authenticate() {
     setBusy(true); setError('');
     try {
-      await loginWithOAuth();
+      await loginWithOAuth(isRegister ? 'register' : 'login');
     } catch (cause) { setError(cause.message); setBusy(false); }
   }
   return (
@@ -504,14 +504,18 @@ function AuthPage({ mode }) {
             <span className="riu-overline">{isRegister ? 'Kostenlos beginnen' : 'Anmelden'}</span>
             <h2>{isRegister ? 'Konto erstellen' : 'Zum Studio'}</h2>
             <div className="auth-oauth">
-              <p>RIU verwendet Google OAuth. Ihr Passwort wird weder von RIU noch in diesem Browser gespeichert.</p>
+              <p>{isRegister
+                ? 'Wählen Sie Ihr Google-Konto. Damit wird Ihr RIU-Konto erstellt; anschließend kommen Sie automatisch in Ihren persönlichen Bereich.'
+                : 'Melden Sie sich mit demselben Google-Konto an, das Sie bei der Registrierung verwendet haben.'}</p>
               {error && <div className="form-error">{error}</div>}
               {isRegister && !settingsBusy && !registrationsEnabled && <div className="form-error">Neue Konten sind derzeit nicht freigeschaltet. Bereits registrierte Personen können sich weiterhin anmelden.</div>}
               <button type="button" className="riu-button" disabled={busy || settingsBusy || (isRegister && !registrationsEnabled)} onClick={authenticate}>
-                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : 'Mit Google fortfahren'}
+                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : (isRegister ? 'Mit Google registrieren' : 'Mit Google anmelden')}
               </button>
             </div>
-            <p className="auth-switch">Beim ersten Login wird Ihr bisheriger lokaler Carnuntum-/Heidentor-Bestand sicher mit Ihrem OAuth-Konto verbunden.</p>
+            <p className="auth-switch">{isRegister
+              ? <>Schon registriert? <a href="/login">Hier anmelden</a>.</>
+              : <>Noch kein Konto? <a href="/register">Hier registrieren</a>.</>}</p>
           </div>
         </section>
       </main>
