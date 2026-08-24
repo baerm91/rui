@@ -1650,6 +1650,17 @@ body.annotation-placement-mode #scene-canvas {
   -webkit-backdrop-filter: blur(18px) saturate(1.16);
 }
 
+/* Chromium can paint the backdrop-filter as a rectangular surface even when
+   the panel itself has rounded corners. Clip the complete glass layer in the
+   visitor/preview rendering while leaving editor handles free to overhang. */
+.station-text-panel-visitor .station-content-card.high-contrast-text-panel,
+.station-text-panel-visitor .station-content-card.milky-glass-panel {
+  overflow: hidden;
+  background-clip: padding-box;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
 .station-content-card.high-contrast-text-panel::before {
   content: '';
   position: absolute;

@@ -20,7 +20,8 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
     if (!uid || !iframeRef.current || !window.appState) return undefined;
     setStatus('loading');
     let disposed = false;
-    let projectionTimer = 0;
+    let projectionFrame = 0;
+    let projectionUpdateInFlight = false;
     const bridge = window.appState;
     const originalMethods = {};
     const replace = (name, method) => { originalMethods[name] = bridge[name]; bridge[name] = method; };
@@ -80,9 +81,11 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
             }, { pick: 'slow' });
 
             const updateProjections = () => {
+              if (disposed || projectionUpdateInFlight) return;
               const rect = iframeRef.current?.getBoundingClientRect();
               const current = annotationsRef.current.filter((annotation) => annotation?.positionExplicitlySet !== false);
               if (!rect || !current.length) { projectionCacheRef.current = new Map(); return; }
+              projectionUpdateInFlight = true;
               const next = new Map();
               let pending = current.length;
               current.forEach((annotation) => api.getWorldToScreenCoordinates([
@@ -98,11 +101,18 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
                   }
                 }
                 pending -= 1;
-                if (!pending) projectionCacheRef.current = next;
+                if (!pending) {
+                  if (!disposed) projectionCacheRef.current = next;
+                  projectionUpdateInFlight = false;
+                }
               }));
             };
-            updateProjections();
-            projectionTimer = window.setInterval(updateProjections, 80);
+            const projectNextFrame = () => {
+              if (disposed) return;
+              updateProjections();
+              projectionFrame = window.requestAnimationFrame(projectNextFrame);
+            };
+            projectNextFrame();
           });
         },
         error: fail
@@ -111,7 +121,7 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
 
     return () => {
       disposed = true;
-      window.clearInterval(projectionTimer);
+      window.cancelAnimationFrame(projectionFrame);
       window.cancelAnimationFrame(scrollCameraFrameRef.current);
       placementCallbackRef.current = null;
       document.body.classList.remove('annotation-placement-mode');
