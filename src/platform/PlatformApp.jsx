@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Ban, Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Upload, UserPlus, Users, X
+  Ban, Eye, FilePenLine, Globe2, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, Sparkles, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -166,10 +166,28 @@ function Header({ session, transparent = false }) {
             )}
           </div>
         ) : (
-          <>
-            <a href="/login">Anmelden</a>
-            <button className="riu-button riu-button-small" onClick={() => go('/register')}>Story erstellen</button>
-          </>
+          <div className="riu-account-menu" ref={accountMenuRef}>
+            <button
+              className="riu-account riu-account-guest"
+              type="button"
+              aria-label="Einloggen oder registrieren"
+              title="Einloggen oder registrieren"
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+              onClick={() => setAccountOpen((current) => !current)}
+            >
+              <CircleUserRound size={19} />
+              <span className="riu-account-guest-label">Einloggen oder registrieren</span>
+              <ChevronDown className="riu-account-chevron" size={14} />
+            </button>
+            {accountOpen && (
+              <div className="riu-account-dropdown riu-auth-dropdown" role="menu">
+                <span className="riu-account-dropdown-label">Einloggen oder registrieren</span>
+                <a href="/login" role="menuitem"><LogIn size={16} /> Einloggen</a>
+                <a href="/register" role="menuitem"><UserPlus size={16} /> Registrieren</a>
+              </div>
+            )}
+          </div>
         )}
       </nav>
     </header>
