@@ -30,6 +30,7 @@ import {
   isFreeNavigationActiveState
 } from './src/three/freeOrbit.js';
 import { normalizeProjectCameraFov, normalizeProjectOrbitTarget } from './src/projects/projectSettings.js';
+import { isSketchfabModelUrl } from './src/utils/modelSource.js';
 
 // ─── DOM & CANVAS ─────────────────────────────────────
 const canvas = document.getElementById('scene-canvas');
@@ -596,9 +597,29 @@ async function init() {
       loadingScreen.style.pointerEvents = 'none';
     }
 
-    const result = await loadModels(scene, (progress) => {
-      targetLoadingProgress = Math.max(targetLoadingProgress, progress);
-    }, config.project?.models);
+    const usesSketchfabViewer = isSketchfabModelUrl(config.project?.models?.primary);
+    const loadableModels = {
+      ...config.project?.models,
+      reconstruction: isSketchfabModelUrl(config.project?.models?.reconstruction)
+        ? ''
+        : config.project?.models?.reconstruction
+    };
+    const result = usesSketchfabViewer
+      ? {
+          ruinModel: new THREE.Group(),
+          reconModel: new THREE.Group(),
+          modelAnimations: []
+        }
+      : await loadModels(scene, (progress) => {
+          targetLoadingProgress = Math.max(targetLoadingProgress, progress);
+        }, loadableModels);
+
+    if (usesSketchfabViewer) {
+      scene.add(result.ruinModel, result.reconModel);
+      document.body.classList.add('sketchfab-experience');
+    } else {
+      document.body.classList.remove('sketchfab-experience');
+    }
 
     ctx.ruinModel = result.ruinModel;
     ctx.reconModel = result.reconModel;
@@ -628,7 +649,7 @@ async function init() {
     window.appState.update({ baseModelStatus: 'ready', baseModelError: '' });
 
     // Check for saved alignment with default config alignment as fallback
-    const hasReconstruction = !!config.project?.models?.reconstruction;
+    const hasReconstruction = !usesSketchfabViewer && !!loadableModels.reconstruction;
     const savedMatrix = hasReconstruction ? loadAlignment(config.alignment) : null;
     if (savedMatrix) {
       ctx.reconModel.applyMatrix4(savedMatrix);

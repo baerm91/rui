@@ -11,6 +11,7 @@ import {
   uploadStoryPreviewToSupabase
 } from './supabaseStore.js';
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
+import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -417,7 +418,7 @@ export function createStory({
     metadata: { language, category: normalizedCategories[0], categories: normalizedCategories },
     stats: { views: 0, lastViewedAt: null },
     branding: { title: name.trim(), subtitle: '', watermark: name.trim().toUpperCase() },
-    models: { primary: modelUrl.trim(), reconstruction: '', localModelName: '', primaryName: name.trim() },
+    models: { primary: normalizeModelUrl(modelUrl), reconstruction: '', localModelName: '', primaryName: name.trim() },
     settings: { scrollSpeed: 1 },
     alignment: null,
     annotations: [],
@@ -765,12 +766,7 @@ export function updateStoryProject(projectId, project) {
 }
 
 export function isValidModelUrl(value) {
-  try {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol) && /\.(?:fbx|glb|gltf)(?:[?#].*)?$/i.test(url.href);
-  } catch {
-    return false;
-  }
+  return isSupportedModelUrl(value);
 }
 
 export { demoStories };

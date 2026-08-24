@@ -3,6 +3,7 @@ import { Box, Camera, Check, Clapperboard, Crosshair, Home, LoaderCircle, Triang
 
 export function EditorWorkspaceChrome({
   appState,
+  canCaptureThumbnail,
   canCapturePreview,
   hasStoryPreview,
   hasRenderableModel,
@@ -18,7 +19,8 @@ export function EditorWorkspaceChrome({
   previewStatus,
   previewEndStation,
   previewStationCount,
-  thumbnailStatus
+  thumbnailStatus,
+  usesExternalViewer
 }) {
   if (!isEditorMode) return null;
 
@@ -99,7 +101,7 @@ export function EditorWorkspaceChrome({
             onClick={onCapturePreview}
             disabled={!canCapturePreview || previewStatus === 'saving'}
             className="flex items-center gap-2 px-3.5 text-[10px] font-semibold text-amber-200 transition-colors hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-45"
-            title={canCapturePreview ? `WebM-Preview von Station 1 bis Station ${previewEndStation} erzeugen` : 'Mindestens zwei Stationen und ein geladenes Modell erforderlich'}
+            title={canCapturePreview ? `WebM-Preview von Station 1 bis Station ${previewEndStation} erzeugen` : usesExternalViewer ? 'Sketchfab-Inhalte können nicht in RIUs WebM-Aufnahme übernommen werden' : 'Mindestens zwei Stationen und ein geladenes Modell erforderlich'}
           >
             {previewStatus === 'saving'
               ? <LoaderCircle size={14} className="animate-spin" />
@@ -138,9 +140,9 @@ export function EditorWorkspaceChrome({
         <button
           type="button"
           onClick={onCaptureThumbnail}
-          disabled={!hasRenderableModel || thumbnailStatus === 'saving'}
+          disabled={!canCaptureThumbnail || thumbnailStatus === 'saving'}
           className="fixed left-[32rem] top-4 z-50 pointer-events-auto flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-zinc-950/80 px-3.5 text-[10px] font-semibold text-zinc-300 shadow-xl backdrop-blur-xl transition-colors hover:border-amber-400/60 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-45"
-          title="Aktuelle Kameraperspektive als Story-Vorschaubild speichern"
+          title={usesExternalViewer ? 'Für Sketchfab bitte ein eigenes Vorschaubild in den Story-Metadaten hinterlegen' : 'Aktuelle Kameraperspektive als Story-Vorschaubild speichern'}
         >
           {thumbnailStatus === 'saving'
             ? <LoaderCircle size={14} className="animate-spin" />
@@ -157,7 +159,9 @@ export function EditorWorkspaceChrome({
 
       <div className="editor-controls-hint fixed bottom-4 left-4 z-40 pointer-events-none rounded-xl border border-white/10 bg-zinc-950/70 px-3 py-2 text-[9px] text-zinc-400 backdrop-blur-xl shadow-lg flex items-center gap-2">
         <Crosshair size={12} className={appState.firstPersonActive ? 'text-emerald-400' : 'text-amber-400'} />
-        {appState.firstPersonActive
+        {usesExternalViewer
+          ? 'Sketchfab-Viewer: Ziehen zum Drehen · Mausrad zum Zoomen · RIU-Stationen über die Navigation wechseln'
+          : appState.firstPersonActive
           ? 'Mausblick aktiv · WASD bewegen · Rechts ziehen: Höhe · Shift schneller · Esc beenden'
           : 'In die 3D-Fläche klicken: FPS-Mausblick aktivieren'}
       </div>

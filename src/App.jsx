@@ -19,6 +19,8 @@ import { siteConfig } from './site.config.js';
 import PlatformApp, { getExperienceAccess } from './platform/PlatformApp.jsx';
 import { recordStoryView, saveStoryPreview } from './platform/platformStore.js';
 import { resolveStoryWatermarkOpacity } from './utils/storyWatermark.js';
+import { SketchfabViewer } from './components/SketchfabViewer.jsx';
+import { isSketchfabModelUrl } from './utils/modelSource.js';
 
 function ExperienceApp({
   hasInitialStoryPreview = false,
@@ -27,6 +29,7 @@ function ExperienceApp({
   storyAuthorName,
   storyEditors = [],
   storyId,
+  storyModelUrl,
   viewerId
 }) {
   const {
@@ -191,17 +194,21 @@ function ExperienceApp({
     isEditor: isEditorMode,
     activeIndex
   });
+  const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
 
   // 2. MAIN MODES (SCROLL, EDITOR, EXPLORE)
   return (
     <div className="w-full relative text-white">
+      <SketchfabViewer modelUrl={storyModelUrl} title={activeProjectName} />
       <EditorWorkspaceChrome
         appState={appState}
+        canCaptureThumbnail={hasRenderableEditorModel && !usesSketchfabViewer}
         hasRenderableModel={hasRenderableEditorModel}
         isEditorMode={isEditorMode}
         isEditing={isEditorInteractionMode}
         isMuted={isMuted}
-        canCapturePreview={hasRenderableEditorModel && (editor.editingStations?.filter(Boolean).length || 0) >= 2}
+        canCapturePreview={!usesSketchfabViewer && hasRenderableEditorModel && (editor.editingStations?.filter(Boolean).length || 0) >= 2}
+        usesExternalViewer={usesSketchfabViewer}
         hasStoryPreview={hasStoryPreview}
         onCaptureThumbnail={captureThumbnail}
         onCapturePreview={capturePreview}
@@ -380,6 +387,7 @@ function App() {
       storyAuthorName={access.story.authorName}
       storyEditors={access.editors}
       storyId={access.story.id}
+      storyModelUrl={access.story.models?.primary}
       viewerId={access.isEditor ? access.story.ownerId : access.session?.id}
     />
   );

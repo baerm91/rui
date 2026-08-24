@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Box, Check, ChevronDown, ChevronUp, Copy, FolderKanban, LoaderCircle, Plus, Trash2, X } from 'lucide-react';
 import { getStationsUsingModel, getStationsUsingModelId } from '../../utils/modelAssignments.js';
+import { isSketchfabModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
 
 export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, canCreateProjects = true, modelPanelOpen, onModelPanelOpenChange }) {
   const [showCreate, setShowCreate] = useState(false);
@@ -160,8 +161,9 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                 <input
                   value={url}
                   onChange={(event) => onUpdateProject({ models: { [role]: event.target.value } })}
+                  onBlur={(event) => onUpdateProject({ models: { [role]: normalizeModelUrl(event.target.value) } })}
                   className="mt-1.5 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
-                  placeholder="https://…/modell.fbx, .glb oder .gltf"
+                  placeholder={isPrimary ? 'Sketchfab-Link oder .fbx, .glb, .gltf' : 'https://…/modell.fbx, .glb oder .gltf'}
                   aria-label={`${isPrimary ? 'Hauptmodell' : 'Rekonstruktion'} URL`}
                 />
                 <div className="mt-1.5 flex items-center justify-between gap-2 text-[8px]">
@@ -175,6 +177,16 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                 {assignedStations.length > 0 && (
                   <span className="mt-0.5 block truncate text-[8px] text-zinc-600" title={assignedStations.map((station) => station.title).join(', ')}>
                     {assignedStations.map((station) => station.title).join(' · ')}
+                  </span>
+                )}
+                {isPrimary && isSketchfabModelUrl(url) && (
+                  <span className="mt-1.5 block text-[8px] leading-relaxed text-emerald-300/80">
+                    Sketchfab erkannt. Der interaktive Viewer wird nach dem Neuladen eingebettet; RIU-Rekonstruktions- und Portalmodelle sind damit nicht kombinierbar.
+                  </span>
+                )}
+                {!isPrimary && isSketchfabModelUrl(url) && (
+                  <span className="mt-1.5 block text-[8px] leading-relaxed text-red-300/80">
+                    Sketchfab kann nur als Hauptmodell eingebettet werden. Für die Rekonstruktion bitte eine direkte FBX-, GLB- oder glTF-URL verwenden.
                   </span>
                 )}
               </div>
