@@ -184,19 +184,21 @@ function ExperienceApp({
   const activeIndex = getActiveIndex(editor.editingIndex);
   const isEditorMode = appState.stationMode === 'editor';
   const isEditorInteractionMode = editorWorkspace.isEditing;
+  const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
   const projectNeedsLocalModel = !!projectWorkspace.activeProject
+    && !usesSketchfabViewer
     && projectWorkspace.activeProject.id !== appState.projectConfig?.id
     && appState.localModelStatus !== 'loaded';
-  const hasRenderableEditorModel = !projectNeedsLocalModel
-    && (appState.baseModelStatus === 'ready' || appState.localModelStatus === 'loaded');
+  const hasRenderableEditorModel = usesSketchfabViewer
+    ? appState.externalViewerStatus === 'ready'
+    : !projectNeedsLocalModel
+      && (appState.baseModelStatus === 'ready' || appState.localModelStatus === 'loaded');
   const storyWatermarkOpacity = resolveStoryWatermarkOpacity({
     scrollProgress: appState.scrollProgress,
     stationCount: appState.stations.length,
     isEditor: isEditorMode,
     activeIndex
   });
-  const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
-
   // 2. MAIN MODES (SCROLL, EDITOR, EXPLORE)
   return (
     <div className="w-full relative text-white">

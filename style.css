@@ -278,6 +278,14 @@ html, body {
   border: 0;
 }
 
+/* Cross-origin iframe input never bubbles back to RIU. In timeline mode the
+   embed therefore has to yield pointer input so wheel, trackpad and touch
+   gestures keep driving the same station timeline as locally rendered models. */
+.sketchfab-viewer.is-timeline-controlled,
+.sketchfab-viewer.is-timeline-controlled iframe {
+  pointer-events: none;
+}
+
 .sketchfab-viewer-status,
 .sketchfab-placement-hint {
   position: absolute;

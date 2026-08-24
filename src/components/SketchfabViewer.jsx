@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
-import { getSketchfabCamera, getSketchfabScreenshot, loadSketchfabViewerApi, positionKey, setSketchfabCamera, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
+import { getSketchfabCamera, getSketchfabScreenshot, loadSketchfabViewerApi, positionKey, setSketchfabCamera, shouldSketchfabCapturePointer, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
 import { interpolateStationCameras } from '../utils/cameraInterpolation.js';
 
 export function SketchfabViewer({ modelUrl, title, activeStation, annotations = [], stations = [], scrollProgress = 0, stationMode = 'scroll' }) {
@@ -60,10 +60,12 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
             replace('startAnnotationPlacement', (callback) => {
               placementCallbackRef.current = callback;
               setIsPlacing(true);
+              document.body.classList.toggle('annotation-placement-mode', typeof callback === 'function');
             });
             replace('cancelAnnotationPlacement', () => {
               placementCallbackRef.current = null;
               setIsPlacing(false);
+              document.body.classList.remove('annotation-placement-mode');
             });
             replace('projectWorldPoint', (position) => projectionCacheRef.current.get(positionKey(position)) || null);
             replace('captureThumbnail', () => getSketchfabScreenshot(api, Math.max(960, window.innerWidth), Math.max(540, window.innerHeight)));
@@ -72,6 +74,7 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
               if (!callback || !event?.position3D) return;
               placementCallbackRef.current = null;
               setIsPlacing(false);
+              document.body.classList.remove('annotation-placement-mode');
               const camera = await getSketchfabCamera(api);
               callback({ ...camera, position: vectorToObject(event.position3D) });
             }, { pick: 'slow' });
@@ -111,6 +114,7 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
       window.clearInterval(projectionTimer);
       window.cancelAnimationFrame(scrollCameraFrameRef.current);
       placementCallbackRef.current = null;
+      document.body.classList.remove('annotation-placement-mode');
       apiRef.current = null;
       Object.entries(originalMethods).forEach(([name, method]) => { bridge[name] = method; });
       bridge.update?.({ externalViewerStatus: null });
@@ -140,7 +144,11 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
   }, [scrollProgress, stationMode, stations, status]);
 
   if (!uid) return null;
-  return <div className="sketchfab-viewer" data-testid="sketchfab-viewer">
+  const capturesPointer = shouldSketchfabCapturePointer(stationMode, isPlacing);
+  return <div
+    className={`sketchfab-viewer ${capturesPointer ? 'is-interactive' : 'is-timeline-controlled'}`}
+    data-testid="sketchfab-viewer"
+  >
     <iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={`Sketchfab-Modell: ${title || '3D-Modell'}`} />
     {status === 'loading' && <div className="sketchfab-viewer-status">Sketchfab-Modell wird geladen …</div>}
     {status === 'error' && <div className="sketchfab-viewer-status is-error">Sketchfab-Modell konnte nicht geladen werden.</div>}

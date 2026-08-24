@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeSketchfabCamera, objectToVector, positionKey, vectorToObject } from '../src/utils/sketchfabViewerApi.js';
+import { normalizeSketchfabCamera, objectToVector, positionKey, shouldSketchfabCapturePointer, vectorToObject } from '../src/utils/sketchfabViewerApi.js';
 
 test('converts Sketchfab vectors to RIU coordinate objects and back', () => {
   assert.deepEqual(vectorToObject([1.25, -2, 3]), { x: 1.25, y: -2, z: 3 });
@@ -12,6 +12,12 @@ test('normalizes Sketchfab camera data for RIU stations', () => {
     cameraPos: { x: 1, y: 2, z: 3 },
     cameraTarget: { x: 4, y: 5, z: 6 }
   });
+});
+
+test('yields pointer input to the RIU station timeline outside placement mode', () => {
+  assert.equal(shouldSketchfabCapturePointer('scroll'), false);
+  assert.equal(shouldSketchfabCapturePointer('scroll', true), true);
+  assert.equal(shouldSketchfabCapturePointer('editor'), true);
 });
 
 test('uses a stable rounded cache key for projected annotation positions', () => {

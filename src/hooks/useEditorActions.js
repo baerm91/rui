@@ -264,7 +264,11 @@ export function useEditorActions(appState) {
       setPlacingOriginPoint(false);
     }
     setEditingIndex(index);
-    if (appState.baseModelStatus === 'ready' || appState.localModelStatus === 'loaded') {
+    if (
+      appState.baseModelStatus === 'ready'
+      || appState.localModelStatus === 'loaded'
+      || appState.externalViewerStatus === 'ready'
+    ) {
       window.appState?.flyToStation?.(station, index);
     }
   };

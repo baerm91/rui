@@ -61,3 +61,7 @@ export function getSketchfabScreenshot(api, width, height) {
 export function positionKey(position) {
   return ['x', 'y', 'z'].map((axis) => (Number(position?.[axis]) || 0).toFixed(5)).join(':');
 }
+
+export function shouldSketchfabCapturePointer(stationMode, isPlacingAnnotation = false) {
+  return stationMode !== 'scroll' || isPlacingAnnotation;
+}
