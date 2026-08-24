@@ -15,6 +15,7 @@ import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
 import { canCreateStories, isAdmin, USER_ROLE_LABELS, USER_ROLES } from './accessControl.js';
 import { fetchAdminUsers, fetchPlatformAccess, updateAdminUser, updatePlatformAccess } from './supabaseStore.js';
 import { readRememberLoginPreference } from './supabaseClient.js';
+import { filterOwnedStories } from './dashboardStories.js';
 
 const go = (path) => { window.location.href = path; };
 const formatDate = (value) => value
@@ -555,8 +556,7 @@ function Dashboard({ session, onSession }) {
     const projectCovers = new Map(readProjects()
       .filter((project) => project.coverImage)
       .map((project) => [project.id, project.coverImage]));
-    return readStories()
-      .filter((story) => story.ownerId === session.id || !!getStoryPermission(story, session.id))
+    return filterOwnedStories(readStories(), session.id)
       .map((story) => projectCovers.has(story.id) ? { ...story, coverImage: projectCovers.get(story.id) } : story);
   };
   const [stories, setStories] = useState(readDashboardStories);
@@ -614,7 +614,7 @@ function Dashboard({ session, onSession }) {
           <article className="dashboard-card" key={story.id}>
             <StoryPreviewMedia story={story} className="dashboard-cover" mediaClassName="dashboard-cover-media" fallbackImage="/roman_blueprint_bg.png"><span className={`status-pill ${story.status}`}>{story.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}</span></StoryPreviewMedia>
             <div className="dashboard-card-copy">
-              <span>Geändert {formatDate(story.updatedAt)} · {story.ownerId === session.id ? 'Eigene Story' : getStoryPermission(story, session.id) === 'editor' ? 'Als Editor:in' : 'Als Viewer:in'}</span>
+              <span>Geändert {formatDate(story.updatedAt)} · Eigene Story</span>
               <h3>{story.name}</h3>
               <p>{story.description || 'Noch keine Beschreibung.'}</p>
               <div className="dashboard-card-dates">
@@ -633,7 +633,7 @@ function Dashboard({ session, onSession }) {
               {story.ownerId === session.id && <button className="danger" onClick={() => remove(story)}>Löschen</button>}
             </div>
           </article>
-            ))}</div> : <div className="empty-state"><Box size={34} /><h2>Noch keine Story</h2><p>{canCreateStories(session) ? 'Verbinden Sie ein extern gehostetes 3D-Modell und legen Sie Ihre erste Station an.' : 'Mit Ihrem Light-Zugang können Sie veröffentlichte und freigegebene Stories ansehen.'}</p>{canCreateStories(session) && <button className="riu-button" onClick={() => go('/stories/new')}>Erste Story erstellen</button>}</div>}
+            ))}</div> : <div className="empty-state"><Box size={34} /><h2>Noch keine eigene Story</h2><p>{canCreateStories(session) ? 'Verbinden Sie ein extern gehostetes 3D-Modell und legen Sie Ihre erste Station an.' : 'Unter „Meine Stories“ erscheinen nur selbst erstellte Stories. Veröffentlichte Stories finden Sie in der Galerie und Kooperationen in Ihrem Konto.'}</p>{canCreateStories(session) && <button className="riu-button" onClick={() => go('/stories/new')}>Erste Story erstellen</button>}</div>}
           </div>
           <aside className="dashboard-stats" aria-label="Story-Statistik">
             <div><Eye size={18} /><span>Gesamtaufrufe</span><strong>{totalViews.toLocaleString('de-AT')}</strong></div>
