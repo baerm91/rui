@@ -33,7 +33,7 @@ export function SketchfabViewer({ modelUrl, title, activeStation, annotations = 
       if (disposed) return;
       const client = new Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
       client.init(uid, {
-        autostart: 1, dnt: 1, ui_infos: 0, ui_stop: 0,
+        autostart: 1, camera: 0, dnt: 1, ui_infos: 0, ui_stop: 0,
         success(api) {
           if (disposed) return;
           apiRef.current = api;
