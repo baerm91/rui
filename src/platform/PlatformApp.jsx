@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Ban, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Timer, Upload, UserPlus, Users, X
+  Ban, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Moon, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Sun, Timer, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -124,7 +124,33 @@ function Brand({ compact = false, onClick = () => go('/') }) {
   );
 }
 
-function Header({ session, transparent = false }) {
+function ThemeToggle() {
+  const [theme, setTheme] = useState(() => {
+    const stored = window.localStorage.getItem('riu-theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.riuTheme = theme;
+    window.localStorage.setItem('riu-theme', theme);
+  }, [theme]);
+
+  const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button
+      className="riu-theme-toggle"
+      type="button"
+      aria-label={`${nextTheme === 'dark' ? 'Dunkles' : 'Helles'} Farbschema aktivieren`}
+      title={`${nextTheme === 'dark' ? 'Dark' : 'Light'} Mode`}
+      onClick={() => setTheme(nextTheme)}
+    >
+      {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  );
+}
+
+function Header({ session, transparent = false, showThemeToggle = false }) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef(null);
@@ -157,6 +183,7 @@ function Header({ session, transparent = false }) {
         <a className={path === '/' ? 'is-active' : ''} href="/">Home</a>
         <a className={path === '/discover' ? 'is-active' : ''} href="/discover">Discover</a>
         <a href="/#about">Über RIU</a>
+        {showThemeToggle && <ThemeToggle />}
         {session ? (
           <div className="riu-account-menu" ref={accountMenuRef}>
             <button
@@ -208,37 +235,25 @@ function Header({ session, transparent = false }) {
   );
 }
 
-function DiscoverCard({ story, featured = false }) {
+function DiscoverCard({ story, selected = false, onSelect }) {
   return (
     <article
-      className={`discover-card ${featured ? 'is-featured' : ''}`}
-      onClick={() => go(`/stories/${story.slug || story.id}`)}
+      className={`discover-card ${selected ? 'is-selected' : ''}`}
+      onClick={() => onSelect(story.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect(story.id);
+        }
+      }}
+      role="button"
+      tabIndex="0"
+      aria-pressed={selected}
+      aria-label={`${story.name} als Hauptstory anzeigen`}
     >
       <StoryPreviewMedia story={story} className="discover-card-image" mediaClassName="discover-card-media" fallbackImage="/star_sky_bg.png">
-        <span>{STORY_LANGUAGES[getStoryLanguage(story)] || getStoryLanguage(story)}</span>
-        <button aria-label={`${story.name} öffnen`}><ArrowRight /></button>
+        <span className="discover-card-category">{getStoryCategories(story)[0]}</span>
       </StoryPreviewMedia>
-      <div className="discover-card-author">
-        <span>Erstellt von</span>
-        <button
-          type="button"
-          className="discover-author-link"
-          onClick={(event) => {
-            event.stopPropagation();
-            go(`/discover?author=${encodeURIComponent(story.ownerId)}`);
-          }}
-        >
-          {story.authorName || 'RIU Autor:in'}
-        </button>
-        {getEditorNames(story).length > 0 && (
-          <small>Editor:innen: {getEditorNames(story).join(', ')}</small>
-        )}
-      </div>
-      <div className="discover-card-copy">
-        <div>{getStoryCategories(story).join(' · ')}</div>
-        <h2>{story.name}</h2>
-        {featured && <p>{story.description}</p>}
-      </div>
     </article>
   );
 }
@@ -251,7 +266,7 @@ function Discover({ session }) {
   const [language, setLanguage] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('latest');
-  const [featuredId] = useState(() => published[Math.floor(Math.random() * published.length)]?.id);
+  const [selectedStoryId, setSelectedStoryId] = useState(() => published[0]?.id || '');
   const availableLanguages = [...new Set(published.map(getStoryLanguage))];
   const availableCategories = [...new Set(published.flatMap(getStoryCategories))].sort();
   const normalizedQuery = query.trim().toLocaleLowerCase('de');
@@ -264,21 +279,42 @@ function Discover({ session }) {
     .sort((left, right) => sort === 'oldest'
       ? new Date(left.publishedAt || left.createdAt) - new Date(right.publishedAt || right.createdAt)
       : new Date(right.publishedAt || right.createdAt) - new Date(left.publishedAt || left.createdAt));
-  const featuredStoryId = filtered.some((story) => story.id === featuredId) ? featuredId : filtered[0]?.id;
-  const displayedStories = featuredStoryId
-    ? [
-        filtered.find((story) => story.id === featuredStoryId),
-        ...filtered.filter((story) => story.id !== featuredStoryId)
-      ]
-    : filtered;
+  const selectedStory = filtered.find((story) => story.id === selectedStoryId) || filtered[0];
+
+  const selectStory = (storyId) => {
+    setSelectedStoryId(storyId);
+    document.querySelector('.discover-hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <div className="riu-page discover-page">
-      <Header session={session} />
+      <Header session={session} showThemeToggle />
       <main className="discover-shell">
-        <div className="discover-heading">
-          <span className="riu-overline">Discover</span>
-          <h1>Kuratierte digitale<br />Ausstellungen</h1>
+        {selectedStory && (
+          <article className="discover-hero" aria-live="polite">
+            <StoryPreviewMedia
+              key={selectedStory.id}
+              story={selectedStory}
+              className="discover-hero-media"
+              mediaClassName="discover-hero-poster"
+              fallbackImage="/star_sky_bg.png"
+              autoPlay
+            >
+              {(selectedStory.previewVideoUrl || selectedStory.previewVideoAssetId) && <span className="discover-hero-playing">WebM Vorschau</span>}
+            </StoryPreviewMedia>
+            <div className="discover-hero-copy">
+              <span>{getStoryCategories(selectedStory)[0]}</span>
+              <h1>{selectedStory.name}</h1>
+              <p>{selectedStory.description || 'Eine interaktive, räumliche Erzählung.'}</p>
+              <button type="button" onClick={() => go(`/stories/${selectedStory.slug || selectedStory.id}`)}>
+                Story öffnen <ArrowRight size={16} />
+              </button>
+            </div>
+          </article>
+        )}
+        <div className="discover-category-tabs" aria-label="Story-Kategorien">
+          <button className={!category ? 'is-active' : ''} type="button" onClick={() => setCategory('')}>Alle Stories</button>
+          {availableCategories.map((item) => <button className={category === item ? 'is-active' : ''} type="button" onClick={() => setCategory(item)} key={item}>{item}</button>)}
         </div>
         <div className="discover-tools">
           <label className="discover-search">
@@ -297,10 +333,10 @@ function Discover({ session }) {
             <button type="button" onClick={() => go('/discover')}>Alle Autor:innen anzeigen <X size={13} /></button>
           </div>
         )}
-        <div className="discover-results"><span>{filtered.length} {filtered.length === 1 ? 'Story' : 'Stories'}</span></div>
+        <div className="discover-results"><span>{filtered.length} {filtered.length === 1 ? 'Story' : 'Stories'} kuratiert</span></div>
         {filtered.length ? (
           <div className="discover-grid">
-            {displayedStories.map((story) => <DiscoverCard key={story.id} story={story} featured={story.id === featuredStoryId} />)}
+            {filtered.map((story) => <DiscoverCard key={story.id} story={story} selected={story.id === selectedStory?.id} onSelect={selectStory} />)}
           </div>
         ) : (
           <div className="empty-state"><Search size={34} /><h2>Keine Stories gefunden</h2><p>Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.</p><button className="riu-button" onClick={() => { if (authorId) go('/discover'); else { setQuery(''); setLanguage(''); setCategory(''); } }}>Filter zurücksetzen</button></div>

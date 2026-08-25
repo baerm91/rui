@@ -7,7 +7,7 @@ import {
 const HOVER_PLAY_DELAY_MS = 1000;
 const END_HOLD_MS = 1000;
 
-export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, children }) {
+export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, autoPlay = false, children }) {
   const hasPreview = storyHasPreview(story);
   const containerRef = useRef(null);
   const videoRef = useRef(null);
@@ -218,6 +218,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   };
 
   const deactivate = (event) => {
+    if (autoPlay) return;
     event.currentTarget.style.setProperty('--preview-look-x', '0%');
     window.clearTimeout(hoverDelayRef.current);
     window.clearTimeout(endHoldRef.current);
@@ -236,6 +237,14 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const prepareVideoForPlayback = () => {
     const video = videoRef.current;
     if (!video) return;
+    if (autoPlay) {
+      video.currentTime = 0;
+      setReady(true);
+      video.play().catch(() => {
+        // Muted autoplay can still be blocked by a restrictive browser policy.
+      });
+      return;
+    }
     const finish = () => {
       const reveal = () => {
         if (!video.getAttribute('src')) return;
@@ -283,7 +292,14 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     }, { rootMargin: '200px' });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [hasPreview, story.previewVideoUrl, story.previewVideoAssetId]);
+  }, [hasPreview, story.previewVideoUrl, story.previewVideoAssetId, autoPlay]);
+
+  useEffect(() => {
+    if (!autoPlay || !hasPreview) return;
+    activeRef.current = true;
+    setActive(true);
+    ensureVideoLoaded();
+  }, [autoPlay, hasPreview, story.previewVideoUrl, story.previewVideoAssetId]);
 
   return (
     <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${hoverPending ? ' is-hover-pending' : ''}${active && ready ? ' is-preview-active' : ''}`}
@@ -293,9 +309,9 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
       )}
       {hasPreview && (
         <>
-          <video ref={videoRef} className="story-preview-video" muted playsInline preload="none"
+          <video ref={videoRef} className="story-preview-video" muted playsInline loop={autoPlay} autoPlay={autoPlay} preload={autoPlay ? 'auto' : 'none'}
             onLoadedMetadata={prepareVideoForPlayback} aria-hidden="true" />
-          <div className="story-preview-hover-cue" aria-hidden="true">
+          {!autoPlay && <div className="story-preview-hover-cue" aria-hidden="true">
             <span className="story-preview-hover-ring">
               <svg viewBox="0 0 44 44">
                 <circle className="story-preview-hover-track" cx="22" cy="22" r="19" />
@@ -304,7 +320,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
               <i />
             </span>
             <small>Vorschau</small>
-          </div>
+          </div>}
         </>
       )}
       {children}
