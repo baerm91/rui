@@ -4,32 +4,28 @@ import {
   resolvePreviewLookOffset, resolveVisualPreviewProgress, storyHasPreview
 } from './storyPreviewScrub.js';
 
-const RETURN_DELAY_MS = 1000;
-const RETURN_DURATION_SECONDS = 5;
+const HOVER_PLAY_DELAY_MS = 1000;
 
 export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, children }) {
   const hasPreview = storyHasPreview(story);
   const containerRef = useRef(null);
   const videoRef = useRef(null);
-  const freezeCanvasRef = useRef(null);
   const objectUrlRef = useRef('');
   const loadingRef = useRef(false);
   const frameRef = useRef(0);
-  const returnDelayRef = useRef(0);
+  const hoverDelayRef = useRef(0);
   const loadRequestRef = useRef(0);
   const activeRef = useRef(false);
-  const returningRef = useRef(false);
   const [active, setActive] = useState(false);
   const [ready, setReady] = useState(false);
-  const [returning, setReturning] = useState(false);
-  const [bridgingReturn, setBridgingReturn] = useState(false);
+  const [hoverPending, setHoverPending] = useState(false);
 
   const releaseVideo = () => {
     loadRequestRef.current += 1;
     cancelAnimationFrame(frameRef.current);
-    window.clearTimeout(returnDelayRef.current);
+    window.clearTimeout(hoverDelayRef.current);
     frameRef.current = 0;
-    returnDelayRef.current = 0;
+    hoverDelayRef.current = 0;
     const video = videoRef.current;
     if (video) {
       video.pause();
@@ -41,9 +37,8 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = '';
     activeRef.current = false;
-    returningRef.current = false;
-    setReturning(false);
-    setBridgingReturn(false);
+    setActive(false);
+    setHoverPending(false);
     setReady(false);
   };
 
@@ -85,8 +80,12 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
           video.pause();
           return;
         }
+        setHoverPending(false);
         frameRef.current = requestAnimationFrame(watchForwardPlayback);
-      }).catch(() => releaseVideo());
+      }).catch(() => {
+        setHoverPending(false);
+        releaseVideo();
+      });
     };
     if (Math.abs(video.currentTime - targetTime) > 0.025) {
       video.addEventListener('seeked', playForward, { once: true });
@@ -118,21 +117,17 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     }
   };
 
-  const activate = async (event) => {
+  const activate = (event) => {
     if (!hasPreview || event.pointerType === 'touch' || !window.matchMedia('(hover: hover)').matches) return;
-    const video = videoRef.current;
-    window.clearTimeout(returnDelayRef.current);
-    returnDelayRef.current = 0;
-    activeRef.current = true;
-    returningRef.current = false;
-    setReturning(false);
-    setBridgingReturn(false);
-    setActive(true);
-    if (video?.getAttribute('src')) {
+    window.clearTimeout(hoverDelayRef.current);
+    setHoverPending(true);
+    ensureVideoLoaded();
+    hoverDelayRef.current = window.setTimeout(() => {
+      hoverDelayRef.current = 0;
+      activeRef.current = true;
+      setActive(true);
       startForwardPlayback();
-      return;
-    }
-    await ensureVideoLoaded();
+    }, HOVER_PLAY_DELAY_MS);
   };
 
   const updatePreviewLook = (event) => {
@@ -142,95 +137,18 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     event.currentTarget.style.setProperty('--preview-look-x', `${lookOffset}%`);
   };
 
-  const startSmoothReturn = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    cancelAnimationFrame(frameRef.current);
-    frameRef.current = 0;
-    returningRef.current = true;
-    setReturning(true);
-    const freezeCanvas = freezeCanvasRef.current;
-    if (freezeCanvas && video.videoWidth > 0 && video.videoHeight > 0) {
-      freezeCanvas.width = video.videoWidth;
-      freezeCanvas.height = video.videoHeight;
-      freezeCanvas.getContext('2d')?.drawImage(video, 0, 0, freezeCanvas.width, freezeCanvas.height);
-      setBridgingReturn(true);
-    }
-    const forwardDuration = story.previewDurationSeconds || 3;
-    const hasRecordedReturn = story.previewPlaybackMode === 'ping-pong'
-      || (Number.isFinite(video.duration) && video.duration > forwardDuration + 0.75);
-    if (!hasRecordedReturn) {
-      // Alte Previews besitzen keinen aufgenommenen Rückweg. Der exakt aktuelle
-      // Frame überbrückt deshalb den Seek zu Frame 1, statt Schwarz zu zeigen.
-      const revealFirstFrame = () => {
-        returningRef.current = false;
-        setReturning(false);
-        setBridgingReturn(false);
-      };
-      if (video.currentTime < 0.015) {
-        revealFirstFrame();
-        return;
-      }
-      video.addEventListener('seeked', () => {
-        if (typeof video.requestVideoFrameCallback === 'function') {
-          video.requestVideoFrameCallback(revealFirstFrame);
-        } else {
-          window.setTimeout(revealFirstFrame, 80);
-        }
-      }, { once: true });
-      video.currentTime = 0;
-      return;
-    }
-    const progress = Math.max(0, Math.min(1, video.currentTime / forwardDuration));
-    if (progress < 0.015) {
-      returningRef.current = false;
-      setReturning(false);
-      setBridgingReturn(false);
-      return;
-    }
-    const totalDuration = Number.isFinite(video.duration)
-      ? video.duration
-      : forwardDuration + (story.previewReturnDurationSeconds || 3.5);
-    const returnSegmentDuration = Math.max(0.1, totalDuration - forwardDuration);
-    const returnStartTime = forwardDuration + (1 - progress) * returnSegmentDuration;
-    const remainingReturnSeconds = progress * returnSegmentDuration;
-    const playReturn = () => {
-      if (!returningRef.current || !video.getAttribute('src')) return;
-      // Der visuelle Rückweg dauert unabhängig von der aktuellen Mausposition
-      // gleich lang. Sonst wäre ein halb abgespielter Teaser doppelt so schnell
-      // wieder am Anfang wie ein vollständig abgespielter.
-      video.playbackRate = Math.max(0.1, Math.min(1, remainingReturnSeconds / RETURN_DURATION_SECONDS));
-      setBridgingReturn(false);
-      video.play().catch(() => releaseVideo());
-    };
-    video.onended = () => {
-      video.pause();
-      video.playbackRate = 1;
-      video.onended = null;
-      returningRef.current = false;
-      setReturning(false);
-      setBridgingReturn(false);
-    };
-    video.addEventListener('seeked', playReturn, { once: true });
-    video.currentTime = Math.min(totalDuration - 0.01, returnStartTime);
-  };
-
   const deactivate = (event) => {
     event.currentTarget.style.setProperty('--preview-look-x', '0%');
+    window.clearTimeout(hoverDelayRef.current);
+    hoverDelayRef.current = 0;
     activeRef.current = false;
     setActive(false);
+    setHoverPending(false);
     cancelAnimationFrame(frameRef.current);
     frameRef.current = 0;
+    // currentTime bleibt absichtlich unverändert, damit der nächste Hover
+    // exakt an diesem Frame weiterläuft.
     videoRef.current?.pause();
-    if (ready && videoRef.current?.getAttribute('src')) {
-      window.clearTimeout(returnDelayRef.current);
-      returnDelayRef.current = window.setTimeout(() => {
-        returnDelayRef.current = 0;
-        startSmoothReturn();
-      }, RETURN_DELAY_MS);
-    } else {
-      releaseVideo();
-    }
   };
 
   const prepareVideoForPlayback = () => {
@@ -286,7 +204,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   }, [hasPreview, story.previewVideoUrl, story.previewVideoAssetId]);
 
   return (
-    <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${(active || returning) && ready ? ' is-preview-active' : ''}`}
+    <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${hoverPending ? ' is-hover-pending' : ''}${active && ready ? ' is-preview-active' : ''}`}
       onPointerEnter={activate} onPointerMove={updatePreviewLook} onPointerLeave={deactivate}>
       {!ready && (
         <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
@@ -295,8 +213,16 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
         <>
           <video ref={videoRef} className="story-preview-video" muted playsInline preload="none"
             onLoadedMetadata={prepareVideoForPlayback} aria-hidden="true" />
-          <canvas ref={freezeCanvasRef}
-            className={`story-preview-freeze${bridgingReturn ? ' is-visible' : ''}`} aria-hidden="true" />
+          <div className="story-preview-hover-cue" aria-hidden="true">
+            <span className="story-preview-hover-ring">
+              <svg viewBox="0 0 44 44">
+                <circle className="story-preview-hover-track" cx="22" cy="22" r="19" />
+                <circle className="story-preview-hover-progress" cx="22" cy="22" r="19" />
+              </svg>
+              <i />
+            </span>
+            <small>Vorschau</small>
+          </div>
         </>
       )}
       {children}
