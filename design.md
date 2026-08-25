@@ -57,7 +57,7 @@ Neue Komponenten dürfen keine eigenen Light-/Dark-Farbwerte benötigen. Sie sol
 - Karten: `--riu-panel-low`, `--riu-line`, `--riu-radius-md`, `--riu-shadow`
 - Formulare: ruhige Unterstreichung oder feiner Rahmen; Fokus immer `--riu-accent`
 - Dialoge: stärkster Schatten, klare Oberflächentrennung, identische Tokens in beiden Themes
-- Bilder und WebM-Vorschauen: standardmäßig farbig; WebM im Discover-Hero automatisch stumm und geloopt
+- Bilder und WebM-Vorschauen: kleine Karten verwenden ausschließlich das Coverbild; nur der Discover-Hero spielt WebM automatisch stumm und geloopt
 - Animationen: kurze Farbwechsel um `300ms`; größere Bewegungen mit weichem Expo-Easing
 
 ## Schnell ändern

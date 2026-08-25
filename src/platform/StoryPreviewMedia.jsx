@@ -8,7 +8,9 @@ const HOVER_PLAY_DELAY_MS = 1000;
 const END_HOLD_MS = 1000;
 
 export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, autoPlay = false, children }) {
-  const hasPreview = storyHasPreview(story);
+  // Video media is intentionally reserved for the large Discover hero.
+  // Cards and other compact previews always remain lightweight poster images.
+  const hasPreview = autoPlay && storyHasPreview(story);
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const objectUrlRef = useRef('');
