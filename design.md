@@ -42,7 +42,7 @@ Weitere globale Tokens:
 - Desktop-Seitenrand: `--riu-page-inline`
 - Mobile-Seitenrand: `20–24px`
 - Kartenraster: 4 Spalten Desktop, 2 Spalten Tablet, 1 Spalte Mobile
-- Medien: bevorzugt `16:9`; Hero-Medien ebenfalls `16:9`
+- Medien: bevorzugt `16:9`; der Discover-Hero kombiniert das Medium links mit einem kompakten Editorial-Text rechts und stapelt beides mobil
 - Große Sektionen verwenden etwa `80–120px` vertikalen Abstand.
 
 ## Light und Dark Mode

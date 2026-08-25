@@ -314,7 +314,7 @@ function Discover({ session }) {
               {(selectedStory.previewVideoUrl || selectedStory.previewVideoAssetId) && <span className="discover-hero-playing">WebM Vorschau</span>}
             </StoryPreviewMedia>
             <div className="discover-hero-copy">
-              <span>{getStoryCategories(selectedStory)[0]}</span>
+              <span>Ausgewählte Story · {getStoryCategories(selectedStory)[0]}</span>
               <h1>{selectedStory.name}</h1>
               <p>{selectedStory.description || 'Eine interaktive, räumliche Erzählung.'}</p>
               <button type="button" onClick={() => go(`/stories/${selectedStory.slug || selectedStory.id}`)}>
