@@ -5,6 +5,7 @@ import {
 } from './storyPreviewScrub.js';
 
 const HOVER_PLAY_DELAY_MS = 1000;
+const END_HOLD_MS = 1000;
 
 export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, children }) {
   const hasPreview = storyHasPreview(story);
@@ -14,8 +15,11 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const loadingRef = useRef(false);
   const frameRef = useRef(0);
   const hoverDelayRef = useRef(0);
+  const endHoldRef = useRef(0);
+  const endHoldUntilRef = useRef(0);
   const loadRequestRef = useRef(0);
   const activeRef = useRef(false);
+  const playbackPhaseRef = useRef('forward');
   const [active, setActive] = useState(false);
   const [ready, setReady] = useState(false);
   const [hoverPending, setHoverPending] = useState(false);
@@ -24,8 +28,11 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     loadRequestRef.current += 1;
     cancelAnimationFrame(frameRef.current);
     window.clearTimeout(hoverDelayRef.current);
+    window.clearTimeout(endHoldRef.current);
     frameRef.current = 0;
     hoverDelayRef.current = 0;
+    endHoldRef.current = 0;
+    endHoldUntilRef.current = 0;
     const video = videoRef.current;
     if (video) {
       video.pause();
@@ -37,6 +44,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     objectUrlRef.current = '';
     activeRef.current = false;
+    playbackPhaseRef.current = 'forward';
     setActive(false);
     setHoverPending(false);
     setReady(false);
@@ -69,6 +77,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
         video.pause();
         video.currentTime = Math.max(0, forwardDuration - 0.001);
         frameRef.current = 0;
+        startEndHold(true);
         return;
       }
       frameRef.current = requestAnimationFrame(watchForwardPlayback);
@@ -93,6 +102,77 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
     } else {
       playForward();
     }
+  };
+
+  const startReturnPlayback = () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < HTMLMediaElement.HAVE_METADATA || !activeRef.current) return;
+    cancelAnimationFrame(frameRef.current);
+    window.clearTimeout(endHoldRef.current);
+    frameRef.current = 0;
+    endHoldRef.current = 0;
+    video.pause();
+    video.playbackRate = 1;
+    playbackPhaseRef.current = 'return';
+    endHoldUntilRef.current = 0;
+    const forwardDuration = story.previewDurationSeconds || 3;
+    const totalDuration = Number.isFinite(video.duration)
+      ? video.duration
+      : forwardDuration + (story.previewReturnDurationSeconds || 3.5);
+    const returnStartTime = video.currentTime > forwardDuration
+      ? Math.min(video.currentTime, totalDuration - 0.01)
+      : Math.min(forwardDuration, totalDuration - 0.01);
+    const finishReturn = () => {
+      video.pause();
+      video.playbackRate = 1;
+      video.onended = null;
+      playbackPhaseRef.current = 'forward';
+      video.currentTime = 0;
+    };
+    const playReturn = () => {
+      if (!activeRef.current || playbackPhaseRef.current !== 'return' || !video.getAttribute('src')) return;
+      video.onended = finishReturn;
+      video.play().then(() => {
+        if (!activeRef.current) {
+          video.pause();
+          return;
+        }
+        setHoverPending(false);
+      }).catch(() => releaseVideo());
+    };
+    if (Math.abs(video.currentTime - returnStartTime) > 0.025) {
+      video.addEventListener('seeked', playReturn, { once: true });
+      video.currentTime = returnStartTime;
+    } else {
+      playReturn();
+    }
+  };
+
+  const startEndHold = (restartHold = false) => {
+    window.clearTimeout(endHoldRef.current);
+    playbackPhaseRef.current = 'hold';
+    if (restartHold || !endHoldUntilRef.current) {
+      endHoldUntilRef.current = Date.now() + END_HOLD_MS;
+    }
+    setHoverPending(false);
+    const remainingHoldMs = Math.max(0, endHoldUntilRef.current - Date.now());
+    endHoldRef.current = window.setTimeout(() => {
+      endHoldRef.current = 0;
+      if (!activeRef.current) return;
+      startReturnPlayback();
+    }, remainingHoldMs);
+  };
+
+  const resumePreviewPlayback = () => {
+    if (playbackPhaseRef.current === 'return') {
+      startReturnPlayback();
+      return;
+    }
+    if (playbackPhaseRef.current === 'hold') {
+      startEndHold();
+      return;
+    }
+    startForwardPlayback();
   };
 
   const ensureVideoLoaded = async () => {
@@ -126,7 +206,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
       hoverDelayRef.current = 0;
       activeRef.current = true;
       setActive(true);
-      startForwardPlayback();
+      resumePreviewPlayback();
     }, HOVER_PLAY_DELAY_MS);
   };
 
@@ -140,7 +220,9 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   const deactivate = (event) => {
     event.currentTarget.style.setProperty('--preview-look-x', '0%');
     window.clearTimeout(hoverDelayRef.current);
+    window.clearTimeout(endHoldRef.current);
     hoverDelayRef.current = 0;
+    endHoldRef.current = 0;
     activeRef.current = false;
     setActive(false);
     setHoverPending(false);
@@ -158,7 +240,7 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
       const reveal = () => {
         if (!video.getAttribute('src')) return;
         setReady(true);
-        if (activeRef.current) startForwardPlayback();
+        if (activeRef.current) resumePreviewPlayback();
       };
       if (video.currentTime < 0.012) {
         video.currentTime = 0;
