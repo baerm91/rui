@@ -310,3 +310,14 @@ export async function fetchStoryAnalytics(storyId) {
   if (error) throw error;
   return normalizeAnalyticsResult(data);
 }
+
+export async function fetchOwnedStoryViewCounts() {
+  const client = getSupabase();
+  if (!client) return {};
+  const { data, error } = await client.rpc('get_owned_story_view_counts');
+  if (error) throw error;
+  return Object.fromEntries((data || []).map((item) => [item.story_id, {
+    views: Number(item.views) || 0,
+    lastViewedAt: item.last_viewed_at || null
+  }]));
+}

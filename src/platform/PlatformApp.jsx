@@ -14,7 +14,7 @@ import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
 import { StoryPreviewMedia } from './StoryPreviewMedia.jsx';
 import { canCreateStories, isAdmin, USER_ROLE_LABELS, USER_ROLES } from './accessControl.js';
 import {
-  fetchAdminUsers, fetchPlatformAccess, fetchStoryAnalytics, fetchStoryVersions, restoreStoryVersion,
+  fetchAdminUsers, fetchOwnedStoryViewCounts, fetchPlatformAccess, fetchStoryAnalytics, fetchStoryVersions, restoreStoryVersion,
   updateAdminUser, updatePlatformAccess
 } from './supabaseStore.js';
 import { readRememberLoginPreference } from './supabaseClient.js';
@@ -699,9 +699,19 @@ function Dashboard({ session, onSession }) {
   const [metadataStory, setMetadataStory] = useState(null);
   const [collaborationStory, setCollaborationStory] = useState(null);
   const [versionStory, setVersionStory] = useState(null);
+  const [viewCounts, setViewCounts] = useState({});
   const filtered = stories.filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
-  const totalViews = stories.reduce((sum, story) => sum + (Number(story.stats?.views) || 0), 0);
+  const getViewCount = (story) => viewCounts[story.id]?.views ?? (Number(story.stats?.views) || 0);
+  const totalViews = stories.reduce((sum, story) => sum + getViewCount(story), 0);
   const publishedCount = stories.filter((story) => story.status === 'published').length;
+
+  useEffect(() => {
+    let active = true;
+    fetchOwnedStoryViewCounts()
+      .then((counts) => { if (active) setViewCounts(counts); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [session.id]);
 
   useEffect(() => {
     const mergedStories = readDashboardStories();
@@ -758,7 +768,7 @@ function Dashboard({ session, onSession }) {
                 <span><Globe2 size={14} /><span><small>Veröffentlicht seit</small><strong>{getStoryPublishedAt(story) ? formatDate(getStoryPublishedAt(story)) : 'Noch nicht veröffentlicht'}</strong></span></span>
               </div>
               <div className="dashboard-card-facts"><span><Layers3 size={14} /><strong>{story.stations?.length || 0}</strong> Stationen</span><span><MapPin size={14} /><strong>{getStoryAnnotationCount(story)}</strong> Annotationen</span></div>
-              <div className="dashboard-card-views"><Eye size={14} /><strong>{Number(story.stats?.views) || 0}</strong> Aufrufe</div>
+              <div className="dashboard-card-views"><Eye size={14} /><strong>{getViewCount(story)}</strong> Aufrufe</div>
             </div>
             <div className="dashboard-actions">
               {canEditStory(story, session.id) && <button onClick={() => go(`/studio/${story.id}`)}>Bearbeiten <ArrowRight size={15} /></button>}
