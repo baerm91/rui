@@ -22,6 +22,17 @@ import { filterOwnedStories } from './dashboardStories.js';
 import { formatAnalyticsDuration } from './storyAnalytics.js';
 
 const go = (path) => { window.location.href = path; };
+const getPreferredTheme = () => {
+  try {
+    const stored = window.localStorage.getItem('riu-theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+  } catch {
+    // Storage may be unavailable in hardened browser contexts.
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+document.documentElement.dataset.riuTheme = getPreferredTheme();
+
 const formatDate = (value) => value
   ? new Intl.DateTimeFormat('de-AT', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value))
   : 'Entwurf';
@@ -125,15 +136,15 @@ function Brand({ compact = false, onClick = () => go('/') }) {
 }
 
 function ThemeToggle() {
-  const [theme, setTheme] = useState(() => {
-    const stored = window.localStorage.getItem('riu-theme');
-    if (stored === 'light' || stored === 'dark') return stored;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState(getPreferredTheme);
 
   useEffect(() => {
     document.documentElement.dataset.riuTheme = theme;
-    window.localStorage.setItem('riu-theme', theme);
+    try {
+      window.localStorage.setItem('riu-theme', theme);
+    } catch {
+      // The visible theme still works for this session without persistence.
+    }
   }, [theme]);
 
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -150,7 +161,7 @@ function ThemeToggle() {
   );
 }
 
-function Header({ session, transparent = false, showThemeToggle = false }) {
+function Header({ session, transparent = false, showThemeToggle = true }) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef(null);
