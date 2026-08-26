@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Ban, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Moon, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Sun, Timer, Upload, UserPlus, Users, X
+  Ban, Camera, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Moon, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Sun, Timer, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -21,6 +21,8 @@ import { readRememberLoginPreference } from './supabaseClient.js';
 import { filterOwnedStories } from './dashboardStories.js';
 import { formatAnalyticsDuration } from './storyAnalytics.js';
 import { getPublishedDiscoverStories } from './discoverStories.js';
+import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
+import { isRoomStory } from '../utils/storyExperience.js';
 
 const go = (path) => { window.location.href = path; };
 const getPreferredTheme = () => {
@@ -125,6 +127,105 @@ const createCoverImageFromFile = async (file) => {
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
+};
+
+const loadPreviewImage = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Das Objektbild konnte nicht geladen werden.');
+  const blob = await response.blob();
+  if (!blob.type.startsWith('image/')) throw new Error('Für dieses Objekt ist kein gültiges Thumbnail verfügbar.');
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const drawPreviewText = (context, text, x, y, maximumWidth, lineHeight, maximumLines) => {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  let line = '';
+  let lineIndex = 0;
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width <= maximumWidth || !line) {
+      line = candidate;
+      continue;
+    }
+    context.fillText(line, x, y + lineIndex * lineHeight);
+    lineIndex += 1;
+    if (lineIndex >= maximumLines) return;
+    line = word;
+  }
+  if (line && lineIndex < maximumLines) context.fillText(line, x, y + lineIndex * lineHeight);
+};
+
+const createExhibitionPreviewImage = async (story, station, item) => {
+  if (!item?.thumbnailUrl) throw new Error('Dieses Objekt besitzt noch kein Thumbnail.');
+  const image = await loadPreviewImage(item.thumbnailUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = 960;
+  canvas.height = 540;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Das Vorschaubild konnte nicht erzeugt werden.');
+
+  context.fillStyle = '#a79c85';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const sourceRatio = image.naturalWidth / image.naturalHeight;
+  const targetRatio = canvas.width / canvas.height;
+  let sourceX = 0;
+  let sourceY = 0;
+  let sourceWidth = image.naturalWidth;
+  let sourceHeight = image.naturalHeight;
+  if (sourceRatio > targetRatio) {
+    sourceWidth = image.naturalHeight * targetRatio;
+    sourceX = (image.naturalWidth - sourceWidth) / 2;
+  } else {
+    sourceHeight = image.naturalWidth / targetRatio;
+    sourceY = (image.naturalHeight - sourceHeight) / 2;
+  }
+  context.save();
+  context.globalAlpha = .38;
+  context.filter = 'blur(22px)';
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, -28, -28, canvas.width + 56, canvas.height + 56);
+  context.restore();
+  context.fillStyle = 'rgba(151, 141, 120, .28)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const objectArea = { x: 370, y: 24, width: 560, height: 410 };
+  const objectScale = Math.min(objectArea.width / image.naturalWidth, objectArea.height / image.naturalHeight);
+  const objectWidth = image.naturalWidth * objectScale;
+  const objectHeight = image.naturalHeight * objectScale;
+  context.drawImage(
+    image,
+    objectArea.x + (objectArea.width - objectWidth) / 2,
+    objectArea.y + (objectArea.height - objectHeight) / 2,
+    objectWidth,
+    objectHeight
+  );
+  const gradient = context.createLinearGradient(0, 0, 560, 0);
+  gradient.addColorStop(0, 'rgba(235, 231, 220, .97)');
+  gradient.addColorStop(.68, 'rgba(235, 231, 220, .83)');
+  gradient.addColorStop(1, 'rgba(235, 231, 220, 0)');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 610, canvas.height);
+  context.fillStyle = '#a65331';
+  context.font = '700 13px Arial, sans-serif';
+  context.fillText('STATION 01', 58, 70);
+  context.fillStyle = '#292a25';
+  context.font = '52px Georgia, serif';
+  drawPreviewText(context, station?.title || story.name, 58, 142, 410, 54, 3);
+  context.fillStyle = '#555650';
+  context.font = '16px Arial, sans-serif';
+  drawPreviewText(context, station?.introduction || station?.description || story.description, 60, 330, 360, 25, 4);
+  context.fillStyle = 'rgba(235, 231, 220, .9)';
+  context.fillRect(610, 455, 310, 58);
+  context.fillStyle = '#292a25';
+  context.font = '24px Georgia, serif';
+  context.fillText(String(item.title || 'Objekt').slice(0, 28), 630, 489);
+  return canvas.toDataURL('image/jpeg', .86);
 };
 
 function Brand({ compact = false, onClick = () => go('/') }) {
@@ -419,6 +520,10 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
   const [coverImage, setCoverImage] = useState(story.coverImage || '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [previewBuilderOpen, setPreviewBuilderOpen] = useState(false);
+  const firstStation = story.stations?.[0] || null;
+  const previewItems = isRoomStory(story) ? (firstStation?.items || []).filter((item) => item?.modelUrl) : [];
+  const [previewItemId, setPreviewItemId] = useState(() => previewItems.find((item) => item.thumbnailUrl)?.id || previewItems[0]?.id || '');
 
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
@@ -438,6 +543,38 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
     } finally {
       setBusy(false);
       event.target.value = '';
+    }
+  }
+
+  async function createPreview() {
+    setError('');
+    if (!isRoomStory(story)) {
+      setCoverImage(createAutomaticStoryPreviewImage(story));
+      return;
+    }
+    if (!previewBuilderOpen) {
+      if (!previewItems.length) setError('Station 1 enthält noch kein Objekt für das Vorschaubild.');
+      else setPreviewBuilderOpen(true);
+      return;
+    }
+    const item = previewItems.find((entry) => entry.id === previewItemId);
+    if (!item) {
+      setError('Bitte wählen Sie ein Objekt aus Station 1 aus.');
+      return;
+    }
+    setBusy(true);
+    try {
+      setCoverImage(await createExhibitionPreviewImage(story, firstStation, item));
+      setPreviewBuilderOpen(false);
+    } catch (cause) {
+      if (/^https?:\/\//i.test(item.thumbnailUrl)) {
+        setCoverImage(item.thumbnailUrl);
+        setPreviewBuilderOpen(false);
+      } else {
+        setError(cause.message);
+      }
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -465,8 +602,9 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
   return (
     <div className="metadata-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section className="metadata-dialog" role="dialog" aria-modal="true" aria-labelledby="metadata-dialog-title">
-        <div className="metadata-dialog-header"><div><span className="riu-overline">Story bearbeiten</span><h2 id="metadata-dialog-title">Metadaten</h2></div><button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button></div>
+        <div className="metadata-dialog-header"><div><span className="riu-overline">Story bearbeiten</span><h2 id="metadata-dialog-title">Metadaten</h2></div><div className="metadata-dialog-header-actions"><button type="button" className="metadata-create-preview" onClick={createPreview} disabled={busy}><Camera size={15} />{coverImage ? 'Preview neu erstellen' : 'Preview erstellen'}</button><button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button></div></div>
         <form onSubmit={submit}>
+          {previewBuilderOpen && <section className="metadata-preview-builder"><div><span>Ausstellung · Station 1</span><strong>Objekt für das Preview wählen</strong><small>Das gewählte Objekt wird zusammen mit Titel und Einführung der ersten Station als 16:9-Vorschau gestaltet.</small></div><div className="metadata-preview-object-list">{previewItems.map((item) => <button key={item.id} type="button" className={item.id === previewItemId ? 'is-selected' : ''} onClick={() => setPreviewItemId(item.id)} disabled={!item.thumbnailUrl}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={22} />}</span><b>{item.title || 'Unbenanntes Objekt'}</b>{!item.thumbnailUrl && <small>Kein Thumbnail</small>}</button>)}</div><div className="metadata-preview-builder-actions"><button type="button" onClick={() => setPreviewBuilderOpen(false)}>Abbrechen</button><button type="button" className="riu-button" onClick={createPreview} disabled={busy || !previewItemId}>{busy ? 'Preview wird erstellt …' : 'Aus Auswahl erstellen'}</button></div></section>}
           <div className="metadata-cover" style={{ backgroundImage: `url("${coverImage || '/roman_blueprint_bg.png'}")` }}><span>Vorschau · 16:9</span></div>
           <div className="metadata-cover-actions">
             <label><Upload size={15} /> Eigenes Bild hochladen<input type="file" accept="image/*" onChange={uploadCover} /></label>
