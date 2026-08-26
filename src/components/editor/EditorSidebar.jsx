@@ -9,6 +9,7 @@ import { ProjectOriginPanel } from './ProjectOriginPanel.jsx';
 import { ProjectSoundsPanel } from './ProjectSoundsPanel.jsx';
 import { stripHighlights } from '../../utils/textFormatting.jsx';
 import ImportExportDialog from '../../ImportExportDialog.jsx';
+import { SpatialStationEditor } from './SpatialStationEditor.jsx';
 
 export function EditorSidebar({
   editingStations,
@@ -55,7 +56,12 @@ export function EditorSidebar({
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
-  canCreateProjects = true
+  canCreateProjects = true,
+  spatialMode = false,
+  onUpdateSpatialStation,
+  onUpdateSpatialItem,
+  onAddSpatialItem,
+  onRemoveSpatialItem
 }) {
   const [openSettingsPanel, setOpenSettingsPanel] = useState('station');
   const [projectSettingsTab, setProjectSettingsTab] = useState('general');
@@ -476,7 +482,15 @@ export function EditorSidebar({
 
       <div className="flex-1 overflow-y-auto flex flex-col scrollbar-thin">
         {activeStation && (
-          <StationEditorCard
+          spatialMode ? <SpatialStationEditor
+            station={activeStation}
+            index={safeEditingIndex}
+            onUpdateStation={onUpdateSpatialStation}
+            onUpdateItem={onUpdateSpatialItem}
+            onAddItem={onAddSpatialItem}
+            onRemoveItem={onRemoveSpatialItem}
+            onCaptureCamera={onCaptureCamera}
+          /> : <StationEditorCard
             key={activeStation.id}
             station={activeStation}
             models={activeProject?.models}
@@ -505,7 +519,7 @@ export function EditorSidebar({
       </div>
 
       <div className="p-4 border-t border-white/10 shrink-0 bg-zinc-950/95 flex flex-col gap-2.5">
-        <div className="grid grid-cols-3 gap-2">
+        {!spatialMode && <div className="grid grid-cols-3 gap-2">
           <button
             onClick={onRealign}
             className="bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl py-2 text-[10px] font-semibold text-amber-300 flex items-center justify-center gap-1.5 transition-all"
@@ -521,7 +535,7 @@ export function EditorSidebar({
             <Download size={12} />
             <span>Import / Export</span>
           </button>
-        </div>
+        </div>}
 
         <div className="flex gap-2">
           <button onClick={onCancel} className="flex-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl py-2.5 text-xs font-semibold text-zinc-300 transition-all">

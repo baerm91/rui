@@ -13,6 +13,7 @@ import {
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
 import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
 import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
+import { ensurePublishedStoryPreviewImage, ensurePublishedStoryPreviewImages } from './storyPreviewImage.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -208,7 +209,7 @@ function seededStories(current = storiesCache) {
     .filter((story) => demoStories.some((demo) => demo.id === story?.id))
     .map((story) => [story.id, story]));
   const owner = usersCache.find((user) => user.id === demoOwnerId);
-  return [
+  return ensurePublishedStoryPreviewImages([
     ...demoStories.map((demo) => {
       const existing = existingDemos.get(demo.id);
       const hasCrossStoryData = !!findCrossStoryStationSource(existing?.stations, demo.id, demoStories);
@@ -244,7 +245,7 @@ function seededStories(current = storiesCache) {
       };
     }),
     ...userStories
-  ];
+  ]);
 }
 
 export function mergeStoryCollections(localStories = [], remoteStories = []) {
@@ -294,6 +295,7 @@ export async function initializePlatformStore() {
   const callbackError = readOAuthCallbackError();
   if (callbackError) localStorage.setItem('riu_auth_notice', callbackError);
   const legacyActiveUserId = safeParse(SESSION_KEY, null)?.userId || '';
+  let previewImageBackfillsToSync = [];
   if (typeof indexedDB === 'undefined') {
     usersCache = ensureUsernames(safeParse(USERS_KEY, []));
     storiesCache = seededStories(safeParse(STORIES_KEY, []));
@@ -327,9 +329,13 @@ export async function initializePlatformStore() {
           await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
         }
         const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
+        const missingPreviewImageIds = new Set(remoteStories
+          .filter((story) => story.status === 'published' && !String(story.coverImage || '').trim())
+          .map((story) => story.id));
         usersCache = ensureUsernames(remoteState.users);
         demoOwnerId = remoteState.user.id;
         storiesCache = seededStories(remoteStories);
+        previewImageBackfillsToSync = storiesCache.filter((story) => missingPreviewImageIds.has(story.id));
         localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
         if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
       }
@@ -352,6 +358,9 @@ export async function initializePlatformStore() {
   } else {
     localStorage.setItem(USERS_KEY, JSON.stringify(usersCache));
     localStorage.setItem(STORIES_KEY, JSON.stringify(storiesCache));
+  }
+  if (previewImageBackfillsToSync.length) {
+    await syncStoriesToSupabase(previewImageBackfillsToSync).catch(reportDatabaseError);
   }
 }
 
@@ -378,7 +387,7 @@ export function readStories() {
 }
 
 export function writeStories(stories) {
-  storiesCache = clone(stories);
+  storiesCache = clone(ensurePublishedStoryPreviewImages(stories));
   persistStories();
   syncStoriesToSupabase(storiesCache).catch(reportDatabaseError);
   window.dispatchEvent(new CustomEvent('riu-stories-changed'));
@@ -441,9 +450,9 @@ export function createStory({
 
 export async function saveStory(story) {
   const stories = readStories();
-  const next = stories.some((item) => item.id === story.id)
+  const next = ensurePublishedStoryPreviewImages(stories.some((item) => item.id === story.id)
     ? stories.map((item) => item.id === story.id ? { ...story, updatedAt: now() } : item)
-    : [...stories, story];
+    : [...stories, story]);
   const previousStories = storiesCache;
   storiesCache = clone(next);
   try {
@@ -465,11 +474,18 @@ export function updateStoryMetadata(storyId, actorId, metadata) {
   const name = String(metadata.name || '').trim();
   if (!name) throw new Error('Bitte geben Sie einen Namen für die Story ein.');
   const categories = normalizeStoryCategories(metadata.categories, metadata.category || story.metadata?.category);
+  const nextCoverImage = String(metadata.coverImage || '').trim();
+  const coverImageChanged = nextCoverImage !== String(story.coverImage || '').trim();
   const updated = {
     ...story,
     name,
     description: String(metadata.description || '').trim(),
-    coverImage: String(metadata.coverImage || '').trim(),
+    coverImage: nextCoverImage,
+    ...(coverImageChanged ? {
+      previewImageSource: nextCoverImage ? 'manual' : '',
+      previewImageSignature: '',
+      previewImageGeneratedAt: nextCoverImage ? story.previewImageGeneratedAt : ''
+    } : {}),
     metadata: {
       ...story.metadata,
       language: metadata.language || story.metadata?.language || 'de',
@@ -480,8 +496,8 @@ export function updateStoryMetadata(storyId, actorId, metadata) {
     branding: { ...story.branding, title: name },
     updatedAt: now()
   };
-  writeStories(stories.map((item) => item.id === storyId ? updated : item));
-  return updated;
+  const persistedStories = writeStories(stories.map((item) => item.id === storyId ? updated : item));
+  return persistedStories.find((item) => item.id === storyId) || updated;
 }
 
 function requireOwnedStory(storyId, ownerId) {
@@ -594,7 +610,7 @@ export function publishStory(storyId, ownerId) {
   if (!story || story.ownerId !== ownerId) throw new Error('Diese Story darf nicht veröffentlicht werden.');
   const publishedAt = story.publishedAt || now();
   const next = stories.map((item) => item.id === storyId
-    ? { ...item, status: 'published', publishedAt, updatedAt: now() }
+    ? ensurePublishedStoryPreviewImage({ ...item, status: 'published', publishedAt, updatedAt: now() })
     : item);
   writeStories(next);
   return next.find((item) => item.id === storyId);
@@ -762,11 +778,18 @@ export async function logoutUser() {
 export function updateStoryProject(projectId, project) {
   const story = storiesCache.find((item) => item.id === projectId);
   if (!story || !canEditStory(story, readSession()?.id)) return null;
-  const updated = {
+  const projectCoverImage = String(project.coverImage || '').trim();
+  const coverImage = projectCoverImage || story.coverImage;
+  const coverImageChanged = Boolean(projectCoverImage) && projectCoverImage !== story.coverImage;
+  const updated = ensurePublishedStoryPreviewImage({
     ...story,
     name: project.name ?? story.name,
     description: project.description ?? story.description,
-    coverImage: project.coverImage ?? story.coverImage,
+    coverImage,
+    ...(coverImageChanged ? {
+      previewImageSource: 'manual',
+      previewImageSignature: ''
+    } : {}),
     branding: clone(project.branding ?? story.branding),
     models: clone(project.models ?? story.models),
     settings: clone(project.settings ?? story.settings),
@@ -774,7 +797,7 @@ export function updateStoryProject(projectId, project) {
     annotations: clone(project.annotations ?? story.annotations),
     stations: clone(project.stations ?? story.stations),
     updatedAt: now()
-  };
+  });
   storiesCache = storiesCache.map((item) => item.id === projectId ? updated : item);
   putRecord(STORES.stories, updated).catch(reportDatabaseError);
   syncStoryToSupabase(updated).catch(reportDatabaseError);

@@ -17,7 +17,7 @@ import { useStationConfigFile } from './useStationConfigFile.js';
 import { audioManager } from './utils/audioManager.js';
 import { siteConfig } from './site.config.js';
 import PlatformApp, { getExperienceAccess } from './platform/PlatformApp.jsx';
-import { recordStoryView, saveStoryPreview } from './platform/platformStore.js';
+import { recordStoryView, saveStory, saveStoryPreview } from './platform/platformStore.js';
 import { resolveStoryWatermarkOpacity } from './utils/storyWatermark.js';
 import { SketchfabViewer } from './components/SketchfabViewer.jsx';
 import { isSketchfabModelUrl } from './utils/modelSource.js';
@@ -25,6 +25,7 @@ import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
 import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
 import ExhibitionRoom from './exhibition/ExhibitionRoom.jsx';
 import { isRoomStory } from './utils/storyExperience.js';
+import { SPATIAL_DEMO_STORY } from './exhibition/spatialDemo.js';
 
 function ExperienceApp({
   hasInitialStoryPreview = false,
@@ -444,6 +445,10 @@ function ExperienceApp({
 }
 
 function App() {
+  if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
+    const initialMode = new URLSearchParams(window.location.search).get('mode') === 'visitor' ? 'visitor' : 'editor';
+    return <ExhibitionRoom story={SPATIAL_DEMO_STORY} initialMode={initialMode} backHref="/" onSaveStory={() => Promise.resolve()} />;
+  }
   const isExperiencePath = /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(window.location.pathname);
   const access = getExperienceAccess();
 
@@ -455,11 +460,10 @@ function App() {
   if (isRoomStory(access.story)) {
     return (
       <ExhibitionRoom
-        storyId={access.story.id}
-        storyTitle={access.story.name}
-        storyDescription={access.story.description}
+        story={access.story}
         initialMode={access.isEditor ? 'editor' : 'visitor'}
         backHref={access.isEditor ? '/dashboard' : '/discover'}
+        onSaveStory={saveStory}
       />
     );
   }

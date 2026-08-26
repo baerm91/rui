@@ -95,6 +95,22 @@ Alle Storys – einschließlich der Demos – verwenden Modell-URLs aus dem Stor
 
 Die Laufzeit lädt die Modellkonfiguration erst nach der Story-Auswahl. Dadurch gibt es keine projektspezifische Viewer-Implementierung mehr.
 
+### Räumlicher Ausstellungsmodus
+
+Der Ausstellungsmodus ist keine separate Anwendung und kein eigener Inhaltstyp. Eine Story ohne zentrales Hauptmodell erhält intern `settings.experienceType: "room"`; sie verwendet weiterhin dieselben Story-Routen, Berechtigungen, Stationen, Veröffentlichungsregeln und Speicherfunktionen.
+
+Wiederverwendet werden insbesondere:
+
+- `EditorSidebar` für Editor-/Besucherwechsel, Stationsnavigation, Sortierung, Hinzufügen, Löschen und Speichern,
+- `platformStore` und Supabase für Story-Persistenz und Rechteprüfung,
+- `normalizeStations` und `prepareStationsForStorage` als Migrations- und Serialisierungsschicht,
+- bestehende Modell-URL-Erkennung für Sketchfab, GLB und glTF,
+- die vorhandenen Three.js-Loader samt Draco-, KTX2- und Meshopt-Unterstützung.
+
+Räumliche Stationen ergänzen die bisherigen Felder um `spatial` (Position, Ausrichtung, Kamera, Bewegungsradius, Material, Licht und Audio) sowie `items`. Ein Item speichert Quelle, URL, Titel, Beschreibung, Thumbnail, Thumbnail- und Modelltransformation sowie optionale Attribution und Lizenz. Alte Stationen erhalten diese Felder erst beim Normalisieren und bleiben dadurch ohne manuelle Migration lesbar.
+
+Modellquellen sind über `modelSourceAdapters.js` getrennt. Direkte GLB-/glTF-Modelle werden in dieselbe Three.js-Szene geladen und reagieren auf das Stationslicht. Sketchfab wird über einen möglichst reduzierten transparenten Viewer eingebettet; oEmbed-Metadaten liefern nach Möglichkeit Titel und Thumbnail. Weitere Plattformen können als zusätzlicher Adapter ergänzt werden, ohne Stations- oder Editorcode umzubauen.
+
 ## Verifikation
 
 Automatisiert:
