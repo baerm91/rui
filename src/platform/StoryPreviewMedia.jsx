@@ -313,16 +313,6 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
         <>
           <video ref={videoRef} className="story-preview-video" muted playsInline loop={autoPlay} autoPlay={autoPlay} preload={autoPlay ? 'auto' : 'none'}
             onLoadedMetadata={prepareVideoForPlayback} aria-hidden="true" />
-          {!autoPlay && <div className="story-preview-hover-cue" aria-hidden="true">
-            <span className="story-preview-hover-ring">
-              <svg viewBox="0 0 44 44">
-                <circle className="story-preview-hover-track" cx="22" cy="22" r="19" />
-                <circle className="story-preview-hover-progress" cx="22" cy="22" r="19" />
-              </svg>
-              <i />
-            </span>
-            <small>Vorschau</small>
-          </div>}
         </>
       )}
       {children}

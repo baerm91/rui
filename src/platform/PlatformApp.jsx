@@ -20,7 +20,7 @@ import {
 import { readRememberLoginPreference } from './supabaseClient.js';
 import { filterOwnedStories } from './dashboardStories.js';
 import { formatAnalyticsDuration } from './storyAnalytics.js';
-import { getPublishedDiscoverStories } from './discoverStories.js';
+import { getPublishedDiscoverStories, getRandomFeaturedDiscoverStoryId } from './discoverStories.js';
 import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
 import { isRoomStory } from '../utils/storyExperience.js';
 
@@ -379,7 +379,9 @@ function Discover({ session }) {
   const [language, setLanguage] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('latest');
-  const [selectedStoryId, setSelectedStoryId] = useState(() => published[0]?.id || '');
+  const [selectedStoryId, setSelectedStoryId] = useState(() => getRandomFeaturedDiscoverStoryId(
+    authorId ? published.filter((story) => story.ownerId === authorId) : published
+  ));
   const availableLanguages = [...new Set(published.map(getStoryLanguage))];
   const availableCategories = [...new Set(published.flatMap(getStoryCategories))].sort();
   const normalizedQuery = query.trim().toLocaleLowerCase('de');
@@ -413,7 +415,6 @@ function Discover({ session }) {
               fallbackImage="/star_sky_bg.png"
               autoPlay
             >
-              {(selectedStory.previewVideoUrl || selectedStory.previewVideoAssetId) && <span className="discover-hero-playing">WebM Vorschau</span>}
             </StoryPreviewMedia>
             <div className="discover-hero-copy">
               <span>Ausgewählte Story · {getStoryCategories(selectedStory)[0]}</span>
