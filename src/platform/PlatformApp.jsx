@@ -944,7 +944,9 @@ function Dashboard({ session, onSession }) {
             <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label></div>
             {filtered.length ? <div className="dashboard-grid">{filtered.map((story) => (
           <article className="dashboard-card" key={story.id}>
-            <StoryPreviewMedia story={story} className="dashboard-cover" mediaClassName="dashboard-cover-media" fallbackImage="/roman_blueprint_bg.png"><span className={`status-pill ${story.status}`}>{story.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}</span></StoryPreviewMedia>
+            <a className="dashboard-cover-link" href={`/stories/${story.slug || story.id}`} aria-label={`„${story.name}“ ansehen`}>
+              <StoryPreviewMedia story={story} className="dashboard-cover" mediaClassName="dashboard-cover-media" fallbackImage="/roman_blueprint_bg.png"><span className={`status-pill ${story.status}`}>{story.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}</span></StoryPreviewMedia>
+            </a>
             <div className="dashboard-card-copy">
               <span>Geändert {formatDate(story.updatedAt)} · Eigene Story</span>
               <h3>{story.name}</h3>

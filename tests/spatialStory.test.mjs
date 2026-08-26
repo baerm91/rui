@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, normalizeSpatialStation } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, normalizeSpatialStation, resolveSpatialInitialItemId } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -37,6 +37,14 @@ test('Sketchfab and direct glTF sources use separate adapter types', () => {
   assert.equal(getSpatialSourceType('https://example.org/model.obj'), 'unknown');
 });
 
+test('station start model is explicit and falls back safely for legacy data', () => {
+  const items = [{ id: 'one' }, { id: 'two' }];
+  assert.equal(resolveSpatialInitialItemId({ initialItemId: 'two', selectedItemId: 'one' }, items), 'two');
+  assert.equal(resolveSpatialInitialItemId({ selectedItemId: 'two' }, items), 'two');
+  assert.equal(resolveSpatialInitialItemId({ initialItemId: 'missing' }, items), 'one');
+  assert.equal(resolveSpatialInitialItemId({}, []), null);
+});
+
 test('legacy stations receive complete spatial camera, light, and audio defaults', () => {
   const spatial = normalizeSpatialStation({ cameraPos: { x: 1, y: 2, z: 3 }, cameraTarget: { x: 0, y: 1, z: 0 } }, 2);
   assert.deepEqual(spatial.camera.position, [1, 2, 3]);
@@ -58,12 +66,14 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
     introduction: 'Ein räumlicher Auftakt.',
     spatial: normalizeSpatialStation({}, 0),
     items: [createSpatialItem({ id: 'object-1', modelUrl: 'https://example.org/object.glb', title: 'Objekt', thumbnailTransform })],
-    selectedItemId: 'object-1'
+    selectedItemId: 'object-1',
+    initialItemId: 'object-1'
   };
   const [stored] = prepareStationsForStorage([source]);
   assert.equal(stored.introduction, source.introduction);
   assert.equal(stored.items[0].modelUrl, 'https://example.org/object.glb');
   assert.deepEqual(stored.items[0].thumbnailTransform, thumbnailTransform);
+  assert.equal(stored.initialItemId, 'object-1');
   assert.deepEqual(stored.spatial.camera, source.spatial.camera);
   assert.deepEqual(stored.spatial.lighting, source.spatial.lighting);
   assert.deepEqual(stored.spatial.audio, source.spatial.audio);

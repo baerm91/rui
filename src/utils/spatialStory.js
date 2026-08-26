@@ -91,6 +91,13 @@ export function normalizeSpatialItems(items) {
   return (Array.isArray(items) ? items : []).map(createSpatialItem).filter((item) => item.modelUrl);
 }
 
+export function resolveSpatialInitialItemId(station = {}, items = station.items) {
+  const availableItems = Array.isArray(items) ? items : [];
+  const availableIds = new Set(availableItems.map((item) => item?.id).filter(Boolean));
+  return [station.initialItemId, station.selectedItemId, availableItems[0]?.id]
+    .find((id) => availableIds.has(id)) || null;
+}
+
 export function isValidSpatialModelUrl(url) {
   return getSpatialSourceType(String(url || '').trim()) !== 'unknown';
 }

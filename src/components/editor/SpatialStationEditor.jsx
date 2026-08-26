@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Box, Camera, ImagePlus, Lightbulb, Link2, Music2, Plus, Trash2 } from 'lucide-react';
+import { Box, Camera, Check, ImagePlus, Lightbulb, Link2, Music2, Play, Plus, Trash2 } from 'lucide-react';
 import { createSpatialItem, isValidSpatialModelUrl } from '../../utils/spatialStory.js';
 import { getModelSourceAdapter } from '../../utils/modelSourceAdapters.js';
 
@@ -38,9 +38,10 @@ export function SpatialStationEditor({ station, index, onUpdateStation, onUpdate
       <label>Stationstitel<input value={station.title || ''} onChange={(event) => onUpdateStation(index, { title: event.target.value })} /></label>
       <label>Einführungstext<textarea rows="4" value={station.introduction ?? station.description ?? ''} onChange={(event) => onUpdateStation(index, { introduction: event.target.value, description: event.target.value })} /></label>
       <div className="spatial-add-model"><span><Link2 size={14} /> Modell über URL hinzufügen</span><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Sketchfab, .glb oder .gltf" /><button onClick={addModel} disabled={resolving}><Plus size={13} />{resolving ? 'Prüfen …' : 'Hinzufügen'}</button>{urlError && <small>{urlError}</small>}</div>
-      <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={item.id === selectedItem?.id ? 'is-active' : ''} onClick={() => onUpdateStation(index, { selectedItemId: item.id })}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.sourceType}</small></button>)}</div>
+      <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={item.id === selectedItem?.id ? 'is-active' : ''} onClick={() => onUpdateStation(index, { selectedItemId: item.id })}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
       {selectedItem && <div className="spatial-item-settings">
         <div className="spatial-item-heading"><strong>Ausgewähltes Objekt</strong><button onClick={() => onRemoveItem(index, selectedItem.id)}><Trash2 size={13} /> Entfernen</button></div>
+        <button className={`spatial-start-model ${station.initialItemId === selectedItem.id ? 'is-active' : ''}`} type="button" onClick={() => onUpdateStation(index, { initialItemId: selectedItem.id })} disabled={station.initialItemId === selectedItem.id}>{station.initialItemId === selectedItem.id ? <Check size={13} /> : <Play size={13} />}{station.initialItemId === selectedItem.id ? 'Startmodell dieser Station' : 'Als Startmodell festlegen'}</button>
         <label>Titel<input value={selectedItem.title} onChange={(event) => onUpdateItem(index, selectedItem.id, { title: event.target.value })} /></label>
         <label>Beschreibung<textarea rows="2" value={selectedItem.description} onChange={(event) => onUpdateItem(index, selectedItem.id, { description: event.target.value })} /></label>
         <label>Thumbnail-URL<input value={selectedItem.thumbnailUrl} onChange={(event) => onUpdateItem(index, selectedItem.id, { thumbnailUrl: event.target.value })} /></label>
@@ -79,4 +80,3 @@ export function SpatialStationEditor({ station, index, onUpdateStation, onUpdate
     </div>}
   </section>;
 }
-
