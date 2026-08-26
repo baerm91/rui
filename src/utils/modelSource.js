@@ -43,7 +43,7 @@ export function isSupportedModelUrl(value) {
 export function extractModelUrl(value) {
   const text = String(value || '').replaceAll('&amp;', '&').trim();
   if (isSupportedModelUrl(text)) return text;
-  const candidates = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+  const candidates = text.match(/https?:\/\/[^\s"'<>()[\]]+/gi) || [];
   return candidates
     .map((candidate) => candidate.replace(/[),.;]+$/, ''))
     .find((candidate) => isSupportedModelUrl(candidate)) || '';

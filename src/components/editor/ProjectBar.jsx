@@ -14,20 +14,14 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
   const connectedModelCount = [activeProject?.models?.primary, activeProject?.models?.reconstruction, ...additionalModels.map((model) => model.url)].filter(Boolean).length;
   const modelsAreOpen = modelPanelOpen ?? showModels;
 
-  const applyPastedUrl = (event, apply) => {
-    const value = extractModelUrl(event.clipboardData?.getData('text/plain'));
-    if (!value) return;
-    event.preventDefault();
-    event.stopPropagation();
-    apply(value);
-  };
-
-  const readClipboardUrl = async (apply) => {
+  const readClipboardUrl = async (targetId, apply) => {
     try {
       const value = extractModelUrl(await navigator.clipboard.readText());
-      if (value) apply(value);
+      if (!value) throw new Error('Kein unterstützter Modell-Link in der Zwischenablage.');
+      apply(value);
+      reportDrop(targetId, 'Link eingefügt');
     } catch {
-      // Native Ctrl+V and context-menu paste remain available if clipboard access is denied.
+      reportDrop(targetId, 'Zwischenablage blockiert – URL-Feld wählen und Strg+V verwenden.', true);
     }
   };
 
@@ -223,7 +217,6 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                   <input
                     value={url}
                     onChange={(event) => onUpdateProject({ models: { [role]: event.target.value } })}
-                    onPaste={(event) => applyPastedUrl(event, (value) => onUpdateProject({ models: { [role]: value } }))}
                     onBlur={(event) => onUpdateProject({ models: { [role]: normalizeModelUrl(event.target.value) } })}
                     className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
                     placeholder={isPrimary ? 'Sketchfab-Link oder .fbx, .glb, .gltf' : 'https://…/modell.fbx, .glb oder .gltf'}
@@ -231,7 +224,7 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                   />
                   <button
                     type="button"
-                    onClick={() => readClipboardUrl((value) => onUpdateProject({ models: { [role]: value } }))}
+                    onClick={() => readClipboardUrl(role, (value) => onUpdateProject({ models: { [role]: value } }))}
                     className="grid w-8 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-amber-500/40 hover:text-amber-300"
                     aria-label={`${modelLabel}-Link aus Zwischenablage einfügen`}
                     title="Link einfügen"
@@ -301,14 +294,13 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                   <input
                     value={model.url}
                     onChange={(event) => updateAdditionalModel(model.id, { url: event.target.value })}
-                    onPaste={(event) => applyPastedUrl(event, (value) => updateAdditionalModel(model.id, { url: value }))}
                     className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
                     placeholder="https://…/modell.fbx, .glb oder .gltf"
                     aria-label={`${model.name || `Modell ${modelIndex + 3}`} URL`}
                   />
                   <button
                     type="button"
-                    onClick={() => readClipboardUrl((value) => updateAdditionalModel(model.id, { url: value }))}
+                    onClick={() => readClipboardUrl(model.id, (value) => updateAdditionalModel(model.id, { url: value }))}
                     className="grid w-8 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-amber-500/40 hover:text-amber-300"
                     aria-label={`${model.name || `Modell ${modelIndex + 3}`}-Link aus Zwischenablage einfügen`}
                     title="Link einfügen"

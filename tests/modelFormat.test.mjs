@@ -53,6 +53,12 @@ test('extracts Sketchfab model pages from copied share text and embed code', () 
   assert.equal(extractModelUrl(`<iframe src="https://sketchfab.com/models/${uid}/embed"></iframe>`), `https://sketchfab.com/models/${uid}/embed`);
 });
 
+test('extracts the Dog and Hare Sketchfab URL from Markdown clipboard content', () => {
+  const pageUrl = 'https://sketchfab.com/3d-models/dog-and-hare-brooch-d5c7f71f3f6a4ae8b7eb6137bda4c0de';
+  assert.equal(extractModelUrl(`[${pageUrl}](${pageUrl})`), pageUrl);
+  assert.equal(normalizeModelUrl(extractModelUrl(`[${pageUrl}](${pageUrl})`)), 'https://sketchfab.com/models/d5c7f71f3f6a4ae8b7eb6137bda4c0de');
+});
+
 test('rejects Sketchfab profile, collection and malformed model URLs', () => {
   assert.equal(isValidModelUrl('https://sketchfab.com/landessammlungen-noe'), false);
   assert.equal(isValidModelUrl('https://sketchfab.com/collections/museum'), false);
