@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, normalizeSpatialStation, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -43,6 +43,13 @@ test('station start model is explicit and falls back safely for legacy data', ()
   assert.equal(resolveSpatialInitialItemId({ selectedItemId: 'two' }, items), 'two');
   assert.equal(resolveSpatialInitialItemId({ initialItemId: 'missing' }, items), 'one');
   assert.equal(resolveSpatialInitialItemId({}, []), null);
+});
+
+test('carousel items can be reordered without changing their data', () => {
+  const items = [{ id: 'one' }, { id: 'two' }, { id: 'three' }];
+  assert.deepEqual(moveSpatialItem(items, 'two', -1).map((item) => item.id), ['two', 'one', 'three']);
+  assert.deepEqual(moveSpatialItem(items, 'two', 1).map((item) => item.id), ['one', 'three', 'two']);
+  assert.equal(moveSpatialItem(items, 'one', -1), items);
 });
 
 test('room overview camera frames the complete row of station walls', () => {

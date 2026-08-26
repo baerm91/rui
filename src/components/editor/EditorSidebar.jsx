@@ -64,6 +64,7 @@ export function EditorSidebar({
   onUpdateSpatialStation,
   onUpdateSpatialItem,
   onUpdateSpatialItemPositions,
+  onMoveSpatialItem,
   onAddSpatialItem,
   onRemoveSpatialItem
 }) {
@@ -495,6 +496,7 @@ export function EditorSidebar({
             onUpdateStation={onUpdateSpatialStation}
             onUpdateItem={onUpdateSpatialItem}
             onUpdateItemPositions={onUpdateSpatialItemPositions}
+            onMoveItem={onMoveSpatialItem}
             onAddItem={onAddSpatialItem}
             onRemoveItem={onRemoveSpatialItem}
             onCaptureCamera={onCaptureCamera}

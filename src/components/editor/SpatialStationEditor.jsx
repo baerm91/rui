@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Box, Camera, Check, ImagePlus, Lightbulb, Link2, Music2, Play, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Box, Camera, Check, ImagePlus, Lightbulb, Link2, Music2, Play, Plus, Trash2 } from 'lucide-react';
 import { createSpatialItem, isValidSpatialModelUrl } from '../../utils/spatialStory.js';
 import { getModelSourceAdapter } from '../../utils/modelSourceAdapters.js';
 import { alignThumbnailSelection, createThumbnailLayout } from '../../utils/spatialThumbnailLayout.js';
@@ -7,13 +7,14 @@ import { alignThumbnailSelection, createThumbnailLayout } from '../../utils/spat
 const VectorFields = ({ label, value = [0, 0, 0], onChange, step = .1 }) => <label className="spatial-vector-field"><span>{label}</span><span>{['X', 'Y', 'Z'].map((axis, index) => <input key={axis} type="number" step={step} value={value[index] ?? 0} aria-label={`${label} ${axis}`} onChange={(event) => { const next = [...value]; next[index] = Number(event.target.value); onChange(next); }} />)}</span></label>;
 const RangeField = ({ label, value, min, max, step, onChange, suffix = '' }) => <label className="spatial-range-field"><span>{label}<b>{value}{suffix}</b></span><input type="range" value={value} min={min} max={max} step={step} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 
-export function SpatialStationEditor({ station, index, selectedItemIds = [], onSelectItem, onUpdateStation, onUpdateItem, onUpdateItemPositions, onAddItem, onRemoveItem, onCaptureCamera }) {
+export function SpatialStationEditor({ station, index, selectedItemIds = [], onSelectItem, onUpdateStation, onUpdateItem, onUpdateItemPositions, onMoveItem, onAddItem, onRemoveItem, onCaptureCamera }) {
   const [tab, setTab] = useState('content');
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState('');
   const [resolving, setResolving] = useState(false);
   const fileRef = useRef(null);
   const selectedItem = station.items?.find((item) => item.id === station.selectedItemId) || station.items?.[0];
+  const selectedItemIndex = station.items?.findIndex((item) => item.id === selectedItem?.id) ?? -1;
   const updateSpatial = (section, patch) => onUpdateStation(index, { spatial: { ...station.spatial, [section]: { ...station.spatial?.[section], ...patch } } });
   const addModel = async () => {
     const trimmed = url.trim();
@@ -44,6 +45,14 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
       <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={`${item.id === selectedItem?.id ? 'is-active' : ''} ${selectedItemIds.includes(item.id) ? 'is-multi-selected' : ''}`} onClick={(event) => onSelectItem(item.id, event)}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
       {(station.items || []).length > 1 && <div className="spatial-layout-tools">
         <div className="spatial-layout-heading"><strong>Thumbnail-Layout</strong><span>{selectedItemIds.length} ausgewählt</span></div>
+        <div className="spatial-carousel-order">
+          <div><strong>Karussell-Reihenfolge</strong><small>Position {selectedItemIndex + 1} von {station.items.length}</small></div>
+          <span>
+            <button type="button" title="Im Karussell nach links" aria-label="Im Karussell nach links" disabled={selectedItemIndex <= 0} onClick={() => onMoveItem(index, selectedItem.id, -1)}><ArrowLeft size={13} /></button>
+            <button type="button" title="Im Karussell nach rechts" aria-label="Im Karussell nach rechts" disabled={selectedItemIndex < 0 || selectedItemIndex >= station.items.length - 1} onClick={() => onMoveItem(index, selectedItem.id, 1)}><ArrowRight size={13} /></button>
+          </span>
+        </div>
+        <p>Die Modellliste entspricht der Reihenfolge im Besucher-Karussell. Ausgewähltes Icon mit den Pfeilen verschieben.</p>
         <p>Mehrere Bilder mit Umschalt- oder Strg-Klick auswählen.</p>
         <div className="spatial-layout-presets" aria-label="Layout-Presets">
           <button type="button" onClick={() => applyPreset('grid')}>Raster</button>

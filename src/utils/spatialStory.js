@@ -91,6 +91,17 @@ export function normalizeSpatialItems(items) {
   return (Array.isArray(items) ? items : []).map(createSpatialItem).filter((item) => item.modelUrl);
 }
 
+export function moveSpatialItem(items, itemId, direction) {
+  const source = Array.isArray(items) ? items : [];
+  const currentIndex = source.findIndex((item) => item?.id === itemId);
+  const nextIndex = currentIndex + Math.sign(Number(direction) || 0);
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= source.length || nextIndex === currentIndex) return source;
+  const reordered = [...source];
+  const [item] = reordered.splice(currentIndex, 1);
+  reordered.splice(nextIndex, 0, item);
+  return reordered;
+}
+
 export function resolveSpatialInitialItemId(station = {}, items = station.items) {
   const availableItems = Array.isArray(items) ? items : [];
   const availableIds = new Set(availableItems.map((item) => item?.id).filter(Boolean));
