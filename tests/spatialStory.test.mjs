@@ -72,10 +72,10 @@ test('room overview camera frames the complete row of station walls', () => {
     { spatial: { position: [9, 0, 0] } },
     { spatial: { position: [18, 0, 0] } }
   ]);
-  assert.deepEqual(overview.target, [9, 1.8, 0]);
+  assert.deepEqual(overview.target, [9, 2.15, 0]);
   assert.equal(overview.position[0], 9);
-  assert.ok(overview.position[1] > 7);
-  assert.ok(overview.position[2] > 18);
+  assert.ok(overview.position[1] >= 3.3 && overview.position[1] < 4);
+  assert.ok(overview.position[2] >= 13 && overview.position[2] < 16);
   assert.ok(overview.fov > 50);
 });
 

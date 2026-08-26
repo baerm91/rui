@@ -121,16 +121,16 @@ export function resolveSpatialInitialItemId(station = {}, items = station.items)
 export function resolveSpatialOverviewCamera(stations = []) {
   const positions = (Array.isArray(stations) ? stations : [])
     .map((station) => vector(station?.spatial?.position ?? station?.position, [0, 0, 0]));
-  if (!positions.length) return { position: [0, 7.5, 14], target: [0, 1.8, 0], fov: 50 };
+  if (!positions.length) return { position: [0, 3.35, 13], target: [0, 2.15, 0], fov: 52 };
   const xs = positions.map((position) => position[0]);
   const zs = positions.map((position) => position[2]);
   const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
   const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
-  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 7.4);
+  const span = Math.max(7.4, (positions.length - 1) * 7.2);
   return {
-    position: [centerX, Math.max(7.2, span * .38 + 4.8), centerZ + Math.max(14, span * .78 + 8)],
-    target: [centerX, 1.8, centerZ],
-    fov: Math.min(62, 48 + span * .28)
+    position: [centerX, Math.max(3.35, span * .045 + 2.7), centerZ + Math.max(13, span * .55 + 6)],
+    target: [centerX, 2.15, centerZ],
+    fov: Math.min(56, 50 + span * .14)
   };
 }
 

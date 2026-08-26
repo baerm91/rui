@@ -20,24 +20,44 @@ const disposeObject = (root) => root?.traverse((object) => {
   });
 });
 const easeInOutCubic = (value) => (value < .5 ? 4 * value * value * value : 1 - ((-2 * value + 2) ** 3) / 2);
-const createStationLabelTexture = (station, index, active) => {
+const drawWrappedText = (context, text, x, startY, maxWidth, lineHeight, maxLines) => {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  words.forEach((word) => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width <= maxWidth || !line) line = candidate;
+    else { lines.push(line); line = word; }
+  });
+  if (line) lines.push(line);
+  const visibleLines = lines.slice(0, maxLines);
+  if (lines.length > maxLines && visibleLines.length) visibleLines[visibleLines.length - 1] = `${visibleLines.at(-1).replace(/[.,;:]?$/, '')}…`;
+  visibleLines.forEach((entry, lineIndex) => context.fillText(entry, x, startY + lineIndex * lineHeight));
+  return startY + visibleLines.length * lineHeight;
+};
+const createStationPlaqueTexture = (station, index) => {
   const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 240;
+  canvas.width = 640;
+  canvas.height = 960;
   const context = canvas.getContext('2d');
-  context.fillStyle = active ? 'rgba(30, 29, 26, .98)' : 'rgba(55, 53, 48, .96)';
+  context.fillStyle = '#e9e4da';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = '#c35f32';
-  context.fillRect(0, 0, 18, canvas.height);
-  context.fillStyle = active ? '#e6b993' : '#d9c9b7';
-  context.font = '600 30px Arial, sans-serif';
+  context.strokeStyle = 'rgba(77, 68, 57, .2)';
+  context.lineWidth = 3;
+  context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+  context.fillStyle = '#a65331';
+  context.font = '700 28px Arial, sans-serif';
   context.letterSpacing = '5px';
-  context.fillText(`STATION ${String(index + 1).padStart(2, '0')}`, 66, 72);
-  context.fillStyle = '#fffaf0';
-  context.font = '600 58px Georgia, serif';
-  const title = station.title || `Station ${index + 1}`;
-  const shortTitle = title.length > 31 ? `${title.slice(0, 30)}…` : title;
-  context.fillText(shortTitle, 66, 158);
+  context.fillText(`STATION ${String(index + 1).padStart(2, '0')}`, 58, 92);
+  context.fillStyle = '#282823';
+  context.font = '600 55px Georgia, serif';
+  const titleEnd = drawWrappedText(context, station.title || `Station ${index + 1}`, 58, 182, 520, 60, 4);
+  context.fillStyle = '#5b5b54';
+  context.font = '400 25px Arial, sans-serif';
+  drawWrappedText(context, station.introduction, 58, titleEnd + 48, 510, 39, 10);
+  context.fillStyle = '#8a7567';
+  context.font = '600 22px Arial, sans-serif';
+  context.fillText(`${station.items.length} ${station.items.length === 1 ? 'OBJEKT' : 'OBJEKTE'}`, 58, 882);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
@@ -102,8 +122,12 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const rebuildStations = (nextStations = [], activeIndex = 0, showOverview = false) => {
       const buildVersion = (world.userData.stationBuildVersion || 0) + 1;
       world.userData.stationBuildVersion = buildVersion;
+      const stationXs = nextStations.map((entry) => entry.spatial.position[0]);
+      const stationZs = nextStations.map((entry) => entry.spatial.position[2]);
+      const overviewCenterX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
+      const overviewCenterZ = stationZs.length ? (Math.min(...stationZs) + Math.max(...stationZs)) / 2 : 0;
       [...world.children].filter((child) => child !== floor).forEach((child) => { world.remove(child); disposeObject(child); });
-      if (nextStations.length > 1) {
+      if (nextStations.length > 1 && !showOverview) {
         const guidePoints = nextStations.map((station) => new THREE.Vector3(station.spatial.position[0], .035, station.spatial.position[2] + 1.75));
         const guideGeometry = new THREE.BufferGeometry().setFromPoints(guidePoints);
         const guide = new THREE.Line(guideGeometry, new THREE.LineBasicMaterial({ color: '#b2643c', transparent: true, opacity: showOverview ? .72 : .22 }));
@@ -122,48 +146,73 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       nextStations.forEach((station, index) => {
         const spatial = station.spatial;
         const group = new THREE.Group();
-        group.position.fromArray(spatial.position);
-        group.rotation.fromArray(spatial.rotation);
+        if (showOverview) {
+          const overviewOffset = index - (nextStations.length - 1) / 2;
+          group.position.set(overviewCenterX + overviewOffset * 7.2, 0, overviewCenterZ + Math.abs(overviewOffset) * .75);
+          group.rotation.set(0, -overviewOffset * .12, 0);
+        } else {
+          group.position.fromArray(spatial.position);
+          group.rotation.fromArray(spatial.rotation);
+        }
         const wallMat = new THREE.MeshStandardMaterial({
           color: materialColors[spatial.wallMaterial] || materialColors['warm-white'],
-          roughness: .96,
-          emissive: index === activeIndex ? '#24130b' : '#000000',
-          emissiveIntensity: index === activeIndex ? .08 : 0
+          roughness: .9,
+          emissive: showOverview ? '#30261d' : index === activeIndex ? '#24130b' : '#000000',
+          emissiveIntensity: showOverview ? .08 : index === activeIndex ? .08 : 0,
+          side: showOverview ? THREE.DoubleSide : THREE.FrontSide
         });
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(7.4, 4.5, .18), wallMat);
-        wall.position.y = 2.25;
+        const wall = new THREE.Mesh(
+          showOverview
+            ? new THREE.CylinderGeometry(5, 5, 4.8, 48, 1, true, -.72, 1.44)
+            : new THREE.BoxGeometry(7.4, 4.5, .18),
+          wallMat
+        );
+        wall.position.set(0, showOverview ? 2.4 : 2.25, showOverview ? -5 : 0);
         wall.receiveShadow = true;
-        wall.castShadow = true;
+        wall.castShadow = !showOverview;
         wall.userData.stationIndex = index;
         group.add(wall);
-        const pad = new THREE.Mesh(new THREE.PlaneGeometry(8.1, 5.2), new THREE.MeshStandardMaterial({ color: '#bcb5a6', roughness: 1 }));
-        pad.rotation.x = -Math.PI / 2;
-        pad.position.set(0, .018, 1.65);
-        pad.receiveShadow = true;
-        group.add(pad);
-        const glow = new THREE.Mesh(new THREE.BoxGeometry(7.1, .055, .08), new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#c35f32' : '#e6dfd2' }));
-        glow.position.set(0, 4.24, .14);
-        group.add(glow);
+        if (showOverview) {
+          const baseGlow = new THREE.Mesh(
+            new THREE.CylinderGeometry(5.05, 5.05, .11, 48, 1, true, -.73, 1.46),
+            new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#d88455' : '#f0d5ae', transparent: true, opacity: .86, side: THREE.DoubleSide })
+          );
+          baseGlow.position.set(0, .13, -5);
+          group.add(baseGlow);
+          const wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.8 : 2.1, 7, 2);
+          wash.position.set(0, .48, 1.25);
+          group.add(wash);
+        } else {
+          const pad = new THREE.Mesh(new THREE.PlaneGeometry(8.1, 5.2), new THREE.MeshStandardMaterial({ color: '#bcb5a6', roughness: 1 }));
+          pad.rotation.x = -Math.PI / 2;
+          pad.position.set(0, .018, 1.65);
+          pad.receiveShadow = true;
+          group.add(pad);
+          const glow = new THREE.Mesh(new THREE.BoxGeometry(7.1, .055, .08), new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#c35f32' : '#e6dfd2' }));
+          glow.position.set(0, 4.24, .14);
+          group.add(glow);
+        }
 
         const previewItems = station.items.filter((item) => item.thumbnailUrl).slice(0, 6);
         const previewColumns = Math.min(3, previewItems.length);
         const previewRows = Math.ceil(previewItems.length / Math.max(1, previewColumns));
-        const cardWidth = previewItems.length > 4 ? 1.28 : 1.52;
-        const cardHeight = cardWidth * 1.08;
-        const cardGap = .24;
+        const cardWidth = previewItems.length > 4 ? 1.02 : 1.18;
+        const cardHeight = cardWidth * 1.12;
+        const cardGap = .22;
+        const previewCenterX = .85;
         previewItems.forEach((item, previewIndex) => {
           const row = Math.floor(previewIndex / previewColumns);
           const column = previewIndex % previewColumns;
           const itemsInRow = Math.min(previewColumns, previewItems.length - row * previewColumns);
           const rowWidth = itemsInRow * cardWidth + Math.max(0, itemsInRow - 1) * cardGap;
           const frame = new THREE.Mesh(
-            new THREE.PlaneGeometry(cardWidth, cardHeight),
-            new THREE.MeshStandardMaterial({ color: '#eeeae1', roughness: .88, metalness: 0 })
+            new THREE.BoxGeometry(cardWidth, cardHeight, .075),
+            new THREE.MeshStandardMaterial({ color: '#f2eee6', roughness: .76, metalness: 0 })
           );
           frame.position.set(
-            -rowWidth / 2 + cardWidth / 2 + column * (cardWidth + cardGap),
-            2.55 + ((previewRows - 1) / 2 - row) * (cardHeight + cardGap),
-            .105
+            previewCenterX - rowWidth / 2 + cardWidth / 2 + column * (cardWidth + cardGap),
+            2.4 + ((previewRows - 1) / 2 - row) * (cardHeight + cardGap),
+            .12
           );
           frame.visible = showOverview;
           frame.userData.stationIndex = index;
@@ -172,7 +221,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           const imageMaterial = new THREE.MeshBasicMaterial({ color: '#d4cfc4', toneMapped: false });
           const image = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth - .18, cardHeight - .18), imageMaterial);
           image.position.copy(frame.position);
-          image.position.z += .012;
+          image.position.z += .042;
           image.visible = showOverview;
           image.userData.stationIndex = index;
           group.add(image);
@@ -200,20 +249,24 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             imageMaterial.needsUpdate = true;
           }, undefined, () => {});
         });
+        if (showOverview) {
+          const plaqueTexture = createStationPlaqueTexture(station, index);
+          const plaque = new THREE.Mesh(
+            new THREE.BoxGeometry(1.35, 2.65, .065),
+            new THREE.MeshStandardMaterial({ color: '#e9e4da', roughness: .82 })
+          );
+          plaque.position.set(-2.45, 2.35, .12);
+          plaque.userData.stationIndex = index;
+          group.add(plaque);
+          const plaqueFace = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.24, 2.54),
+            new THREE.MeshBasicMaterial({ map: plaqueTexture, toneMapped: false })
+          );
+          plaqueFace.position.set(-2.45, 2.35, .157);
+          plaqueFace.userData.stationIndex = index;
+          group.add(plaqueFace);
+        }
         world.add(group);
-
-        const label = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: createStationLabelTexture(station, index, index === activeIndex),
-          transparent: true,
-          depthTest: false,
-          depthWrite: false,
-          toneMapped: false
-        }));
-        label.position.set(spatial.position[0], spatial.position[1] + 4.95, spatial.position[2] + .45);
-        label.scale.set(4.8, 1.125, 1);
-        label.visible = showOverview;
-        label.renderOrder = 20;
-        world.add(label);
       });
     };
     const resize = () => {
