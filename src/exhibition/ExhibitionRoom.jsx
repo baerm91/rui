@@ -179,17 +179,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime || !activeSpatial) return;
-    let config = overviewMode ? resolveSpatialOverviewCamera(stations) : activeSpatial.camera;
-    if (modelFocused && selectedItem?.sourceType === 'gltf') {
-      const modelPosition = new THREE.Vector3().fromArray(activeSpatial.position)
-        .add(new THREE.Vector3().fromArray(selectedItem.modelTransform.position));
-      const focusDistance = Math.max(3.25, Math.min(10, 4 * selectedItem.modelTransform.scale));
-      config = {
-        position: [modelPosition.x, modelPosition.y + .08, modelPosition.z + focusDistance],
-        target: modelPosition.toArray(),
-        fov: 36
-      };
-    }
+    const config = overviewMode ? resolveSpatialOverviewCamera(stations) : activeSpatial.camera;
     const toPosition = new THREE.Vector3().fromArray(config.position);
     const toTarget = new THREE.Vector3().fromArray(config.target);
     const fromPosition = runtime.camera.position.clone();
@@ -201,7 +191,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     cancelAnimationFrame(runtime.cameraTransitionFrame);
     runtime.controls.enabled = immediate;
     runtime.controls.enableDamping = immediate;
-    runtime.controls.maxDistance = overviewMode ? 36 : modelFocused ? 18 : activeSpatial.movementRadius;
+    runtime.controls.maxDistance = overviewMode ? 36 : activeSpatial.movementRadius;
     const applyView = (progress) => {
       runtime.camera.position.lerpVectors(fromPosition, toPosition, progress);
       runtime.controls.target.lerpVectors(fromTarget, toTarget, progress);
@@ -213,7 +203,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       applyView(1);
     } else {
       const startedAt = performance.now();
-      const duration = overviewMode ? 1100 : modelFocused ? 720 : 1100;
+      const duration = overviewMode ? 1100 : 1450;
       const animateTransition = (now) => {
         const progress = Math.min(1, (now - startedAt) / duration);
         applyView(easeInOutCubic(progress));
@@ -234,7 +224,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const origin = new THREE.Vector3().fromArray(activeSpatial.position);
     runtime.key.position.fromArray(activeSpatial.lighting.keyLightPosition).add(origin);
     runtime.key.target.position.fromArray(activeSpatial.lighting.keyLightTarget).add(origin);
-  }, [activeSpatial, modelFocused, overviewMode, selectedItem?.id, selectedItem?.modelTransform, selectedItem?.sourceType, stationIndex, stations]);
+  }, [activeSpatial, overviewMode, stationIndex, stations]);
   useEffect(() => {
     const runtime = runtimeRef.current;
     const root = modelRootRef.current;
@@ -256,15 +246,17 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const fit = 1.65 / Math.max(size.x, size.y, size.z, .001);
-      object.position.sub(center.multiplyScalar(fit));
-      object.scale.setScalar(fit * selectedItem.modelTransform.scale);
-      object.position.add(new THREE.Vector3().fromArray(activeSpatial.position)).add(new THREE.Vector3().fromArray(selectedItem.modelTransform.position));
-      object.rotation.fromArray(selectedItem.modelTransform.rotation);
+      object.position.sub(center);
+      object.scale.setScalar(fit * selectedItem.modelTransform.scale * (modelFocused ? 1.5 : 1));
+      const pivot = new THREE.Group();
+      pivot.position.add(new THREE.Vector3().fromArray(activeSpatial.position)).add(new THREE.Vector3().fromArray(selectedItem.modelTransform.position));
+      pivot.rotation.fromArray(selectedItem.modelTransform.rotation);
       object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
-      root.add(object);
+      pivot.add(object);
+      root.add(pivot);
     }, undefined, () => {});
     return () => { cancelled = true; draco.dispose(); ktx2.dispose(); };
-  }, [activeSpatial?.position, selectedItem?.id, selectedItem?.modelTransform, selectedItem?.modelUrl, selectedItem?.sourceType, stationIndex]);
+  }, [activeSpatial?.position, modelFocused, selectedItem?.id, selectedItem?.modelTransform, selectedItem?.modelUrl, selectedItem?.sourceType, stationIndex]);
   return <canvas ref={canvasRef} className={`exhibition-room-canvas ${editorMode ? 'is-editor' : ''}`} aria-label="Begehbarer 3D-Ausstellungsraum" />;
 }
 
@@ -456,9 +448,9 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   return <main className={`exhibition-shell mode-${mode} ${modelFocused ? 'is-model-focused' : ''} ${overviewMode ? 'is-overview' : ''}`}>
     <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} modelFocused={modelFocused} onCameraReady={(capture) => { captureCameraRef.current = capture; }} />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(undefined); setOverviewMode(false); setModelFocused(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setModelFocused(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
-    <section className="spatial-station-content" onClick={(event) => { if (modelFocused && event.target === event.currentTarget) setModelFocused(false); }}>{modelFocused && <button className="spatial-model-focus-dismiss" type="button" aria-label="Vollbild schließen" onClick={() => setModelFocused(false)} />}<div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else setOpenItemId(item.id); }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
+    <section className="spatial-station-content" onClick={(event) => { if (modelFocused && event.target === event.currentTarget) setModelFocused(false); }}>{modelFocused && <button className="spatial-model-focus-dismiss" type="button" aria-label="Fokusansicht schließen" onClick={() => setModelFocused(false)} />}<div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else setOpenItemId(item.id); }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
       {selectedItem?.sourceType === 'sketchfab' && <div className="spatial-sketchfab"><iframe src={adapter.getViewerUrl(selectedItem.modelUrl)} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={selectedItem.title} /></div>}
-      {mode === 'visitor' && selectedItem && !modelFocused && <button className="spatial-model-focus-trigger" type="button" onClick={() => setModelFocused(true)}><span>Modell im Vollbild</span></button>}
+      {mode === 'visitor' && selectedItem && !modelFocused && <button className="spatial-model-focus-trigger" type="button" onClick={() => setModelFocused(true)}><span>Modell groß ansehen</span></button>}
       {selectedItem && <div className="spatial-object-caption"><b>{selectedItem.title}</b><span>{selectedItem.description}</span>{(selectedItem.attribution || selectedItem.license) && <small>{[selectedItem.attribution, selectedItem.license].filter(Boolean).join(' · ')}</small>}</div>}
       {selectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>

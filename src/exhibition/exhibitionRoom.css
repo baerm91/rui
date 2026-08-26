@@ -109,15 +109,8 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   display: none;
 }
 
-.mode-visitor.is-model-focused .exhibition-header,
-.mode-visitor.is-model-focused .exhibition-footer {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .mode-visitor.is-model-focused .exhibition-room-canvas {
-  z-index: 31;
+  z-index: 6;
   pointer-events: auto;
   cursor: grab;
 }
@@ -127,8 +120,8 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 }
 
 .mode-visitor.is-model-focused .spatial-station-content {
-  z-index: 32;
-  inset: 0;
+  z-index: 7;
+  inset: 0 0 62px;
   pointer-events: none;
 }
 
@@ -141,10 +134,12 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 }
 
 .mode-visitor.is-model-focused .spatial-sketchfab {
-  z-index: 33;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 8;
+  inset: auto;
+  left: 4%;
+  top: 3%;
+  width: 92%;
+  height: calc(100% - 172px);
   pointer-events: auto;
 }
 
@@ -164,7 +159,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   overflow-y: visible;
   pointer-events: auto;
   scroll-snap-type: x mandatory;
-  background: linear-gradient(0deg, rgba(24, 23, 21, .7), rgba(24, 23, 21, .12), transparent);
+  background: linear-gradient(0deg, rgba(178, 168, 148, .82), rgba(178, 168, 148, .18), transparent);
 }
 
 .mode-visitor.is-model-focused .spatial-thumbnail,
@@ -187,7 +182,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .mode-visitor.is-model-focused .spatial-model-focus-dismiss {
   position: absolute;
   z-index: 45;
-  top: 18px;
+  top: 72px;
   left: 18px;
   display: block;
   padding: 9px 13px;
@@ -201,7 +196,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 }
 
 .mode-visitor.is-model-focused .spatial-model-focus-dismiss::after {
-  content: "Vollbild schließen";
+  content: "Zur Station";
   font-size: 8px;
   font-weight: 700;
   letter-spacing: .09em;
@@ -346,7 +341,10 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   }
 
   .mode-visitor.is-model-focused .spatial-sketchfab {
-    height: 100%;
+    left: 2%;
+    top: 6%;
+    width: 96%;
+    height: calc(100% - 150px);
   }
 
   .mode-visitor .spatial-model-focus-dismiss {
@@ -365,7 +363,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   }
 
   .mode-visitor .spatial-model-focus-dismiss::after {
-    content: "Vollbild schließen";
+    content: "Zur Station";
     font-size: 8px;
     font-weight: 700;
     letter-spacing: .09em;
