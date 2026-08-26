@@ -336,3 +336,76 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     bottom: 154px;
   }
 }
+
+/* Visitor typography follows the readable scale documented in design.md. */
+.mode-visitor .spatial-story-copy {
+  width: min(34vw, 500px);
+  padding: 28px;
+}
+
+.mode-visitor .spatial-story-copy > span {
+  font-size: var(--riu-type-label, .6875rem);
+}
+
+.mode-visitor .spatial-story-copy h1 {
+  margin: 16px 0 22px;
+  font-size: var(--riu-type-display-xl, clamp(3rem, 4.3vw, 4.25rem));
+  line-height: .94;
+}
+
+.mode-visitor .spatial-story-copy p {
+  max-width: 420px;
+  color: #494a45;
+  font-size: var(--riu-type-body, 1rem);
+  line-height: 1.65;
+}
+
+.mode-visitor .spatial-object-caption {
+  width: min(360px, 38vw);
+  gap: 7px;
+  padding: 15px 18px;
+}
+
+.mode-visitor .spatial-object-caption b {
+  font-size: 1.25rem;
+  line-height: 1.1;
+}
+
+.mode-visitor .spatial-object-caption span {
+  font-size: var(--riu-type-body-compact, .875rem);
+  line-height: 1.5;
+}
+
+.mode-visitor .spatial-object-caption small {
+  font-size: var(--riu-type-meta, .625rem);
+  line-height: 1.35;
+}
+
+.mode-visitor .exhibition-back,
+.mode-visitor .walk-hint,
+.mode-visitor .station-stepper span,
+.mode-visitor .exhibition-progress {
+  font-size: var(--riu-type-meta, .625rem);
+}
+
+@media (max-width: 720px) {
+  .mode-visitor .spatial-story-copy {
+    width: min(72vw, 320px);
+    padding: 20px 18px 22px;
+  }
+
+  .mode-visitor .spatial-story-copy h1 {
+    margin: 14px 0 18px;
+    font-size: clamp(2.25rem, 10vw, 3rem);
+    line-height: .92;
+  }
+
+  .mode-visitor .spatial-story-copy p {
+    font-size: .9375rem;
+    line-height: 1.6;
+  }
+
+  .mode-visitor .spatial-object-caption {
+    width: min(70vw, 320px);
+  }
+}

@@ -36,6 +36,23 @@ Weitere globale Tokens:
 - Navigation, Labels und Fließtext: Inter
 - Große Titel bleiben in normaler Serifenschreibweise; nur Labels und Metadaten werden in Versalien mit erhöhter Laufweite gesetzt.
 
+### Lesbare Typografieskala
+
+Die folgenden Größen sind Mindestwerte für Besucheransichten und werden über die `--riu-type-*` Tokens in `src/platform/platform.css` gesteuert. Editor-Hilfstexte dürfen kompakter sein, wenn sie keine inhaltlich relevante Information tragen.
+
+| Einsatz | Token | Richtwert |
+| --- | --- | --- |
+| Große Stationstitel | `--riu-type-display-xl` | responsiv `48–68px` |
+| Längerer Fließtext | `--riu-type-body` | responsiv `15–16px` |
+| Kurze Begleittexte | `--riu-type-body-compact` | mindestens `14px` |
+| Navigation und Labels | `--riu-type-label` | mindestens `11px` |
+| Quellen und Metadaten | `--riu-type-meta` | mindestens `10px` |
+
+- Längerer Fließtext verwendet `1.55–1.75` Zeilenhöhe und bleibt möglichst bei `45–70` Zeichen pro Zeile.
+- Inhaltlich relevante Texte dürfen auf Desktop nicht unter `14px`, Metadaten nicht unter `10px` fallen. Kleinere Schrift ist nur für rein dekorative Nummern oder nicht notwendige Editor-Hinweise zulässig.
+- Displaytitel und Fließtext sollen nicht unabhängig voneinander skaliert werden: Wird der Titel stark vergrößert, muss der Fließtext mindestens auf der regulären Lesestufe bleiben.
+- Auf Bildern oder 3D-Szenen liegt Text auf einer ausreichend deckenden, ruhigen Fläche; Schriftgröße ersetzt keinen fehlenden Kontrast.
+
 ## Abstände und Layout
 
 - Maximale Inhaltsbreite der Discover-Galerie: `1440px`

@@ -21,6 +21,11 @@
   --riu-page-inline:clamp(24px,7vw,110px);
   --riu-font-display:"Cormorant Garamond",serif;
   --riu-font-body:Inter,sans-serif;
+  --riu-type-display-xl:clamp(3rem,4.3vw,4.25rem);
+  --riu-type-body:clamp(.9375rem,.2vw + .75rem,1rem);
+  --riu-type-body-compact:.875rem;
+  --riu-type-label:.6875rem;
+  --riu-type-meta:.625rem;
 }
 html[data-riu-theme="dark"] {
   --riu-bg:#131413;
