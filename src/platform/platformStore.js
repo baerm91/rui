@@ -585,7 +585,7 @@ export function removeStoryCollaborator(storyId, ownerId, userId) {
 
 export function recordStoryView(storyId, viewerId = '') {
   const story = storiesCache.find((item) => item.id === storyId);
-  if (!story || story.status !== 'published' || story.ownerId === viewerId || recordedStoryViews.has(storyId)) {
+  if (!story || story.status !== 'published' || recordedStoryViews.has(storyId)) {
     return story ?? null;
   }
 

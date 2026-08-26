@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const migration = await readFile(new URL('../supabase/migrations/0008_story_versions_and_analytics.sql', import.meta.url), 'utf8');
 const dashboardMigration = await readFile(new URL('../supabase/migrations/0009_dashboard_analytics_counts.sql', import.meta.url), 'utf8');
+const publicViewRepairMigration = await readFile(new URL('../supabase/migrations/0011_count_owner_public_story_views.sql', import.meta.url), 'utf8');
 const versionPermissionMigration = await readFile(new URL('../supabase/migrations/0010_repair_story_version_permissions.sql', import.meta.url), 'utf8');
 
 test('raw analytics are readable only by the story owner', () => {
@@ -22,6 +23,13 @@ test('dashboard view counts are aggregated only for owned stories', () => {
   assert.match(dashboardMigration, /where stories\.owner_id = \(select auth\.uid\(\)\)/);
   assert.match(dashboardMigration, /count\(distinct events\.session_id\)/);
   assert.match(dashboardMigration, /revoke execute .* from public, anon/);
+});
+
+test('public story analytics count the owner while studio tracking stays a client concern', () => {
+  assert.doesNotMatch(publicViewRepairMigration, /selected_story\.owner_id\s*=\s*\(select auth\.uid\(\)\)/);
+  assert.match(publicViewRepairMigration, /selected_story\.status\s*<>\s*'published'/);
+  assert.match(publicViewRepairMigration, /set load_ms = greatest/);
+  assert.match(publicViewRepairMigration, /grant execute on function public\.record_story_analytics_event/);
 });
 
 test('authenticated authors can read version metadata without direct write grants', () => {

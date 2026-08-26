@@ -60,22 +60,31 @@ function ExperienceApp({
   const analyticsSessionId = useRef(analyticsEnabled ? getAnalyticsSessionId(storyId) : '');
   const trackedStations = useRef(new Set());
   const analyticsViewRecorded = useRef(false);
+  const analyticsLoadRecorded = useRef(false);
 
   const trackAnalytics = (eventType, details = {}) => {
     if (!analyticsEnabled || !analyticsSessionId.current) return;
     recordStoryAnalyticsEvent(storyId, analyticsSessionId.current, eventType, {
       deviceClass: getDeviceClass(),
       ...details
-    }).catch(() => {});
+    }).catch((error) => {
+      console.warn(`[analytics] ${eventType} konnte nicht gespeichert werden.`, error);
+    });
   };
 
   useEffect(() => {
-    recordStoryView(storyId, viewerId);
-  }, [storyId, viewerId]);
+    if (analyticsEnabled) recordStoryView(storyId, viewerId);
+  }, [analyticsEnabled, storyId, viewerId]);
 
   useEffect(() => {
-    if (!analyticsEnabled || appState.mode === 'loading' || analyticsViewRecorded.current) return;
+    if (!analyticsEnabled || analyticsViewRecorded.current) return;
     analyticsViewRecorded.current = true;
+    trackAnalytics('story_view');
+  }, [analyticsEnabled]);
+
+  useEffect(() => {
+    if (!analyticsEnabled || appState.mode === 'loading' || analyticsLoadRecorded.current) return;
+    analyticsLoadRecorded.current = true;
     trackAnalytics('story_view', { loadMs: Math.round(performance.now() - analyticsStartedAt.current) });
   }, [analyticsEnabled, appState.mode]);
 

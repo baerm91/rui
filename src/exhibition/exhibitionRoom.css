@@ -76,6 +76,38 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   gap: 1rem;
 }
 
+.mode-visitor .spatial-station-content {
+  inset: 0;
+}
+
+.mode-visitor .exhibition-footer {
+  border-top: 0;
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+.mode-visitor .exhibition-footer a,
+.mode-visitor .exhibition-footer button {
+  pointer-events: auto;
+}
+
+.mode-visitor .exhibition-back,
+.mode-visitor .station-stepper,
+.mode-visitor .exhibition-footer-actions {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  background: rgba(235, 232, 223, .72);
+  box-shadow: 0 4px 16px rgba(38, 34, 28, .14);
+  backdrop-filter: blur(12px);
+}
+
+.mode-visitor .exhibition-back {
+  width: max-content;
+}
+
 @media (max-width: 720px) {
   .mode-visitor.exhibition-shell {
     height: 100dvh;
@@ -84,7 +116,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   }
 
   .mode-visitor .spatial-station-content {
-    inset: 0 0 54px;
+    inset: 0;
   }
 
   .mode-visitor .spatial-story-copy {
@@ -124,7 +156,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     left: 0;
     right: 0;
     top: auto;
-    bottom: 0;
+    bottom: 54px;
     display: flex;
     align-items: flex-end;
     gap: 12px;
