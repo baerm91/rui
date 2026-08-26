@@ -75,9 +75,137 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   gap: 1rem;
 }
 
-.spatial-model-focus-trigger,
+.spatial-model-focus-trigger {
+  position: absolute;
+  z-index: 10;
+  left: 36%;
+  top: 2%;
+  display: block;
+  width: 59%;
+  height: 72%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #f4f0e7;
+  pointer-events: auto;
+  cursor: zoom-in;
+}
+
+.spatial-model-focus-trigger span {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(31, 30, 27, .66);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
 .spatial-model-focus-dismiss {
   display: none;
+}
+
+.mode-visitor.is-model-focused .exhibition-header,
+.mode-visitor.is-model-focused .exhibition-footer {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mode-visitor.is-model-focused .exhibition-room-canvas {
+  z-index: 31;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.mode-visitor.is-model-focused .exhibition-room-canvas:active {
+  cursor: grabbing;
+}
+
+.mode-visitor.is-model-focused .spatial-station-content {
+  z-index: 32;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mode-visitor.is-model-focused .spatial-story-copy,
+.mode-visitor.is-model-focused .spatial-object-caption,
+.mode-visitor.is-model-focused .spatial-station-content > .model-interaction-hint {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode-visitor.is-model-focused .spatial-sketchfab {
+  z-index: 33;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.mode-visitor.is-model-focused .spatial-thumbnails {
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: auto;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  height: 166px;
+  padding: 18px 32px 24px;
+  overflow-x: auto;
+  overflow-y: visible;
+  pointer-events: auto;
+  scroll-snap-type: x mandatory;
+  background: linear-gradient(0deg, rgba(24, 23, 21, .7), rgba(24, 23, 21, .12), transparent);
+}
+
+.mode-visitor.is-model-focused .spatial-thumbnail,
+.mode-visitor.is-model-focused .spatial-thumbnail:hover,
+.mode-visitor.is-model-focused .spatial-thumbnail.is-dragging {
+  position: relative;
+  left: auto !important;
+  top: auto !important;
+  flex: 0 0 112px;
+  width: 112px !important;
+  min-width: 112px;
+  transform: none;
+  scroll-snap-align: center;
+}
+
+.mode-visitor.is-model-focused .spatial-thumbnail.is-selected {
+  transform: translateY(-7px);
+}
+
+.mode-visitor.is-model-focused .spatial-model-focus-dismiss {
+  position: absolute;
+  z-index: 45;
+  top: 18px;
+  left: 18px;
+  display: block;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 999px;
+  background: rgba(31, 30, 27, .74);
+  color: #f4f0e7;
+  pointer-events: auto;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.mode-visitor.is-model-focused .spatial-model-focus-dismiss::after {
+  content: "Vollbild schließen";
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 720px) {
@@ -213,28 +341,17 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     backdrop-filter: blur(8px);
   }
 
-  .mode-visitor.is-model-focused .spatial-station-content {
-    pointer-events: auto;
-  }
-
   .mode-visitor.is-model-focused .spatial-story-copy {
-    z-index: 7;
-    opacity: .12;
-    transform: translateY(-8px);
-    pointer-events: none;
+    opacity: 0;
   }
 
   .mode-visitor.is-model-focused .spatial-sketchfab {
-    z-index: 13;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: calc(100% - 132px);
+    height: 100%;
   }
 
   .mode-visitor .spatial-model-focus-dismiss {
     position: absolute;
-    z-index: 16;
+    z-index: 45;
     top: 12px;
     left: 12px;
     display: block;
@@ -248,7 +365,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   }
 
   .mode-visitor .spatial-model-focus-dismiss::after {
-    content: "Text anzeigen";
+    content: "Vollbild schließen";
     font-size: 8px;
     font-weight: 700;
     letter-spacing: .09em;
