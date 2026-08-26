@@ -8,7 +8,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getModelSourceAdapter } from '../utils/modelSourceAdapters.js';
-import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../utils/spatialStory.js';
+import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout } from '../utils/spatialStory.js';
 import './exhibitionRoom.css';
 
 const materialColors = { 'warm-white': '#ded9cd', limestone: '#c9c0ae', 'soft-grey': '#c9cbc7' };
@@ -197,25 +197,21 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         }
 
         const previewItems = station.items.filter((item) => item.thumbnailUrl).slice(0, 6);
-        const previewColumns = Math.min(3, previewItems.length);
-        const previewRows = Math.ceil(previewItems.length / Math.max(1, previewColumns));
-        const cardWidth = previewItems.length > 4 ? 1.02 : 1.18;
-        const cardHeight = cardWidth * 1.12;
-        const cardGap = .22;
-        const previewCenterX = .85;
-        previewItems.forEach((item, previewIndex) => {
-          const row = Math.floor(previewIndex / previewColumns);
-          const column = previewIndex % previewColumns;
-          const itemsInRow = Math.min(previewColumns, previewItems.length - row * previewColumns);
-          const rowWidth = itemsInRow * cardWidth + Math.max(0, itemsInRow - 1) * cardGap;
+        const stationPreviewEntries = [];
+        const layoutStationPreviews = () => {
+          if (!stationPreviewEntries.length) return;
+          const layout = resolveSpatialOverviewThumbnailLayout(stationPreviewEntries.map((entry) => entry.aspect));
+          stationPreviewEntries.forEach((entry, entryIndex) => {
+            Object.assign(entry, layout[entryIndex]);
+            entry.frame.geometry.dispose();
+            entry.frame.geometry = new THREE.BoxGeometry(entry.cardWidth, entry.cardHeight, .075);
+            entry.frame.position.set(entry.x, entry.y, .12);
+          });
+        };
+        previewItems.forEach((item) => {
           const frame = new THREE.Mesh(
-            new THREE.BoxGeometry(cardWidth, cardHeight, .075),
+            new THREE.BoxGeometry(1, 1, .075),
             new THREE.MeshStandardMaterial({ color: '#f2eee6', roughness: .76, metalness: 0 })
-          );
-          frame.position.set(
-            previewCenterX - rowWidth / 2 + cardWidth / 2 + column * (cardWidth + cardGap),
-            2.4 + ((previewRows - 1) / 2 - row) * (cardHeight + cardGap),
-            .12
           );
           frame.visible = showOverview;
           frame.userData.stationIndex = index;
@@ -223,13 +219,22 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           if (showOverview && overviewOverlay) {
             const image = document.createElement('img');
             image.className = 'overview-wall-thumbnail';
-            image.src = item.thumbnailUrl;
             image.alt = '';
             image.draggable = false;
+            const entry = { element: image, frame, aspect: 1, imageWidth: .82, imageHeight: .82, cardWidth: 1, cardHeight: 1, sourceWidth: 512, sourceHeight: 512 };
+            image.addEventListener('load', () => {
+              entry.aspect = Math.max(.58, Math.min(1.9, image.naturalWidth / Math.max(1, image.naturalHeight)));
+              entry.sourceWidth = 512 * entry.aspect;
+              image.style.width = `${entry.sourceWidth}px`;
+              layoutStationPreviews();
+            }, { once: true });
+            image.src = item.thumbnailUrl;
             overviewOverlay.append(image);
-            overlayEntries.push({ element: image, frame, cardWidth, cardHeight });
+            stationPreviewEntries.push(entry);
+            overlayEntries.push(entry);
           }
         });
+        layoutStationPreviews();
         if (showOverview) {
           const plaqueTexture = createStationPlaqueTexture(station, index);
           const plaque = new THREE.Mesh(
@@ -291,7 +296,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         z: projected.z
       };
     };
-    const applyQuadProjection = (element, [topLeft, topRight, bottomRight, bottomLeft]) => {
+    const applyQuadProjection = (element, [topLeft, topRight, bottomRight, bottomLeft], sourceWidth, sourceHeight) => {
       const dx1 = topRight.x - bottomRight.x;
       const dx2 = bottomLeft.x - bottomRight.x;
       const dx3 = topLeft.x - topRight.x + bottomRight.x - bottomLeft.x;
@@ -306,21 +311,20 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const skewX = bottomLeft.x - topLeft.x + perspectiveY * bottomLeft.x;
       const scaleY = topRight.y - topLeft.y + perspectiveX * topRight.y;
       const skewY = bottomLeft.y - topLeft.y + perspectiveY * bottomLeft.y;
-      const sourceSize = 512;
-      element.style.transform = `matrix3d(${scaleX / sourceSize},${scaleY / sourceSize},0,${perspectiveX / sourceSize},${skewX / sourceSize},${skewY / sourceSize},0,${perspectiveY / sourceSize},0,0,1,0,${topLeft.x},${topLeft.y},0,1)`;
+      element.style.transform = `matrix3d(${scaleX / sourceWidth},${scaleY / sourceWidth},0,${perspectiveX / sourceWidth},${skewX / sourceHeight},${skewY / sourceHeight},0,${perspectiveY / sourceHeight},0,0,1,0,${topLeft.x},${topLeft.y},0,1)`;
       return true;
     };
     const updateOverviewOverlay = () => {
       if (!overviewOverlay || !overlayEntries.length) return;
       const rect = canvas.getBoundingClientRect();
-      overlayEntries.forEach(({ element, frame: thumbnailFrame, cardWidth, cardHeight }) => {
+      overlayEntries.forEach(({ element, frame: thumbnailFrame, imageWidth, imageHeight, sourceWidth, sourceHeight }) => {
         thumbnailFrame.updateWorldMatrix(true, false);
         const worldCenter = thumbnailFrame.localToWorld(new THREE.Vector3(0, 0, .05));
         const center = projectPoint(worldCenter.clone(), rect);
-        const topLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-cardWidth * .41, cardHeight * .41, .05)), rect);
-        const topRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(cardWidth * .41, cardHeight * .41, .05)), rect);
-        const bottomRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(cardWidth * .41, -cardHeight * .41, .05)), rect);
-        const bottomLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-cardWidth * .41, -cardHeight * .41, .05)), rect);
+        const topLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, imageHeight / 2, .05)), rect);
+        const topRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, imageHeight / 2, .05)), rect);
+        const bottomRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, -imageHeight / 2, .05)), rect);
+        const bottomLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, -imageHeight / 2, .05)), rect);
         const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
         const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
         const frameNormal = new THREE.Vector3(0, 0, 1).transformDirection(thumbnailFrame.matrixWorld);
@@ -334,7 +338,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         element.style.display = visible ? 'block' : 'none';
         if (!visible) return;
         element.style.zIndex = String(Math.round((1 - center.z) * 100000));
-        if (!applyQuadProjection(element, [topLeft, topRight, bottomRight, bottomLeft])) element.style.display = 'none';
+        if (!applyQuadProjection(element, [topLeft, topRight, bottomRight, bottomLeft], sourceWidth, sourceHeight)) element.style.display = 'none';
       });
     };
     let frame;

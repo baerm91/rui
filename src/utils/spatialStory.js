@@ -111,6 +111,44 @@ export function normalizeThumbnailGridSpacing(value) {
   return Number.isFinite(parsed) ? Math.max(60, Math.min(140, Math.round(parsed))) : 100;
 }
 
+export function resolveSpatialOverviewThumbnailLayout(aspects = [], options = {}) {
+  const columns = Math.max(1, Math.round(number(options.columns, 3, 1, 6)));
+  const gap = number(options.gap, .22, 0, 1);
+  const centerX = number(options.centerX, .85);
+  const centerY = number(options.centerY, 2.4);
+  const availableWidth = number(options.availableWidth, 4.15, 1, 12);
+  const borderSize = number(options.borderSize, .18, 0, .8);
+  const maxImageHeight = number(options.maxImageHeight, 1.08, .2, 3);
+  const normalizedAspects = (Array.isArray(aspects) ? aspects : []).map((aspect) => number(aspect, 1, .58, 1.9));
+  const rows = [];
+  for (let rowStart = 0; rowStart < normalizedAspects.length; rowStart += columns) {
+    const rowAspects = normalizedAspects.slice(rowStart, rowStart + columns);
+    const aspectSum = rowAspects.reduce((sum, aspect) => sum + aspect, 0);
+    const imageHeight = Math.max(.56, Math.min(maxImageHeight, (availableWidth - gap * (rowAspects.length - 1) - borderSize * rowAspects.length) / Math.max(.7, aspectSum)));
+    const entries = rowAspects.map((aspect, rowIndex) => ({
+      index: rowStart + rowIndex,
+      imageWidth: imageHeight * aspect,
+      imageHeight,
+      cardWidth: imageHeight * aspect + borderSize,
+      cardHeight: imageHeight + borderSize
+    }));
+    rows.push({ entries, height: Math.max(...entries.map((entry) => entry.cardHeight)) });
+  }
+  const totalHeight = rows.reduce((sum, row) => sum + row.height, 0) + gap * Math.max(0, rows.length - 1);
+  let rowTop = centerY + totalHeight / 2;
+  const layout = [];
+  rows.forEach((row) => {
+    const rowWidth = row.entries.reduce((sum, entry) => sum + entry.cardWidth, 0) + gap * Math.max(0, row.entries.length - 1);
+    let itemLeft = centerX - rowWidth / 2;
+    row.entries.forEach((entry) => {
+      layout[entry.index] = { ...entry, x: itemLeft + entry.cardWidth / 2, y: rowTop - row.height / 2 };
+      itemLeft += entry.cardWidth + gap;
+    });
+    rowTop -= row.height + gap;
+  });
+  return layout;
+}
+
 export function resolveSpatialInitialItemId(station = {}, items = station.items) {
   const availableItems = Array.isArray(items) ? items : [];
   const availableIds = new Set(availableItems.map((item) => item?.id).filter(Boolean));

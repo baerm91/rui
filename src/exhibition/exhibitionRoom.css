@@ -429,7 +429,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   left: 0;
   width: 512px;
   height: 512px;
-  object-fit: cover;
+  object-fit: fill;
   background: #ddd7cc;
   box-shadow: 0 3px 9px rgba(52, 43, 34, .18);
   transform-origin: 0 0;

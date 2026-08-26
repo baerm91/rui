@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -64,6 +64,15 @@ test('thumbnail grid spacing is stored as a safe percentage', () => {
   assert.equal(normalizeThumbnailGridSpacing(45), 60);
   assert.equal(normalizeThumbnailGridSpacing(125.4), 125);
   assert.equal(normalizeThumbnailGridSpacing(180), 140);
+});
+
+test('overview thumbnail frames follow each image aspect ratio and remain centered', () => {
+  const layout = resolveSpatialOverviewThumbnailLayout([1.8, .72, 1, 1.5]);
+  assert.ok(layout[0].cardWidth > layout[0].cardHeight);
+  assert.ok(layout[1].cardWidth < layout[1].cardHeight);
+  assert.ok(Math.abs(layout[2].cardWidth - layout[2].cardHeight) < .001);
+  assert.ok(layout[0].x < layout[1].x && layout[1].x < layout[2].x);
+  assert.ok(layout[3].y < layout[0].y);
 });
 
 test('room overview camera frames the complete row of station walls', () => {
