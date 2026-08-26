@@ -20,6 +20,17 @@ test('spatial items preserve source metadata and transforms', () => {
   assert.equal(item.license, 'CC BY 4.0');
 });
 
+test('thumbnail defaults wrap into visible rows and repair legacy off-screen positions', () => {
+  const fifthItem = createSpatialItem({ modelUrl: 'https://example.org/fifth.glb' }, 4);
+  const repairedItem = createSpatialItem({
+    modelUrl: 'https://example.org/legacy.glb',
+    thumbnailTransform: { position: [5.2, 1.45, .08] }
+  }, 4);
+
+  assert.deepEqual(fifthItem.thumbnailTransform.position, [-3.2, -1.25, .08]);
+  assert.deepEqual(repairedItem.thumbnailTransform.position, [-3.2, -1.25, .08]);
+});
+
 test('Sketchfab and direct glTF sources use separate adapter types', () => {
   assert.equal(getSpatialSourceType('https://sketchfab.com/3d-models/object-0123456789abcdef0123456789abcdef'), 'sketchfab');
   assert.equal(getSpatialSourceType('https://example.org/model.gltf'), 'gltf');

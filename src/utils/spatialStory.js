@@ -10,6 +10,19 @@ const vector = (value, fallback) => {
   return fallback.map((entry, index) => number(value?.[['x', 'y', 'z'][index]], entry));
 };
 
+const defaultThumbnailPosition = (index) => {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
+  return [Number((-3.2 + column * 2.1).toFixed(2)), Number((1.45 - row * 2.7).toFixed(2)), 0.08];
+};
+
+const visibleThumbnailPosition = (value, index) => {
+  const fallback = defaultThumbnailPosition(index);
+  const position = vector(value, fallback);
+  const outsideStation = position[0] < -3.5 || position[0] > 3.5 || position[1] < -2.2 || position[1] > 2.4;
+  return outsideStation ? fallback : position;
+};
+
 export function getSpatialSourceType(url = '') {
   if (isSketchfabModelUrl(url)) return 'sketchfab';
   if (isSupportedModelUrl(url)) return 'gltf';
@@ -28,7 +41,7 @@ export function createSpatialItem(input = {}, index = 0) {
     description: String(input.description || '').trim(),
     thumbnailUrl: String(input.thumbnailUrl || '').trim(),
     thumbnailTransform: {
-      position: vector(input.thumbnailTransform?.position, [-1.8 + index * 1.8, 1.45, 0.08]),
+      position: visibleThumbnailPosition(input.thumbnailTransform?.position, index),
       rotation: vector(input.thumbnailTransform?.rotation, [0, 0, 0]),
       scale: number(input.thumbnailTransform?.scale, 1, 0.35, 2.5)
     },
@@ -81,4 +94,3 @@ export function normalizeSpatialItems(items) {
 export function isValidSpatialModelUrl(url) {
   return getSpatialSourceType(String(url || '').trim()) !== 'unknown';
 }
-
