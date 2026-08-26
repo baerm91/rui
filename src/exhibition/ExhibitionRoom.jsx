@@ -98,7 +98,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const key = new THREE.DirectionalLight(0xffead0, 1.2);
     key.castShadow = true;
     scene.add(key, key.target);
+    const thumbnailLoader = new THREE.TextureLoader().setCrossOrigin('anonymous');
     const rebuildStations = (nextStations = [], activeIndex = 0, showOverview = false) => {
+      const buildVersion = (world.userData.stationBuildVersion || 0) + 1;
+      world.userData.stationBuildVersion = buildVersion;
       [...world.children].filter((child) => child !== floor).forEach((child) => { world.remove(child); disposeObject(child); });
       if (nextStations.length > 1) {
         const guidePoints = nextStations.map((station) => new THREE.Vector3(station.spatial.position[0], .035, station.spatial.position[2] + 1.75));
@@ -141,6 +144,62 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         const glow = new THREE.Mesh(new THREE.BoxGeometry(7.1, .055, .08), new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#c35f32' : '#e6dfd2' }));
         glow.position.set(0, 4.24, .14);
         group.add(glow);
+
+        const previewItems = station.items.filter((item) => item.thumbnailUrl).slice(0, 6);
+        const previewColumns = Math.min(3, previewItems.length);
+        const previewRows = Math.ceil(previewItems.length / Math.max(1, previewColumns));
+        const cardWidth = previewItems.length > 4 ? 1.28 : 1.52;
+        const cardHeight = cardWidth * 1.08;
+        const cardGap = .24;
+        previewItems.forEach((item, previewIndex) => {
+          const row = Math.floor(previewIndex / previewColumns);
+          const column = previewIndex % previewColumns;
+          const itemsInRow = Math.min(previewColumns, previewItems.length - row * previewColumns);
+          const rowWidth = itemsInRow * cardWidth + Math.max(0, itemsInRow - 1) * cardGap;
+          const frame = new THREE.Mesh(
+            new THREE.PlaneGeometry(cardWidth, cardHeight),
+            new THREE.MeshStandardMaterial({ color: '#eeeae1', roughness: .88, metalness: 0 })
+          );
+          frame.position.set(
+            -rowWidth / 2 + cardWidth / 2 + column * (cardWidth + cardGap),
+            2.55 + ((previewRows - 1) / 2 - row) * (cardHeight + cardGap),
+            .105
+          );
+          frame.visible = showOverview;
+          frame.userData.stationIndex = index;
+          group.add(frame);
+
+          const imageMaterial = new THREE.MeshBasicMaterial({ color: '#d4cfc4', toneMapped: false });
+          const image = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth - .18, cardHeight - .18), imageMaterial);
+          image.position.copy(frame.position);
+          image.position.z += .012;
+          image.visible = showOverview;
+          image.userData.stationIndex = index;
+          group.add(image);
+
+          thumbnailLoader.load(item.thumbnailUrl, (texture) => {
+            if (world.userData.stationBuildVersion !== buildVersion) {
+              texture.dispose();
+              return;
+            }
+            texture.colorSpace = THREE.SRGBColorSpace;
+            const sourceWidth = texture.image?.naturalWidth || texture.image?.width || 1;
+            const sourceHeight = texture.image?.naturalHeight || texture.image?.height || 1;
+            const sourceAspect = sourceWidth / sourceHeight;
+            const targetAspect = (cardWidth - .18) / (cardHeight - .18);
+            if (sourceAspect > targetAspect) {
+              texture.repeat.set(targetAspect / sourceAspect, 1);
+              texture.offset.set((1 - texture.repeat.x) / 2, 0);
+            } else {
+              texture.repeat.set(1, sourceAspect / targetAspect);
+              texture.offset.set(0, (1 - texture.repeat.y) / 2);
+            }
+            texture.needsUpdate = true;
+            imageMaterial.map = texture;
+            imageMaterial.color.set('#ffffff');
+            imageMaterial.needsUpdate = true;
+          }, undefined, () => {});
+        });
         world.add(group);
 
         const label = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -495,14 +554,6 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       {selectedItem && <div className="spatial-object-caption"><b>{selectedItem.title}</b><span>{selectedItem.description}</span>{(selectedItem.attribution || selectedItem.license) && <small>{[selectedItem.attribution, selectedItem.license].filter(Boolean).join(' · ')}</small>}</div>}
       {selectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>
-    {mode === 'visitor' && overviewMode && <nav className="overview-station-picker" aria-label="Station auswählen">{stations.map((entry, index) => {
-      const previewItems = entry.items.filter((item) => item.thumbnailUrl).slice(0, 3);
-      return <button key={entry.id} type="button" className={index === stationIndex ? 'is-active' : ''} onClick={() => enterStation(index)} aria-label={`Station ${index + 1}: ${entry.title} öffnen`}>
-        <span className="overview-station-previews" aria-hidden="true">{previewItems.length ? previewItems.map((item) => <img key={item.id} src={item.thumbnailUrl} alt="" />) : <span className="overview-station-placeholder"><Box size={18} /></span>}</span>
-        <span className="overview-station-copy"><small>Station {String(index + 1).padStart(2, '0')}</small><strong>{entry.title}</strong><em>{entry.items.length} {entry.items.length === 1 ? 'Objekt' : 'Objekte'}</em></span>
-        <ChevronRight size={16} aria-hidden="true" />
-      </button>;
-    })}</nav>}
     <footer className="exhibition-footer"><a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a><div className="station-stepper"><button disabled={stationIndex === 0} onClick={() => setStationIndex((value) => value - 1)}><ChevronLeft /></button><span><b>{String(stationIndex + 1).padStart(2, '0')}</b> / {String(stations.length).padStart(2, '0')}</span><button disabled={stationIndex === stations.length - 1} onClick={() => setStationIndex((value) => value + 1)}><ChevronRight /></button></div><div className="exhibition-footer-actions">{mode === 'visitor' && station.spatial.audio.url && !station.spatial.audio.autoplay && <button className="walk-hint" type="button" onClick={() => setAudioPlaying((value) => !value)}>{audioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />} {audioPlaying ? 'Ton stoppen' : 'Ton starten'}</button>}<button className={`walk-hint ${overviewMode ? 'is-active' : ''}`} type="button" onClick={() => { const nextOverviewMode = !overviewMode; setOverviewMode(nextOverviewMode); setOpenItemId(nextOverviewMode ? null : undefined); }}><Footprints size={15} /> {overviewMode ? 'Zur Station' : 'Raumübersicht'}</button></div></footer>
     {mode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => setStationIndex(index)} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? undefined : null); setOverviewMode(false); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} onSelectSpatialItem={selectThumbnailItem} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
     {saved && <div className="spatial-save-toast"><Check size={14} /> Story gespeichert</div>}
