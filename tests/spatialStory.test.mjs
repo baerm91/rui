@@ -47,17 +47,23 @@ test('legacy stations receive complete spatial camera, light, and audio defaults
 });
 
 test('spatial station fields survive the existing RIU storage pipeline', () => {
+  const thumbnailTransform = {
+    position: [-1.237, 0.684, 0.08],
+    rotation: [0, 0, 0.12],
+    scale: 1.35
+  };
   const source = {
     id: 'station-room',
     title: 'Raumstation',
     introduction: 'Ein räumlicher Auftakt.',
     spatial: normalizeSpatialStation({}, 0),
-    items: [createSpatialItem({ id: 'object-1', modelUrl: 'https://example.org/object.glb', title: 'Objekt' })],
+    items: [createSpatialItem({ id: 'object-1', modelUrl: 'https://example.org/object.glb', title: 'Objekt', thumbnailTransform })],
     selectedItemId: 'object-1'
   };
   const [stored] = prepareStationsForStorage([source]);
   assert.equal(stored.introduction, source.introduction);
   assert.equal(stored.items[0].modelUrl, 'https://example.org/object.glb');
+  assert.deepEqual(stored.items[0].thumbnailTransform, thumbnailTransform);
   assert.deepEqual(stored.spatial.camera, source.spatial.camera);
   assert.deepEqual(stored.spatial.lighting, source.spatial.lighting);
   assert.deepEqual(stored.spatial.audio, source.spatial.audio);
