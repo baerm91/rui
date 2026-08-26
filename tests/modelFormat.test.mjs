@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { getModelFormat } from '../src/models.js';
-import { isValidModelUrl } from '../src/platform/platformStore.js';
+import { createStory, isValidModelUrl } from '../src/platform/platformStore.js';
 import {
   getSketchfabEmbedUrl,
   getSketchfabModelUid,
@@ -50,4 +50,30 @@ test('rejects Sketchfab profile, collection and malformed model URLs', () => {
   assert.equal(isValidModelUrl('https://sketchfab.com/collections/museum'), false);
   assert.equal(isValidModelUrl('https://sketchfab.example/models/0123456789abcdef0123456789abcdef'), false);
   assert.equal(isValidModelUrl('https://sketchfab.com/models/not-a-model-id'), false);
+});
+
+test('creates a room story when no model URL is supplied', () => {
+  const story = createStory({
+    ownerId: 'owner-1',
+    authorName: 'Test',
+    name: 'Raumgeschichte',
+    description: 'Eine Ausstellung ohne Startmodell.',
+    modelUrl: '',
+    categories: ['Kunst']
+  });
+  assert.equal(story.models.primary, '');
+  assert.equal(story.settings.experienceType, 'room');
+});
+
+test('keeps model stories on the existing viewer workflow', () => {
+  const story = createStory({
+    ownerId: 'owner-1',
+    authorName: 'Test',
+    name: 'Modellgeschichte',
+    description: 'Eine Ausstellung mit Startmodell.',
+    modelUrl: 'https://example.org/object.glb',
+    categories: ['Kunst']
+  });
+  assert.equal(story.models.primary, 'https://example.org/object.glb');
+  assert.equal(story.settings.experienceType, 'model');
 });

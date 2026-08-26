@@ -420,7 +420,7 @@ export function createStory({
     stats: { views: 0, lastViewedAt: null },
     branding: { title: name.trim(), subtitle: '', watermark: name.trim().toUpperCase() },
     models: { primary: normalizeModelUrl(modelUrl), reconstruction: '', localModelName: '', primaryName: name.trim() },
-    settings: { scrollSpeed: 1 },
+    settings: { scrollSpeed: 1, experienceType: normalizeModelUrl(modelUrl) ? 'model' : 'room' },
     alignment: null,
     annotations: [],
     collaborators: [],

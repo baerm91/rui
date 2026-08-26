@@ -24,6 +24,7 @@ import { isSketchfabModelUrl } from './utils/modelSource.js';
 import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
 import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
 import ExhibitionRoom from './exhibition/ExhibitionRoom.jsx';
+import { isRoomStory } from './utils/storyExperience.js';
 
 function ExperienceApp({
   hasInitialStoryPreview = false,
@@ -451,6 +452,17 @@ function App() {
   if (!access.allowed) {
     window.location.replace(access.isEditor && !access.session ? '/login' : '/');
     return null;
+  }
+  if (isRoomStory(access.story)) {
+    return (
+      <ExhibitionRoom
+        storyId={access.story.id}
+        storyTitle={access.story.name}
+        storyDescription={access.story.description}
+        initialMode={access.isEditor ? 'editor' : 'visitor'}
+        backHref={access.isEditor ? '/dashboard' : '/discover'}
+      />
+    );
   }
   return (
     <ExperienceApp

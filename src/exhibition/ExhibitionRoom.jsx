@@ -239,12 +239,21 @@ function EditableThumbnail({ thumbnail, model, selected, onActivate, onSelect, o
   );
 }
 
-export default function ExhibitionRoom() {
+export default function ExhibitionRoom({ storyId = '', storyTitle = '', storyDescription = '', initialMode = 'visitor', backHref = '/' }) {
+  const storageKey = storyId ? `${EXHIBITION_STORAGE_KEY}:${storyId}` : EXHIBITION_STORAGE_KEY;
   const [exhibition, setExhibition] = useState(() => {
-    try { return normalizeExhibition(JSON.parse(localStorage.getItem(EXHIBITION_STORAGE_KEY))); }
-    catch { return structuredClone(DEFAULT_EXHIBITION); }
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return normalizeExhibition(JSON.parse(saved));
+      const initial = structuredClone(DEFAULT_EXHIBITION);
+      if (storyId) initial.id = storyId;
+      if (storyTitle) initial.title = storyTitle;
+      if (storyTitle) initial.stations[0].title = storyTitle;
+      if (storyDescription) initial.stations[0].introduction = storyDescription;
+      return initial;
+    } catch { return structuredClone(DEFAULT_EXHIBITION); }
   });
-  const [mode, setMode] = useState('visitor');
+  const [mode, setMode] = useState(initialMode);
   const [editorSelection, setEditorSelection] = useState(null);
   const [saveState, setSaveState] = useState('idle');
   const [resetToken, setResetToken] = useState(0);
@@ -266,7 +275,7 @@ export default function ExhibitionRoom() {
   });
 
   const save = () => {
-    localStorage.setItem(EXHIBITION_STORAGE_KEY, JSON.stringify(exhibition));
+    localStorage.setItem(storageKey, JSON.stringify(exhibition));
     setSaveState('saved');
     window.setTimeout(() => setSaveState('idle'), 1800);
   };
@@ -299,7 +308,7 @@ export default function ExhibitionRoom() {
       <RoomBackdrop />
       <div className="exhibition-noise" />
       <header className="exhibition-header">
-        <a href="/" className="exhibition-brand" aria-label="Zurück zu RIU"><span className="exhibition-mark"><i /></span><b>RIU</b><small>Räumliche Geschichten</small></a>
+        <a href={backHref} className="exhibition-brand" aria-label="Zurück zu RIU"><span className="exhibition-mark"><i /></span><b>RIU</b><small>Räumliche Geschichten</small></a>
         <div className="exhibition-mode-switch" aria-label="Ansicht wechseln">
           <button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setEditorSelection(null); }}><Footprints size={14} /> Besucher</button>
           <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => setMode('editor')}><Pencil size={13} /> Editor</button>
@@ -345,7 +354,7 @@ export default function ExhibitionRoom() {
       </section>
 
       <footer className="exhibition-footer">
-        <a href="/" className="exhibition-back"><ArrowLeft size={14} /> Galerie</a>
+        <a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> {storyId ? 'Meine Stories' : 'Galerie'}</a>
         <div className="station-stepper"><button disabled aria-label="Vorherige Station"><ChevronLeft /></button><span><b>{stationNumber}</b> / {String(exhibition.stations.length).padStart(2, '0')}</span><button disabled aria-label="Nächste Station"><ChevronRight /></button></div>
         <span className="walk-hint"><Footprints size={15} /> Rundgang · Station {stationNumber}</span>
       </footer>
