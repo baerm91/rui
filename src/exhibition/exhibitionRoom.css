@@ -413,3 +413,21 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .mode-visitor.is-overview .exhibition-room-canvas {
   cursor: pointer;
 }
+
+.overview-wall-thumbnails {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.overview-wall-thumbnail {
+  position: absolute;
+  display: block;
+  object-fit: cover;
+  background: #ddd7cc;
+  box-shadow: 0 3px 9px rgba(52, 43, 34, .18);
+  transform-origin: center;
+  user-select: none;
+}
