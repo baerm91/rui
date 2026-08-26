@@ -193,7 +193,6 @@ function Header({ session, transparent = false, showThemeToggle = true }) {
       <nav className={open ? 'is-open' : ''}>
         <a className={path === '/' ? 'is-active' : ''} href="/">Home</a>
         <a className={path === '/discover' ? 'is-active' : ''} href="/discover">Discover</a>
-        <a className={path === '/raum' ? 'is-active' : ''} href="/raum">3D-Raum</a>
         <a href="/#about">Über RIU</a>
         {showThemeToggle && <ThemeToggle />}
         {session ? (
