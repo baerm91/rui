@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, normalizeSpatialStation, resolveSpatialInitialItemId } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, normalizeSpatialStation, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -43,6 +43,19 @@ test('station start model is explicit and falls back safely for legacy data', ()
   assert.equal(resolveSpatialInitialItemId({ selectedItemId: 'two' }, items), 'two');
   assert.equal(resolveSpatialInitialItemId({ initialItemId: 'missing' }, items), 'one');
   assert.equal(resolveSpatialInitialItemId({}, []), null);
+});
+
+test('room overview camera frames the complete row of station walls', () => {
+  const overview = resolveSpatialOverviewCamera([
+    { spatial: { position: [0, 0, 0] } },
+    { spatial: { position: [9, 0, 0] } },
+    { spatial: { position: [18, 0, 0] } }
+  ]);
+  assert.deepEqual(overview.target, [9, 1.8, 0]);
+  assert.equal(overview.position[0], 9);
+  assert.ok(overview.position[1] > 7);
+  assert.ok(overview.position[2] > 18);
+  assert.ok(overview.fov > 50);
 });
 
 test('legacy stations receive complete spatial camera, light, and audio defaults', () => {

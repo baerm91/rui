@@ -38,6 +38,14 @@ export function VisitorControls({
       />
       <div className="visitor-top-controls fixed top-5 left-5 z-40 flex items-center gap-2 pointer-events-auto">
         <a
+          href="/"
+          className="flex h-[38px] items-center rounded-full border border-white/10 bg-zinc-950/45 px-3.5 font-serif text-sm font-semibold tracking-[0.16em] text-zinc-200 no-underline shadow-[0_4px_16px_rgba(0,0,0,0.5)] backdrop-blur-xl transition-all duration-300 hover:border-[#c9a96e]/40 hover:bg-zinc-900/60 hover:text-[#c9a96e] active:scale-95"
+          title="Zur RIU Startseite"
+          aria-label="Zur RIU Startseite"
+        >
+          RIU
+        </a>
+        <a
           href="/discover"
           className="p-2.5 rounded-full border border-white/10 bg-zinc-950/45 text-zinc-400 backdrop-blur-xl transition-all duration-300 hover:border-[#c9a96e]/40 hover:bg-zinc-900/60 hover:text-[#c9a96e] active:scale-95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex items-center justify-center"
           title="Zur Galerie"

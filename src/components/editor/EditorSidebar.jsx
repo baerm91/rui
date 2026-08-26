@@ -59,8 +59,11 @@ export function EditorSidebar({
   onLocalModelFiles,
   canCreateProjects = true,
   spatialMode = false,
+  selectedSpatialItemIds,
+  onSelectSpatialItem,
   onUpdateSpatialStation,
   onUpdateSpatialItem,
+  onUpdateSpatialItemPositions,
   onAddSpatialItem,
   onRemoveSpatialItem
 }) {
@@ -487,8 +490,11 @@ export function EditorSidebar({
           spatialMode ? <SpatialStationEditor
             station={activeStation}
             index={safeEditingIndex}
+            selectedItemIds={selectedSpatialItemIds}
+            onSelectItem={onSelectSpatialItem}
             onUpdateStation={onUpdateSpatialStation}
             onUpdateItem={onUpdateSpatialItem}
+            onUpdateItemPositions={onUpdateSpatialItemPositions}
             onAddItem={onAddSpatialItem}
             onRemoveItem={onRemoveSpatialItem}
             onCaptureCamera={onCaptureCamera}

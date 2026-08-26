@@ -2,11 +2,12 @@ import React, { useRef, useState } from 'react';
 import { Box, Camera, Check, ImagePlus, Lightbulb, Link2, Music2, Play, Plus, Trash2 } from 'lucide-react';
 import { createSpatialItem, isValidSpatialModelUrl } from '../../utils/spatialStory.js';
 import { getModelSourceAdapter } from '../../utils/modelSourceAdapters.js';
+import { alignThumbnailSelection, createThumbnailLayout } from '../../utils/spatialThumbnailLayout.js';
 
 const VectorFields = ({ label, value = [0, 0, 0], onChange, step = .1 }) => <label className="spatial-vector-field"><span>{label}</span><span>{['X', 'Y', 'Z'].map((axis, index) => <input key={axis} type="number" step={step} value={value[index] ?? 0} aria-label={`${label} ${axis}`} onChange={(event) => { const next = [...value]; next[index] = Number(event.target.value); onChange(next); }} />)}</span></label>;
 const RangeField = ({ label, value, min, max, step, onChange, suffix = '' }) => <label className="spatial-range-field"><span>{label}<b>{value}{suffix}</b></span><input type="range" value={value} min={min} max={max} step={step} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 
-export function SpatialStationEditor({ station, index, onUpdateStation, onUpdateItem, onAddItem, onRemoveItem, onCaptureCamera }) {
+export function SpatialStationEditor({ station, index, selectedItemIds = [], onSelectItem, onUpdateStation, onUpdateItem, onUpdateItemPositions, onAddItem, onRemoveItem, onCaptureCamera }) {
   const [tab, setTab] = useState('content');
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState('');
@@ -32,13 +33,34 @@ export function SpatialStationEditor({ station, index, onUpdateStation, onUpdate
     reader.readAsDataURL(file);
   };
   const tabs = [['content', 'Inhalt', Box], ['camera', 'Kamera', Camera], ['light', 'Licht', Lightbulb], ['audio', 'Audio', Music2]];
+  const applyPreset = (preset) => onUpdateItemPositions(index, createThumbnailLayout(station.items, preset));
+  const alignSelection = (action) => onUpdateItemPositions(index, alignThumbnailSelection(station.items, selectedItemIds, action));
   return <section className="spatial-editor-card">
     <div className="spatial-editor-tabs">{tabs.map(([id, label, Icon]) => <button key={id} className={tab === id ? 'is-active' : ''} onClick={() => setTab(id)}><Icon size={13} />{label}</button>)}</div>
     {tab === 'content' && <div className="spatial-editor-section">
       <label>Stationstitel<input value={station.title || ''} onChange={(event) => onUpdateStation(index, { title: event.target.value })} /></label>
       <label>Einführungstext<textarea rows="4" value={station.introduction ?? station.description ?? ''} onChange={(event) => onUpdateStation(index, { introduction: event.target.value, description: event.target.value })} /></label>
       <div className="spatial-add-model"><span><Link2 size={14} /> Modell über URL hinzufügen</span><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Sketchfab, .glb oder .gltf" /><button onClick={addModel} disabled={resolving}><Plus size={13} />{resolving ? 'Prüfen …' : 'Hinzufügen'}</button>{urlError && <small>{urlError}</small>}</div>
-      <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={item.id === selectedItem?.id ? 'is-active' : ''} onClick={() => onUpdateStation(index, { selectedItemId: item.id })}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
+      <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={`${item.id === selectedItem?.id ? 'is-active' : ''} ${selectedItemIds.includes(item.id) ? 'is-multi-selected' : ''}`} onClick={(event) => onSelectItem(item.id, event)}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
+      {(station.items || []).length > 1 && <div className="spatial-layout-tools">
+        <div className="spatial-layout-heading"><strong>Thumbnail-Layout</strong><span>{selectedItemIds.length} ausgewählt</span></div>
+        <p>Mehrere Bilder mit Umschalt- oder Strg-Klick auswählen.</p>
+        <div className="spatial-layout-presets" aria-label="Layout-Presets">
+          <button type="button" onClick={() => applyPreset('grid')}>Raster</button>
+          <button type="button" onClick={() => applyPreset('brick')}>Ziegel</button>
+          <button type="button" onClick={() => applyPreset('circle')}>Kreis</button>
+        </div>
+        <div className="spatial-layout-align" aria-label="Ausgewählte Thumbnails ausrichten">
+          <button type="button" title="Links ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('left')}>Links</button>
+          <button type="button" title="Horizontal zentrieren" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('center-horizontal')}>Mitte X</button>
+          <button type="button" title="Rechts ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('right')}>Rechts</button>
+          <button type="button" title="Oben ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('top')}>Oben</button>
+          <button type="button" title="Vertikal zentrieren" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('center-vertical')}>Mitte Y</button>
+          <button type="button" title="Unten ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('bottom')}>Unten</button>
+          <button type="button" title="Horizontal gleichmäßig verteilen" disabled={selectedItemIds.length < 3} onClick={() => alignSelection('distribute-horizontal')}>Verteilen X</button>
+          <button type="button" title="Vertikal gleichmäßig verteilen" disabled={selectedItemIds.length < 3} onClick={() => alignSelection('distribute-vertical')}>Verteilen Y</button>
+        </div>
+      </div>}
       {selectedItem && <div className="spatial-item-settings">
         <div className="spatial-item-heading"><strong>Ausgewähltes Objekt</strong><button onClick={() => onRemoveItem(index, selectedItem.id)}><Trash2 size={13} /> Entfernen</button></div>
         <button className={`spatial-start-model ${station.initialItemId === selectedItem.id ? 'is-active' : ''}`} type="button" onClick={() => onUpdateStation(index, { initialItemId: selectedItem.id })} disabled={station.initialItemId === selectedItem.id}>{station.initialItemId === selectedItem.id ? <Check size={13} /> : <Play size={13} />}{station.initialItemId === selectedItem.id ? 'Startmodell dieser Station' : 'Als Startmodell festlegen'}</button>

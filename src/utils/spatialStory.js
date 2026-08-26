@@ -98,6 +98,22 @@ export function resolveSpatialInitialItemId(station = {}, items = station.items)
     .find((id) => availableIds.has(id)) || null;
 }
 
+export function resolveSpatialOverviewCamera(stations = []) {
+  const positions = (Array.isArray(stations) ? stations : [])
+    .map((station) => vector(station?.spatial?.position ?? station?.position, [0, 0, 0]));
+  if (!positions.length) return { position: [0, 7.5, 14], target: [0, 1.8, 0], fov: 50 };
+  const xs = positions.map((position) => position[0]);
+  const zs = positions.map((position) => position[2]);
+  const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 7.4);
+  return {
+    position: [centerX, Math.max(7.2, span * .38 + 4.8), centerZ + Math.max(14, span * .78 + 8)],
+    target: [centerX, 1.8, centerZ],
+    fov: Math.min(62, 48 + span * .28)
+  };
+}
+
 export function isValidSpatialModelUrl(url) {
   return getSpatialSourceType(String(url || '').trim()) !== 'unknown';
 }
