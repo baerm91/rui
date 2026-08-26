@@ -425,9 +425,14 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .overview-wall-thumbnail {
   position: absolute;
   display: block;
+  top: 0;
+  left: 0;
+  width: 512px;
+  height: 512px;
   object-fit: cover;
   background: #ddd7cc;
   box-shadow: 0 3px 9px rgba(52, 43, 34, .18);
-  transform-origin: center;
+  transform-origin: 0 0;
   user-select: none;
+  will-change: transform;
 }

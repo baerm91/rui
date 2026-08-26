@@ -291,26 +291,50 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         z: projected.z
       };
     };
+    const applyQuadProjection = (element, [topLeft, topRight, bottomRight, bottomLeft]) => {
+      const dx1 = topRight.x - bottomRight.x;
+      const dx2 = bottomLeft.x - bottomRight.x;
+      const dx3 = topLeft.x - topRight.x + bottomRight.x - bottomLeft.x;
+      const dy1 = topRight.y - bottomRight.y;
+      const dy2 = bottomLeft.y - bottomRight.y;
+      const dy3 = topLeft.y - topRight.y + bottomRight.y - bottomLeft.y;
+      const denominator = dx1 * dy2 - dx2 * dy1;
+      if (Math.abs(denominator) < .0001) return false;
+      const perspectiveX = (dx3 * dy2 - dx2 * dy3) / denominator;
+      const perspectiveY = (dx1 * dy3 - dx3 * dy1) / denominator;
+      const scaleX = topRight.x - topLeft.x + perspectiveX * topRight.x;
+      const skewX = bottomLeft.x - topLeft.x + perspectiveY * bottomLeft.x;
+      const scaleY = topRight.y - topLeft.y + perspectiveX * topRight.y;
+      const skewY = bottomLeft.y - topLeft.y + perspectiveY * bottomLeft.y;
+      const sourceSize = 512;
+      element.style.transform = `matrix3d(${scaleX / sourceSize},${scaleY / sourceSize},0,${perspectiveX / sourceSize},${skewX / sourceSize},${skewY / sourceSize},0,${perspectiveY / sourceSize},0,0,1,0,${topLeft.x},${topLeft.y},0,1)`;
+      return true;
+    };
     const updateOverviewOverlay = () => {
       if (!overviewOverlay || !overlayEntries.length) return;
       const rect = canvas.getBoundingClientRect();
       overlayEntries.forEach(({ element, frame: thumbnailFrame, cardWidth, cardHeight }) => {
         thumbnailFrame.updateWorldMatrix(true, false);
-        const center = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(0, 0, .05)), rect);
+        const worldCenter = thumbnailFrame.localToWorld(new THREE.Vector3(0, 0, .05));
+        const center = projectPoint(worldCenter.clone(), rect);
         const topLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-cardWidth * .41, cardHeight * .41, .05)), rect);
         const topRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(cardWidth * .41, cardHeight * .41, .05)), rect);
+        const bottomRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(cardWidth * .41, -cardHeight * .41, .05)), rect);
         const bottomLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-cardWidth * .41, -cardHeight * .41, .05)), rect);
         const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
         const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
-        const rotation = Math.atan2(topRight.y - topLeft.y, topRight.x - topLeft.x) * 180 / Math.PI;
-        const visible = overviewModeRef.current && center.z > -1 && center.z < 1 && width > 2 && height > 2;
+        const frameNormal = new THREE.Vector3(0, 0, 1).transformDirection(thumbnailFrame.matrixWorld);
+        const toCamera = camera.position.clone().sub(worldCenter).normalize();
+        raycaster.set(camera.position, worldCenter.clone().sub(camera.position).normalize());
+        const firstStationHit = raycaster.intersectObjects(world.children, true)
+          .find((hit) => Number.isInteger(hit.object.userData.stationIndex));
+        const facesCamera = frameNormal.dot(toCamera) > .02;
+        const isUnoccluded = firstStationHit?.object.userData.stationIndex === thumbnailFrame.userData.stationIndex;
+        const visible = overviewModeRef.current && facesCamera && isUnoccluded && center.z > -1 && center.z < 1 && width > 2 && height > 2;
         element.style.display = visible ? 'block' : 'none';
         if (!visible) return;
-        element.style.left = `${center.x}px`;
-        element.style.top = `${center.y}px`;
-        element.style.width = `${width}px`;
-        element.style.height = `${height}px`;
-        element.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+        element.style.zIndex = String(Math.round((1 - center.z) * 100000));
+        if (!applyQuadProjection(element, [topLeft, topRight, bottomRight, bottomLeft])) element.style.display = 'none';
       });
     };
     let frame;
