@@ -40,6 +40,15 @@ export function isSupportedModelUrl(value) {
   return isDirectModelUrl(value) || isSketchfabModelUrl(value);
 }
 
+export function extractModelUrl(value) {
+  const text = String(value || '').replaceAll('&amp;', '&').trim();
+  if (isSupportedModelUrl(text)) return text;
+  const candidates = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+  return candidates
+    .map((candidate) => candidate.replace(/[),.;]+$/, ''))
+    .find((candidate) => isSupportedModelUrl(candidate)) || '';
+}
+
 export function normalizeModelUrl(value) {
   const trimmed = String(value || '').trim();
   const uid = getSketchfabModelUid(trimmed);

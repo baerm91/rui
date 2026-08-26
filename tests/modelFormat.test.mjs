@@ -3,6 +3,7 @@ import test from 'node:test';
 import { getModelFormat } from '../src/models.js';
 import { createStory, isValidModelUrl } from '../src/platform/platformStore.js';
 import {
+  extractModelUrl,
   getSketchfabEmbedUrl,
   getSketchfabModelUid,
   normalizeModelUrl
@@ -43,6 +44,13 @@ test('accepts official Sketchfab alphanumeric viewer UIDs', () => {
   const uid = '7w7pAfrCfjovwykkEeRFLGw5SXS';
   assert.equal(getSketchfabModelUid(`https://sketchfab.com/models/${uid}`), uid.toLowerCase());
   assert.equal(isValidModelUrl(`https://sketchfab.com/models/${uid}/embed`), true);
+});
+
+test('extracts Sketchfab model pages from copied share text and embed code', () => {
+  const uid = 'ac98adfce999446393ef3bf9dbdbafe6';
+  const pageUrl = `https://sketchfab.com/3d-models/test-gltf-${uid}`;
+  assert.equal(extractModelUrl(`Test Gltf by gnaz on Sketchfab: ${pageUrl}`), pageUrl);
+  assert.equal(extractModelUrl(`<iframe src="https://sketchfab.com/models/${uid}/embed"></iframe>`), `https://sketchfab.com/models/${uid}/embed`);
 });
 
 test('rejects Sketchfab profile, collection and malformed model URLs', () => {

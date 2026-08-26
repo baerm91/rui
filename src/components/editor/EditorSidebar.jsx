@@ -56,6 +56,7 @@ export function EditorSidebar({
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onLocalModelFiles,
   canCreateProjects = true,
   spatialMode = false,
   onUpdateSpatialStation,
@@ -215,6 +216,7 @@ export function EditorSidebar({
         onCreateProject={onCreateProject}
         onUpdateProject={onUpdateProject}
         onDeleteProject={onDeleteProject}
+        onLocalModelFiles={onLocalModelFiles}
         canCreateProjects={canCreateProjects}
         modelPanelOpen={openSettingsPanel === 'models'}
         onModelPanelOpenChange={(isOpen) => setOpenSettingsPanel(isOpen ? 'models' : null)}

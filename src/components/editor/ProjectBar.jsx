@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, Box, Check, ChevronDown, ChevronUp, ClipboardPaste, Copy, FolderKanban, LoaderCircle, Plus, Trash2, X } from 'lucide-react';
 import { getStationsUsingModel, getStationsUsingModelId } from '../../utils/modelAssignments.js';
-import { isSketchfabModelUrl, isSupportedModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
+import { extractModelUrl, isSketchfabModelUrl, isSupportedModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
 
-export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, canCreateProjects = true, modelPanelOpen, onModelPanelOpenChange }) {
+export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, onLocalModelFiles, canCreateProjects = true, modelPanelOpen, onModelPanelOpenChange }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showModels, setShowModels] = useState(false);
   const [dragTarget, setDragTarget] = useState('');
+  const [dropFeedback, setDropFeedback] = useState({});
   const additionalModels = Array.isArray(activeProject?.models?.additional) ? activeProject.models.additional : [];
   const connectedModelCount = [activeProject?.models?.primary, activeProject?.models?.reconstruction, ...additionalModels.map((model) => model.url)].filter(Boolean).length;
   const modelsAreOpen = modelPanelOpen ?? showModels;
 
   const applyPastedUrl = (event, apply) => {
-    const value = event.clipboardData?.getData('text/plain')?.trim();
+    const value = extractModelUrl(event.clipboardData?.getData('text/plain'));
     if (!value) return;
     event.preventDefault();
     event.stopPropagation();
@@ -23,28 +24,42 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
 
   const readClipboardUrl = async (apply) => {
     try {
-      const value = (await navigator.clipboard.readText()).trim();
+      const value = extractModelUrl(await navigator.clipboard.readText());
       if (value) apply(value);
     } catch {
       // Native Ctrl+V and context-menu paste remain available if clipboard access is denied.
     }
   };
 
-  const handleModelDrop = (event, targetId, apply) => {
+  const reportDrop = (targetId, message, isError = false) => {
+    setDropFeedback((current) => ({ ...current, [targetId]: { message, isError } }));
+    window.setTimeout(() => setDropFeedback((current) => ({ ...current, [targetId]: null })), 2600);
+  };
+
+  const handleModelDrop = async (event, targetId, apply) => {
     event.preventDefault();
     event.stopPropagation();
     setDragTarget('');
     const imageFile = Array.from(event.dataTransfer?.files || []).find((file) => file.type.startsWith('image/'));
     if (imageFile) {
       const reader = new FileReader();
-      reader.onload = () => apply({ thumbnailUrl: reader.result });
+      reader.onload = () => { apply({ thumbnailUrl: reader.result }); reportDrop(targetId, 'Thumbnail übernommen'); };
       reader.readAsDataURL(imageFile);
       return;
     }
-    const value = (event.dataTransfer?.getData('text/uri-list') || event.dataTransfer?.getData('text/plain') || '').trim();
-    if (!value) return;
-    if (isSupportedModelUrl(value)) apply({ url: normalizeModelUrl(value) });
-    else if (/^https?:\/\/.*\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(value)) apply({ thumbnailUrl: value });
+    const modelFiles = Array.from(event.dataTransfer?.files || []).filter((file) => /\.(?:fbx|glb|gltf|bin)$/i.test(file.name));
+    if (modelFiles.length) {
+      if (!onLocalModelFiles) { reportDrop(targetId, 'Lokale Modelldateien sind hier nicht verfügbar.', true); return; }
+      apply({ name: modelFiles[0].name.replace(/\.[^.]+$/, '') });
+      await onLocalModelFiles(modelFiles);
+      reportDrop(targetId, 'Lokales Modell geladen');
+      return;
+    }
+    const value = extractModelUrl(event.dataTransfer?.getData('text/uri-list') || event.dataTransfer?.getData('text/plain'));
+    if (!value) { reportDrop(targetId, 'Kein unterstützter Inhalt erkannt.', true); return; }
+    if (isSupportedModelUrl(value)) { apply({ url: normalizeModelUrl(value) }); reportDrop(targetId, 'Modell-Link übernommen'); }
+    else if (/^https?:\/\/.*\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(value)) { apply({ thumbnailUrl: value }); reportDrop(targetId, 'Thumbnail übernommen'); }
+    else reportDrop(targetId, 'Bitte GLB, glTF, FBX, Sketchfab oder ein Bild ablegen.', true);
   };
 
   const dropZoneProps = (targetId, apply) => ({
@@ -172,7 +187,8 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
             if (!isPrimary && !url) return null;
             const applyDrop = (patch) => onUpdateProject({ models: {
               ...(patch.url ? { [role]: patch.url } : {}),
-              ...(patch.thumbnailUrl ? { [thumbnailKey]: patch.thumbnailUrl } : {})
+              ...(patch.thumbnailUrl ? { [thumbnailKey]: patch.thumbnailUrl } : {}),
+              ...(patch.name ? { [`${role}Name`]: patch.name } : {})
             } });
             return (
               <div
@@ -246,9 +262,10 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                     Sketchfab kann nur als Basismodell eingebettet werden. Für weitere Modelle bitte eine direkte FBX-, GLB- oder glTF-URL verwenden.
                   </span>
                 )}
-                <div className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
+                <div aria-label={`${modelLabel}: Modell-Link oder Thumbnail ablegen`} className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
                   Modell-Link oder Thumbnail hier ablegen
                 </div>
+                {dropFeedback[role] && <div className={`mt-1 text-[8px] ${dropFeedback[role].isError ? 'text-red-300' : 'text-emerald-300'}`}>{dropFeedback[role].message}</div>}
               </div>
             );
           })}
@@ -311,9 +328,10 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                     {assignedStations.map((station) => station.title).join(' · ')}
                   </span>
                 )}
-                <div className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
+                <div aria-label={`${model.name || `Modell ${modelIndex + 2}`}: Modell-Link oder Thumbnail ablegen`} className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
                   Modell-Link oder Thumbnail hier ablegen
                 </div>
+                {dropFeedback[model.id] && <div className={`mt-1 text-[8px] ${dropFeedback[model.id].isError ? 'text-red-300' : 'text-emerald-300'}`}>{dropFeedback[model.id].message}</div>}
               </div>
             );
           })}
