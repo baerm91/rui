@@ -23,6 +23,7 @@ import { SketchfabViewer } from './components/SketchfabViewer.jsx';
 import { isSketchfabModelUrl } from './utils/modelSource.js';
 import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
 import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
+import ExhibitionRoom from './exhibition/ExhibitionRoom.jsx';
 
 function ExperienceApp({
   hasInitialStoryPreview = false,
@@ -442,6 +443,7 @@ function ExperienceApp({
 }
 
 function App() {
+  if (window.location.pathname === '/raum') return <ExhibitionRoom />;
   const isExperiencePath = /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(window.location.pathname);
   const access = getExperienceAccess();
 
