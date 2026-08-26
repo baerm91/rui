@@ -374,7 +374,7 @@ export default function ExhibitionRoom({ storyId = '', storyTitle = '', storyDes
           </> : <p>Wählen Sie eine Bildkarte auf der Stationsfläche aus.</p>}
         </div>
         <div className="editor-architecture"><Box size={17} /><p><strong>Bereit für den Ausbau</strong>Stationen, Modellquellen und Layoutdaten sind getrennt gespeichert. Sketchfab kann als weiterer Modell-Adapter ergänzt werden.</p></div>
-        <button className="editor-save" type="button" onClick={save}>{saveState === 'saved' ? <Check size={16} /> : <Save size={16} />}{saveState === 'saved' ? 'Lokal gespeichert' : 'Ausstellung speichern'}</button>
+        <button className="editor-save" type="button" onClick={save}>{saveState === 'saved' ? <Check size={16} /> : <Save size={16} />}{saveState === 'saved' ? 'Lokal gespeichert' : 'Story speichern'}</button>
       </aside>}
     </main>
   );

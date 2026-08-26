@@ -20,6 +20,7 @@ import {
 import { readRememberLoginPreference } from './supabaseClient.js';
 import { filterOwnedStories } from './dashboardStories.js';
 import { formatAnalyticsDuration } from './storyAnalytics.js';
+import { getPublishedDiscoverStories } from './discoverStories.js';
 
 const go = (path) => { window.location.href = path; };
 const getPreferredTheme = () => {
@@ -270,7 +271,7 @@ function DiscoverCard({ story, selected = false, onSelect }) {
 }
 
 function Discover({ session }) {
-  const published = readStories().filter((story) => story.status === 'published');
+  const published = getPublishedDiscoverStories(readStories());
   const authorId = new URLSearchParams(window.location.search).get('author') || '';
   const selectedAuthor = published.find((story) => story.ownerId === authorId)?.authorName || '';
   const [query, setQuery] = useState('');
@@ -616,7 +617,7 @@ function StoryCard({ story, featured = false }) {
         <button className="story-open" aria-label={`${story.name} öffnen`}><ArrowRight /></button>
       </StoryPreviewMedia>
       <div className="story-card-copy">
-        <div className="story-kicker">{story.location || 'Digitale Ausstellung'}</div>
+        <div className="story-kicker">{story.location || 'Räumliche Story'}</div>
         <h3>{story.name}</h3>
         <p>{story.description}</p>
         <div className="story-meta"><span>von {story.authorName || 'RIU Autor:in'}</span><span>{formatDate(story.publishedAt)}</span></div>
@@ -626,7 +627,7 @@ function StoryCard({ story, featured = false }) {
 }
 
 function Gallery({ session }) {
-  const published = readStories().filter((story) => story.status === 'published');
+  const published = getPublishedDiscoverStories(readStories());
   return (
     <div className="riu-page">
       <Header session={session} transparent />
