@@ -8,7 +8,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getModelSourceAdapter } from '../utils/modelSourceAdapters.js';
-import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../utils/spatialStory.js';
+import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../utils/spatialStory.js';
 import './exhibitionRoom.css';
 
 const materialColors = { 'warm-white': '#ded9cd', limestone: '#c9c0ae', 'soft-grey': '#c9cbc7' };
@@ -51,6 +51,8 @@ const normalizeStoryStations = (story) => (story?.stations || []).map((station, 
     introduction: station.introduction ?? station.description ?? '',
     spatial: normalizeSpatialStation(station, index),
     items,
+    thumbnailLayout: normalizeThumbnailLayout(station.thumbnailLayout),
+    thumbnailGridSpacing: normalizeThumbnailGridSpacing(station.thumbnailGridSpacing),
     selectedItemId,
     initialItemId: resolveSpatialInitialItemId(station, items)
   };
@@ -388,7 +390,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   };
   const addStation = () => {
     const index = stations.length;
-    const next = { id: `station_${Date.now()}`, title: `Station ${index + 1}`, description: '', introduction: '', items: [], selectedItemId: null, initialItemId: null, spatial: normalizeSpatialStation({}, index) };
+    const next = { id: `station_${Date.now()}`, title: `Station ${index + 1}`, description: '', introduction: '', items: [], thumbnailLayout: 'tiles', thumbnailGridSpacing: 100, selectedItemId: null, initialItemId: null, spatial: normalizeSpatialStation({}, index) };
     setStations((current) => [...current, next]);
     setStationIndex(index);
   };
@@ -452,7 +454,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     return () => { clearInterval(volumeTimer); player.pause(); player.src = ''; };
   }, [audioPlaying, stationIndex, mode, station?.spatial]);
   if (!station) return null;
-  return <main className={`exhibition-shell mode-${mode} ${overviewMode ? 'is-overview' : ''}`}>
+  return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''}`}>
     <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} largePresentation={mode === 'visitor'} onCameraReady={(capture) => { captureCameraRef.current = capture; }} />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(undefined); setOverviewMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
     <section className="spatial-station-content"><div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else setOpenItemId(item.id); }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>

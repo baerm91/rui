@@ -31,3 +31,10 @@ test('selected thumbnails align and distribute without moving unselected items',
   const distributed = alignThumbnailSelection(items, ['a', 'b', 'c'], 'distribute-horizontal');
   assert.deepEqual([distributed.a[0], distributed.b[0], distributed.c[0]], [-2, .5, 3]);
 });
+
+test('grid spacing changes the distance between tiles', () => {
+  const compact = createThumbnailLayout(items, 'grid', 60);
+  const spacious = createThumbnailLayout(items, 'grid', 140);
+  assert.ok(Math.abs(compact.a[0] - compact.b[0]) < Math.abs(spacious.a[0] - spacious.b[0]));
+  assert.ok(Math.abs(compact.a[1] - compact.c[1]) < Math.abs(spacious.a[1] - spacious.c[1]));
+});

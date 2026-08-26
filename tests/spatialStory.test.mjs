@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -52,6 +52,20 @@ test('carousel items can be reordered without changing their data', () => {
   assert.equal(moveSpatialItem(items, 'one', -1), items);
 });
 
+test('thumbnail layout defaults to tiles and accepts the explicit carousel mode', () => {
+  assert.equal(normalizeThumbnailLayout(), 'tiles');
+  assert.equal(normalizeThumbnailLayout('tiles'), 'tiles');
+  assert.equal(normalizeThumbnailLayout('carousel'), 'carousel');
+  assert.equal(normalizeThumbnailLayout('dock'), 'tiles');
+});
+
+test('thumbnail grid spacing is stored as a safe percentage', () => {
+  assert.equal(normalizeThumbnailGridSpacing(), 100);
+  assert.equal(normalizeThumbnailGridSpacing(45), 60);
+  assert.equal(normalizeThumbnailGridSpacing(125.4), 125);
+  assert.equal(normalizeThumbnailGridSpacing(180), 140);
+});
+
 test('room overview camera frames the complete row of station walls', () => {
   const overview = resolveSpatialOverviewCamera([
     { spatial: { position: [0, 0, 0] } },
@@ -86,6 +100,8 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
     introduction: 'Ein räumlicher Auftakt.',
     spatial: normalizeSpatialStation({}, 0),
     items: [createSpatialItem({ id: 'object-1', modelUrl: 'https://example.org/object.glb', title: 'Objekt', thumbnailTransform })],
+    thumbnailLayout: 'carousel',
+    thumbnailGridSpacing: 125,
     selectedItemId: 'object-1',
     initialItemId: 'object-1'
   };
@@ -93,6 +109,8 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
   assert.equal(stored.introduction, source.introduction);
   assert.equal(stored.items[0].modelUrl, 'https://example.org/object.glb');
   assert.deepEqual(stored.items[0].thumbnailTransform, thumbnailTransform);
+  assert.equal(stored.thumbnailLayout, 'carousel');
+  assert.equal(stored.thumbnailGridSpacing, 125);
   assert.equal(stored.initialItemId, 'object-1');
   assert.deepEqual(stored.spatial.camera, source.spatial.camera);
   assert.deepEqual(stored.spatial.lighting, source.spatial.lighting);

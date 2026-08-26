@@ -2,7 +2,7 @@ import bundledStations from '../heidentor-stations.json' with { type: 'json' };
 import { siteConfig } from './site.config.js';
 import { preserveDistinctAnnotations } from './utils/annotationIdentity.js';
 import { findCrossStoryStationSource, getRouteStory, platformReady, readStories } from './platform/platformStore.js';
-import { normalizeSpatialItems, normalizeSpatialStation, resolveSpatialInitialItemId } from './utils/spatialStory.js';
+import { normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId } from './utils/spatialStory.js';
 
 const STATIONS_DRAFT_KEY = `${siteConfig.storagePrefix}_custom_stations`;
 export const getStationsDraftKey = (projectId = '') => (
@@ -62,6 +62,8 @@ export const normalizeStations = (stations) => {
     introduction: station.introduction ?? station.description ?? "",
     spatial: normalizeSpatialStation(station, index),
     items: normalizeSpatialItems(station.items),
+    thumbnailLayout: normalizeThumbnailLayout(station.thumbnailLayout),
+    thumbnailGridSpacing: normalizeThumbnailGridSpacing(station.thumbnailGridSpacing),
     selectedItemId: station.selectedItemId ?? station.items?.[0]?.id ?? null,
     initialItemId: resolveSpatialInitialItemId(station, normalizeSpatialItems(station.items)),
     viewMode: station.viewMode ?? "reveal",

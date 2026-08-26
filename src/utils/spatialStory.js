@@ -102,6 +102,15 @@ export function moveSpatialItem(items, itemId, direction) {
   return reordered;
 }
 
+export function normalizeThumbnailLayout(value) {
+  return value === 'carousel' ? 'carousel' : 'tiles';
+}
+
+export function normalizeThumbnailGridSpacing(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(60, Math.min(140, Math.round(parsed))) : 100;
+}
+
 export function resolveSpatialInitialItemId(station = {}, items = station.items) {
   const availableItems = Array.isArray(items) ? items : [];
   const availableIds = new Set(availableItems.map((item) => item?.id).filter(Boolean));

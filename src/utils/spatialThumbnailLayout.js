@@ -1,7 +1,7 @@
 const round = (value) => Number(value.toFixed(2));
 const positionOf = (item) => item?.thumbnailTransform?.position || [0, 0, .08];
 
-export function createThumbnailLayout(items = [], preset = 'grid') {
+export function createThumbnailLayout(items = [], preset = 'grid', spacingPercent = 100) {
   const count = items.length;
   if (!count) return {};
   const result = {};
@@ -17,8 +17,9 @@ export function createThumbnailLayout(items = [], preset = 'grid') {
 
   const columns = Math.min(4, Math.ceil(Math.sqrt(count)));
   const rows = Math.ceil(count / columns);
-  const gapX = Math.min(2.05, 6.2 / Math.max(1, columns - 1));
-  const gapY = Math.min(2.15, 3.7 / Math.max(1, rows - 1));
+  const spacing = preset === 'grid' ? Math.max(.6, Math.min(1.4, Number(spacingPercent) / 100 || 1)) : 1;
+  const gapX = Math.min(2.05, 6.2 / Math.max(1, columns - 1)) * spacing;
+  const gapY = Math.min(2.15, 3.7 / Math.max(1, rows - 1)) * spacing;
   items.forEach((item, index) => {
     const row = Math.floor(index / columns);
     const entriesInRow = Math.min(columns, count - row * columns);
@@ -26,7 +27,7 @@ export function createThumbnailLayout(items = [], preset = 'grid') {
     const brickOffset = preset === 'brick' && row % 2 ? gapX * .42 : 0;
     const x = (column - (entriesInRow - 1) / 2) * gapX + brickOffset;
     const y = (rows - 1) * gapY / 2 - row * gapY;
-    result[item.id] = [round(Math.max(-3.25, Math.min(3.25, x))), round(y), positionOf(item)[2]];
+    result[item.id] = [round(Math.max(-3.25, Math.min(3.25, x))), round(Math.max(-2.2, Math.min(2.2, y))), positionOf(item)[2]];
   });
   return result;
 }

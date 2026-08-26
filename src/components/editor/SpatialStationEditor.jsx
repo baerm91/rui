@@ -34,7 +34,12 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
     reader.readAsDataURL(file);
   };
   const tabs = [['content', 'Inhalt', Box], ['camera', 'Kamera', Camera], ['light', 'Licht', Lightbulb], ['audio', 'Audio', Music2]];
-  const applyPreset = (preset) => onUpdateItemPositions(index, createThumbnailLayout(station.items, preset));
+  const gridSpacing = station.thumbnailGridSpacing ?? 100;
+  const applyPreset = (preset) => onUpdateItemPositions(index, createThumbnailLayout(station.items, preset, gridSpacing));
+  const updateGridSpacing = (thumbnailGridSpacing) => {
+    onUpdateStation(index, { thumbnailGridSpacing });
+    onUpdateItemPositions(index, createThumbnailLayout(station.items, 'grid', thumbnailGridSpacing));
+  };
   const alignSelection = (action) => onUpdateItemPositions(index, alignThumbnailSelection(station.items, selectedItemIds, action));
   return <section className="spatial-editor-card">
     <div className="spatial-editor-tabs">{tabs.map(([id, label, Icon]) => <button key={id} className={tab === id ? 'is-active' : ''} onClick={() => setTab(id)}><Icon size={13} />{label}</button>)}</div>
@@ -45,21 +50,30 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
       <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={`${item.id === selectedItem?.id ? 'is-active' : ''} ${selectedItemIds.includes(item.id) ? 'is-multi-selected' : ''}`} onClick={(event) => onSelectItem(item.id, event)}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
       {(station.items || []).length > 1 && <div className="spatial-layout-tools">
         <div className="spatial-layout-heading"><strong>Thumbnail-Layout</strong><span>{selectedItemIds.length} ausgewählt</span></div>
-        <div className="spatial-carousel-order">
+        <div className="spatial-thumbnail-layout-switch" aria-label="Thumbnail-Darstellung">
+          <button type="button" className={station.thumbnailLayout !== 'carousel' ? 'is-active' : ''} onClick={() => onUpdateStation(index, { thumbnailLayout: 'tiles' })}>Kacheln</button>
+          <button type="button" className={station.thumbnailLayout === 'carousel' ? 'is-active' : ''} onClick={() => onUpdateStation(index, { thumbnailLayout: 'carousel' })}>Karussell</button>
+        </div>
+        {station.thumbnailLayout === 'carousel' && <div className="spatial-carousel-order">
           <div><strong>Karussell-Reihenfolge</strong><small>Position {selectedItemIndex + 1} von {station.items.length}</small></div>
           <span>
             <button type="button" title="Im Karussell nach links" aria-label="Im Karussell nach links" disabled={selectedItemIndex <= 0} onClick={() => onMoveItem(index, selectedItem.id, -1)}><ArrowLeft size={13} /></button>
             <button type="button" title="Im Karussell nach rechts" aria-label="Im Karussell nach rechts" disabled={selectedItemIndex < 0 || selectedItemIndex >= station.items.length - 1} onClick={() => onMoveItem(index, selectedItem.id, 1)}><ArrowRight size={13} /></button>
           </span>
-        </div>
-        <p>Die Modellliste entspricht der Reihenfolge im Besucher-Karussell. Ausgewähltes Icon mit den Pfeilen verschieben.</p>
-        <p>Mehrere Bilder mit Umschalt- oder Strg-Klick auswählen.</p>
-        <div className="spatial-layout-presets" aria-label="Layout-Presets">
-          <button type="button" onClick={() => applyPreset('grid')}>Raster</button>
+        </div>}
+        {station.thumbnailLayout === 'carousel' && <p>Die Modellliste entspricht der Reihenfolge im Besucher-Karussell. Ausgewähltes Icon mit den Pfeilen verschieben.</p>}
+        {station.thumbnailLayout !== 'carousel' && <p>Mehrere Bilder mit Umschalt- oder Strg-Klick auswählen.</p>}
+        {station.thumbnailLayout !== 'carousel' && <div className="spatial-layout-presets" aria-label="Layout-Presets">
+          <button type="button" onClick={() => applyPreset('grid')}>Raster anwenden</button>
           <button type="button" onClick={() => applyPreset('brick')}>Ziegel</button>
           <button type="button" onClick={() => applyPreset('circle')}>Kreis</button>
-        </div>
-        <div className="spatial-layout-align" aria-label="Ausgewählte Thumbnails ausrichten">
+        </div>}
+        {station.thumbnailLayout !== 'carousel' && <div className="spatial-grid-spacing-control">
+          <button type="button" aria-label="Kachelabstand verkleinern" disabled={gridSpacing <= 60} onClick={() => updateGridSpacing(Math.max(60, gridSpacing - 5))}>−</button>
+          <RangeField label="Abstand zwischen Kacheln" value={gridSpacing} min={60} max={140} step={5} suffix=" %" onChange={updateGridSpacing} />
+          <button type="button" aria-label="Kachelabstand vergrößern" disabled={gridSpacing >= 140} onClick={() => updateGridSpacing(Math.min(140, gridSpacing + 5))}>+</button>
+        </div>}
+        {station.thumbnailLayout !== 'carousel' && <div className="spatial-layout-align" aria-label="Ausgewählte Thumbnails ausrichten">
           <button type="button" title="Links ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('left')}>Links</button>
           <button type="button" title="Horizontal zentrieren" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('center-horizontal')}>Mitte X</button>
           <button type="button" title="Rechts ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('right')}>Rechts</button>
@@ -68,7 +82,7 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
           <button type="button" title="Unten ausrichten" disabled={selectedItemIds.length < 2} onClick={() => alignSelection('bottom')}>Unten</button>
           <button type="button" title="Horizontal gleichmäßig verteilen" disabled={selectedItemIds.length < 3} onClick={() => alignSelection('distribute-horizontal')}>Verteilen X</button>
           <button type="button" title="Vertikal gleichmäßig verteilen" disabled={selectedItemIds.length < 3} onClick={() => alignSelection('distribute-vertical')}>Verteilen Y</button>
-        </div>
+        </div>}
       </div>}
       {selectedItem && <div className="spatial-item-settings">
         <div className="spatial-item-heading"><strong>Ausgewähltes Objekt</strong><button onClick={() => onRemoveItem(index, selectedItem.id)}><Trash2 size={13} /> Entfernen</button></div>
