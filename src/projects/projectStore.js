@@ -30,8 +30,9 @@ const normalizePresentation = (presentation = {}) => ({
 const normalizeAdditionalModels = (models = []) => (
   Array.isArray(models) ? models.map((model, index) => ({
     id: model?.id || `additional-model-${index + 1}`,
-    name: model?.name || `Modell ${index + 3}`,
-    url: model?.url || ''
+    name: model?.name || `Modell ${index + 2}`,
+    url: model?.url || '',
+    ...(model?.thumbnailUrl ? { thumbnailUrl: model.thumbnailUrl } : {})
   })) : []
 );
 
@@ -102,7 +103,9 @@ export function createProjectRecord({
       reconstruction: models.reconstruction ?? '',
       localModelName: models.localModelName ?? '',
       primaryName: models.primaryName ?? 'Hauptmodell',
-      reconstructionName: models.reconstructionName ?? 'Rekonstruktion',
+      reconstructionName: models.reconstructionName ?? 'Modell 2',
+      primaryThumbnailUrl: models.primaryThumbnailUrl ?? '',
+      reconstructionThumbnailUrl: models.reconstructionThumbnailUrl ?? '',
       additional: normalizeAdditionalModels(models.additional)
     },
     settings: {

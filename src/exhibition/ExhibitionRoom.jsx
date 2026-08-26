@@ -204,7 +204,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     ...story,
     models: {
       ...story.models,
-      additional: stations.flatMap((entry) => entry.items.map((item) => ({ id: item.id, name: item.title, url: item.modelUrl })))
+      additional: stations.flatMap((entry) => entry.items.map((item) => ({ id: item.id, name: item.title, url: item.modelUrl, thumbnailUrl: item.thumbnailUrl })))
     }
   };
   const adapter = selectedItem ? getModelSourceAdapter(selectedItem.sourceType) : null;

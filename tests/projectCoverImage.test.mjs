@@ -28,7 +28,7 @@ test('project presentation and connected model labels survive normalization and 
       reconstruction: 'https://example.org/reconstructed.glb',
       primaryName: 'Heute',
       reconstructionName: 'Damals',
-      additional: [{ id: 'model-detail', name: 'Detailmodell', url: 'https://example.org/detail.glb' }]
+      additional: [{ id: 'model-detail', name: 'Detailmodell', url: 'https://example.org/detail.glb', thumbnailUrl: 'https://example.org/detail.jpg' }]
     },
     settings: {
       presentation: { showStoryTitle: true, textAnimation: 'soft' },
@@ -40,7 +40,7 @@ test('project presentation and connected model labels survive normalization and 
   assert.equal(project.settings.cameraFov, 120);
   assert.equal(project.models.primaryName, 'Heute');
   assert.equal(project.models.reconstructionName, 'Damals');
-  assert.deepEqual(project.models.additional, [{ id: 'model-detail', name: 'Detailmodell', url: 'https://example.org/detail.glb' }]);
+  assert.deepEqual(project.models.additional, [{ id: 'model-detail', name: 'Detailmodell', url: 'https://example.org/detail.glb', thumbnailUrl: 'https://example.org/detail.jpg' }]);
   assert.deepEqual(cloneProject(project, 'Kopie').settings.presentation, project.settings.presentation);
   assert.equal(cloneProject(project, 'Kopie').settings.cameraFov, 120);
   assert.deepEqual(cloneProject(project, 'Kopie').models.additional, project.models.additional);

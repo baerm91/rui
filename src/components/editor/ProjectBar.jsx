@@ -1,17 +1,58 @@
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, Box, Check, ChevronDown, ChevronUp, Copy, FolderKanban, LoaderCircle, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Box, Check, ChevronDown, ChevronUp, ClipboardPaste, Copy, FolderKanban, LoaderCircle, Plus, Trash2, X } from 'lucide-react';
 import { getStationsUsingModel, getStationsUsingModelId } from '../../utils/modelAssignments.js';
-import { isSketchfabModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
+import { isSketchfabModelUrl, isSupportedModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
 
 export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, canCreateProjects = true, modelPanelOpen, onModelPanelOpenChange }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [showModels, setShowModels] = useState(false);
-  const [addingReconstruction, setAddingReconstruction] = useState(false);
+  const [dragTarget, setDragTarget] = useState('');
   const additionalModels = Array.isArray(activeProject?.models?.additional) ? activeProject.models.additional : [];
   const connectedModelCount = [activeProject?.models?.primary, activeProject?.models?.reconstruction, ...additionalModels.map((model) => model.url)].filter(Boolean).length;
   const modelsAreOpen = modelPanelOpen ?? showModels;
+
+  const applyPastedUrl = (event, apply) => {
+    const value = event.clipboardData?.getData('text/plain')?.trim();
+    if (!value) return;
+    event.preventDefault();
+    event.stopPropagation();
+    apply(value);
+  };
+
+  const readClipboardUrl = async (apply) => {
+    try {
+      const value = (await navigator.clipboard.readText()).trim();
+      if (value) apply(value);
+    } catch {
+      // Native Ctrl+V and context-menu paste remain available if clipboard access is denied.
+    }
+  };
+
+  const handleModelDrop = (event, targetId, apply) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragTarget('');
+    const imageFile = Array.from(event.dataTransfer?.files || []).find((file) => file.type.startsWith('image/'));
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onload = () => apply({ thumbnailUrl: reader.result });
+      reader.readAsDataURL(imageFile);
+      return;
+    }
+    const value = (event.dataTransfer?.getData('text/uri-list') || event.dataTransfer?.getData('text/plain') || '').trim();
+    if (!value) return;
+    if (isSupportedModelUrl(value)) apply({ url: normalizeModelUrl(value) });
+    else if (/^https?:\/\/.*\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(value)) apply({ thumbnailUrl: value });
+  };
+
+  const dropZoneProps = (targetId, apply) => ({
+    onDragEnter: (event) => { event.preventDefault(); setDragTarget(targetId); },
+    onDragOver: (event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; },
+    onDragLeave: (event) => { if (!event.currentTarget.contains(event.relatedTarget)) setDragTarget(''); },
+    onDrop: (event) => handleModelDrop(event, targetId, apply)
+  });
 
   const toggleModels = () => {
     const nextValue = !modelsAreOpen;
@@ -20,16 +61,9 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
   };
 
   const addModel = () => {
-    if (!activeProject?.models?.reconstruction && !addingReconstruction) {
-      setAddingReconstruction(true);
-      return;
-    }
     const id = `model-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
-    onUpdateProject({
-      models: {
-        additional: [...additionalModels, { id, name: `Modell ${additionalModels.length + 3}`, url: '' }]
-      }
-    });
+    const nextNumber = additionalModels.length + (activeProject?.models?.reconstruction ? 3 : 2);
+    onUpdateProject({ models: { additional: [...additionalModels, { id, name: `Modell ${nextNumber}`, url: '', thumbnailUrl: '' }] } });
   };
 
   const updateAdditionalModel = (modelId, patch) => {
@@ -130,42 +164,65 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
           {['primary', 'reconstruction'].map((role) => {
             const isPrimary = role === 'primary';
             const url = activeProject.models?.[role] ?? '';
+            const modelLabel = isPrimary ? 'Basismodell' : 'Modell 2';
+            const thumbnailKey = `${role}ThumbnailUrl`;
+            const thumbnailUrl = activeProject.models?.[thumbnailKey] ?? '';
             const assignedStations = getStationsUsingModel(activeProject.stations, role);
             const canRemove = !isPrimary && (!url || assignedStations.length === 0);
-            if (!isPrimary && !url && !addingReconstruction) return null;
+            if (!isPrimary && !url) return null;
+            const applyDrop = (patch) => onUpdateProject({ models: {
+              ...(patch.url ? { [role]: patch.url } : {}),
+              ...(patch.thumbnailUrl ? { [thumbnailKey]: patch.thumbnailUrl } : {})
+            } });
             return (
-              <div key={role} className="rounded-lg border border-zinc-800 bg-zinc-950/65 p-2.5">
+              <div
+                key={role}
+                {...dropZoneProps(role, applyDrop)}
+                className={`rounded-lg border bg-zinc-950/65 p-2.5 transition-colors ${dragTarget === role ? 'border-amber-400 bg-amber-500/10' : 'border-zinc-800'}`}
+              >
                 <div className="flex items-center gap-2">
+                  {thumbnailUrl && <img src={thumbnailUrl} alt="" className="h-8 w-11 shrink-0 rounded object-cover" />}
                   <input
-                    value={activeProject.models?.[`${role}Name`] ?? (isPrimary ? 'Hauptmodell' : 'Rekonstruktion')}
+                    value={activeProject.models?.[`${role}Name`] ?? modelLabel}
                     onChange={(event) => onUpdateProject({ models: { [`${role}Name`]: event.target.value } })}
                     className="min-w-0 flex-1 bg-transparent text-[10px] font-semibold text-zinc-200 outline-none"
-                    aria-label={`${isPrimary ? 'Hauptmodell' : 'Rekonstruktion'} benennen`}
+                    aria-label={`${modelLabel} benennen`}
                   />
                   {!isPrimary && (
                     <button
                       type="button"
                       disabled={!canRemove}
                       onClick={() => {
-                        onUpdateProject({ models: { reconstruction: '', reconstructionName: 'Rekonstruktion' } });
-                        setAddingReconstruction(false);
+                        onUpdateProject({ models: { reconstruction: '', reconstructionName: 'Modell 2', reconstructionThumbnailUrl: '' } });
                       }}
                       className="text-zinc-600 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-zinc-600"
                       title={!url ? 'Hinzufügen abbrechen' : canRemove ? 'Modell entfernen' : `Wird verwendet in: ${assignedStations.map((station) => station.title).join(', ')}`}
-                      aria-label="Rekonstruktionsmodell entfernen"
+                      aria-label="Modell 2 entfernen"
                     >
                       <Trash2 size={12} />
                     </button>
                   )}
                 </div>
-                <input
-                  value={url}
-                  onChange={(event) => onUpdateProject({ models: { [role]: event.target.value } })}
-                  onBlur={(event) => onUpdateProject({ models: { [role]: normalizeModelUrl(event.target.value) } })}
-                  className="mt-1.5 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
-                  placeholder={isPrimary ? 'Sketchfab-Link oder .fbx, .glb, .gltf' : 'https://…/modell.fbx, .glb oder .gltf'}
-                  aria-label={`${isPrimary ? 'Hauptmodell' : 'Rekonstruktion'} URL`}
-                />
+                <div className="mt-1.5 flex gap-1.5">
+                  <input
+                    value={url}
+                    onChange={(event) => onUpdateProject({ models: { [role]: event.target.value } })}
+                    onPaste={(event) => applyPastedUrl(event, (value) => onUpdateProject({ models: { [role]: value } }))}
+                    onBlur={(event) => onUpdateProject({ models: { [role]: normalizeModelUrl(event.target.value) } })}
+                    className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
+                    placeholder={isPrimary ? 'Sketchfab-Link oder .fbx, .glb, .gltf' : 'https://…/modell.fbx, .glb oder .gltf'}
+                    aria-label={`${modelLabel} URL`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => readClipboardUrl((value) => onUpdateProject({ models: { [role]: value } }))}
+                    className="grid w-8 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-amber-500/40 hover:text-amber-300"
+                    aria-label={`${modelLabel}-Link aus Zwischenablage einfügen`}
+                    title="Link einfügen"
+                  >
+                    <ClipboardPaste size={12} />
+                  </button>
+                </div>
                 <div className="mt-1.5 flex items-center justify-between gap-2 text-[8px]">
                   <span className={assignedStations.length > 0 ? 'text-amber-300/80' : 'text-zinc-600'}>
                     {assignedStations.length > 0
@@ -181,14 +238,17 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                 )}
                 {isPrimary && isSketchfabModelUrl(url) && (
                   <span className="mt-1.5 block text-[8px] leading-relaxed text-emerald-300/80">
-                    Sketchfab erkannt. Der interaktive Viewer wird nach dem Neuladen eingebettet; RIU-Rekonstruktions- und Portalmodelle sind damit nicht kombinierbar.
+                    Sketchfab erkannt. Der interaktive Viewer wird nach dem Neuladen eingebettet; weitere Modellrollen und Portalübergänge sind damit nicht kombinierbar.
                   </span>
                 )}
                 {!isPrimary && isSketchfabModelUrl(url) && (
                   <span className="mt-1.5 block text-[8px] leading-relaxed text-red-300/80">
-                    Sketchfab kann nur als Hauptmodell eingebettet werden. Für die Rekonstruktion bitte eine direkte FBX-, GLB- oder glTF-URL verwenden.
+                    Sketchfab kann nur als Basismodell eingebettet werden. Für weitere Modelle bitte eine direkte FBX-, GLB- oder glTF-URL verwenden.
                   </span>
                 )}
+                <div className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
+                  Modell-Link oder Thumbnail hier ablegen
+                </div>
               </div>
             );
           })}
@@ -196,8 +256,13 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
             const assignedStations = getStationsUsingModelId(activeProject.stations, model.id);
             const canRemove = assignedStations.length === 0;
             return (
-              <div key={model.id} className="rounded-lg border border-zinc-800 bg-zinc-950/65 p-2.5">
+              <div
+                key={model.id}
+                {...dropZoneProps(model.id, (patch) => updateAdditionalModel(model.id, patch))}
+                className={`rounded-lg border bg-zinc-950/65 p-2.5 transition-colors ${dragTarget === model.id ? 'border-amber-400 bg-amber-500/10' : 'border-zinc-800'}`}
+              >
                 <div className="flex items-center gap-2">
+                  {model.thumbnailUrl && <img src={model.thumbnailUrl} alt="" className="h-8 w-11 shrink-0 rounded object-cover" />}
                   <input
                     value={model.name}
                     onChange={(event) => updateAdditionalModel(model.id, { name: event.target.value })}
@@ -215,13 +280,25 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                     <Trash2 size={12} />
                   </button>
                 </div>
-                <input
-                  value={model.url}
-                  onChange={(event) => updateAdditionalModel(model.id, { url: event.target.value })}
-                  className="mt-1.5 w-full rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
-                  placeholder="https://…/modell.fbx, .glb oder .gltf"
-                  aria-label={`${model.name || `Modell ${modelIndex + 3}`} URL`}
-                />
+                <div className="mt-1.5 flex gap-1.5">
+                  <input
+                    value={model.url}
+                    onChange={(event) => updateAdditionalModel(model.id, { url: event.target.value })}
+                    onPaste={(event) => applyPastedUrl(event, (value) => updateAdditionalModel(model.id, { url: value }))}
+                    className="min-w-0 flex-1 rounded border border-zinc-800 bg-zinc-950 px-2 py-1.5 font-mono text-[8px] text-zinc-400 outline-none focus:border-amber-500/40"
+                    placeholder="https://…/modell.fbx, .glb oder .gltf"
+                    aria-label={`${model.name || `Modell ${modelIndex + 3}`} URL`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => readClipboardUrl((value) => updateAdditionalModel(model.id, { url: value }))}
+                    className="grid w-8 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-amber-500/40 hover:text-amber-300"
+                    aria-label={`${model.name || `Modell ${modelIndex + 3}`}-Link aus Zwischenablage einfügen`}
+                    title="Link einfügen"
+                  >
+                    <ClipboardPaste size={12} />
+                  </button>
+                </div>
                 <div className="mt-1.5 text-[8px]">
                   <span className={assignedStations.length > 0 ? 'text-amber-300/80' : 'text-zinc-600'}>
                     {assignedStations.length > 0
@@ -234,10 +311,13 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
                     {assignedStations.map((station) => station.title).join(' · ')}
                   </span>
                 )}
+                <div className="mt-2 rounded border border-dashed border-zinc-800 px-2 py-2 text-center text-[8px] text-zinc-600">
+                  Modell-Link oder Thumbnail hier ablegen
+                </div>
               </div>
             );
           })}
-          <small className="text-[8px] leading-relaxed text-zinc-600">Die Modellrollen bilden die Grundlage für den Ansichtsmodus und die Portalübergänge der Stationen.</small>
+          <small className="text-[8px] leading-relaxed text-zinc-600">Die verbundenen Modelle stehen für Stationsansichten und Übergänge zur Verfügung.</small>
         </div>
       )}
 
