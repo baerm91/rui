@@ -77,6 +77,8 @@ test('creates a room story when no model URL is supplied', () => {
   });
   assert.equal(story.models.primary, '');
   assert.equal(story.settings.experienceType, 'room');
+  assert.deepEqual(story.stations[0].cameraPos, { x: 0, y: 1.7, z: 5 });
+  assert.deepEqual(story.stations[0].cameraTarget, { x: 0, y: 1.5, z: 0 });
 });
 
 test('keeps model stories on the existing viewer workflow', () => {
@@ -90,4 +92,6 @@ test('keeps model stories on the existing viewer workflow', () => {
   });
   assert.equal(story.models.primary, 'https://example.org/object.glb');
   assert.equal(story.settings.experienceType, 'model');
+  assert.deepEqual(story.stations[0].cameraPos, { x: 0, y: 5, z: 14 });
+  assert.deepEqual(story.stations[0].cameraTarget, { x: 0, y: 2.5, z: 0 });
 });

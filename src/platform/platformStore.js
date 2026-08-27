@@ -412,6 +412,8 @@ export function createStory({
   const created = now();
   const id = globalThis.crypto?.randomUUID?.() ?? `story_${Date.now()}`;
   const normalizedCategories = normalizeStoryCategories(categories, category);
+  const primaryModelUrl = normalizeModelUrl(modelUrl);
+  const roomExperience = !primaryModelUrl;
   return {
     id,
     slug: id,
@@ -428,8 +430,8 @@ export function createStory({
     metadata: { language, category: normalizedCategories[0], categories: normalizedCategories },
     stats: { views: 0, lastViewedAt: null },
     branding: { title: name.trim(), subtitle: '', watermark: name.trim().toUpperCase() },
-    models: { primary: normalizeModelUrl(modelUrl), reconstruction: '', localModelName: '', primaryName: name.trim() },
-    settings: { scrollSpeed: 1, experienceType: normalizeModelUrl(modelUrl) ? 'model' : 'room' },
+    models: { primary: primaryModelUrl, reconstruction: '', localModelName: '', primaryName: name.trim() },
+    settings: { scrollSpeed: 1, experienceType: roomExperience ? 'room' : 'model' },
     alignment: null,
     annotations: [],
     collaborators: [],
@@ -438,8 +440,8 @@ export function createStory({
       title: 'Auftakt',
       description: 'Beginnen Sie hier Ihre räumliche Erzählung.',
       viewMode: 'ruin',
-      cameraPos: { x: 0, y: 5, z: 14 },
-      cameraTarget: { x: 0, y: 2.5, z: 0 },
+      cameraPos: roomExperience ? { x: 0, y: 1.7, z: 5 } : { x: 0, y: 5, z: 14 },
+      cameraTarget: roomExperience ? { x: 0, y: 1.5, z: 0 } : { x: 0, y: 2.5, z: 0 },
       cameraExplicitlySet: false,
       freeNavigation: false,
       showAnnotations: true,
