@@ -23,6 +23,7 @@ import { formatAnalyticsDuration } from './storyAnalytics.js';
 import { getPublishedDiscoverStories, getRandomFeaturedDiscoverStoryId } from './discoverStories.js';
 import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
 import { isRoomStory } from '../utils/storyExperience.js';
+import { getStoryCounts } from './storyCounts.js';
 
 const go = (path) => { window.location.href = path; };
 const getPreferredTheme = () => {
@@ -76,16 +77,23 @@ function CategoryPicker({ defaultCategories = ['Kulturerbe'] }) {
     </fieldset>
   );
 }
-const getStoryAnnotationCount = (story) => {
-  const annotations = [
-    ...(Array.isArray(story.annotations) ? story.annotations : []),
-    ...(Array.isArray(story.stations)
-      ? story.stations.flatMap((station) => Array.isArray(station.annotations) ? station.annotations : [])
-      : [])
+function StoryFacts({ story, className }) {
+  const counts = getStoryCounts(story);
+  const facts = [
+    { icon: Box, count: counts.models, singular: 'Modell', plural: 'Modelle' },
+    { icon: Layers3, count: counts.stations, singular: 'Station', plural: 'Stationen' },
+    { icon: MapPin, count: counts.annotations, singular: 'Annotation', plural: 'Annotationen' }
   ];
-  const identified = new Set(annotations.map((annotation) => annotation?.id).filter(Boolean));
-  return identified.size + annotations.filter((annotation) => !annotation?.id).length;
-};
+  const label = facts.map((fact) => `${fact.count} ${fact.count === 1 ? fact.singular : fact.plural}`).join(', ');
+  return (
+    <div className={className} aria-label={label}>
+      {facts.map((fact) => {
+        const Icon = fact.icon;
+        return <span key={fact.singular}><Icon size={14} /><strong>{fact.count}</strong> {fact.count === 1 ? fact.singular : fact.plural}</span>;
+      })}
+    </div>
+  );
+}
 
 const VERSION_REASON_LABELS = {
   autosave: 'Automatischer Stand',
@@ -366,6 +374,7 @@ function DiscoverCard({ story, selected = false, onSelect }) {
     >
       <StoryPreviewMedia story={story} className="discover-card-image" mediaClassName="discover-card-media" fallbackImage="/star_sky_bg.png">
         <span className="discover-card-category">{getStoryCategories(story)[0]}</span>
+        <StoryFacts story={story} className="discover-card-facts" />
       </StoryPreviewMedia>
     </article>
   );
@@ -420,6 +429,7 @@ function Discover({ session }) {
               <span>Ausgewählte Story · {getStoryCategories(selectedStory)[0]}</span>
               <h1>{selectedStory.name}</h1>
               <p>{selectedStory.description || 'Eine interaktive, räumliche Erzählung.'}</p>
+              <StoryFacts story={selectedStory} className="discover-hero-facts" />
               <button type="button" onClick={() => go(`/stories/${selectedStory.slug || selectedStory.id}`)}>
                 Story öffnen <ArrowRight size={16} />
               </button>
@@ -956,7 +966,7 @@ function Dashboard({ session, onSession }) {
                 <span><CalendarDays size={14} /><span><small>Erstellt am</small><strong>{formatDate(getStoryCreatedAt(story))}</strong></span></span>
                 <span><Globe2 size={14} /><span><small>Veröffentlicht seit</small><strong>{getStoryPublishedAt(story) ? formatDate(getStoryPublishedAt(story)) : 'Noch nicht veröffentlicht'}</strong></span></span>
               </div>
-              <div className="dashboard-card-facts"><span><Layers3 size={14} /><strong>{story.stations?.length || 0}</strong> Stationen</span><span><MapPin size={14} /><strong>{getStoryAnnotationCount(story)}</strong> Annotationen</span></div>
+              <StoryFacts story={story} className="dashboard-card-facts" />
               <div className="dashboard-card-views"><Eye size={14} /><strong>{getViewCount(story)}</strong> Aufrufe</div>
             </div>
             <div className="dashboard-actions">
