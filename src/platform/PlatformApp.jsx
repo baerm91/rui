@@ -1194,11 +1194,3 @@ export default function PlatformApp() {
   if (path === '/stories/new') return session ? (canCreateStories(session) ? <NewStory session={session} /> : <Dashboard session={session} onSession={setSession} />) : <AuthPage mode="login" onSession={setSession} />;
   return <NotFound session={session} />;
 }
-
-export function getExperienceAccess() {
-  const story = getStory(window.location.pathname.split('/')[2] || '');
-  const session = readSession();
-  const isEditor = window.location.pathname.startsWith('/studio/');
-  const allowed = !!story && (isEditor ? canEditStory(story, session?.id) : (story.status === 'published' || !!getStoryPermission(story, session?.id)));
-  return { story, session, isEditor, allowed, editors: getStoryEditors(story) };
-}

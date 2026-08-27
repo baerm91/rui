@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 const viteEnv = import.meta.env ?? {};
 const supabaseUrl = viteEnv.VITE_PUBLIC_SUPABASE_URL
   || viteEnv.NEXT_PUBLIC_SUPABASE_URL;
@@ -41,25 +39,29 @@ export function createAuthStorage(persistentStorage, tabStorage, rememberLogin) 
   };
 }
 
-let supabaseClient = null;
+let supabaseClientPromise = null;
 
-export function getSupabase() {
+export async function getSupabase() {
   if (!isSupabaseConfigured) return null;
-  if (!supabaseClient) {
-    supabaseClient = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: createAuthStorage(
-          globalThis.localStorage,
-          globalThis.sessionStorage,
-          () => readRememberLoginPreference()
-        )
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = import('@supabase/supabase-js').then(({ createClient }) => createClient(
+      supabaseUrl,
+      supabaseKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: createAuthStorage(
+            globalThis.localStorage,
+            globalThis.sessionStorage,
+            () => readRememberLoginPreference()
+          )
+        }
       }
-    });
+    ));
   }
-  return supabaseClient;
+  return supabaseClientPromise;
 }
 
 export function authUserToProfile(user) {
@@ -92,7 +94,7 @@ export function readOAuthCallbackError(location = window.location) {
 }
 
 export async function signInWithOAuth(provider = 'google', { mode = 'login', rememberLogin = true } = {}) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist für diese Umgebung noch nicht konfiguriert.');
   const redirectTo = `${window.location.origin}/dashboard`;
   writeRememberLoginPreference(rememberLogin);
@@ -105,7 +107,7 @@ export async function signInWithOAuth(provider = 'google', { mode = 'login', rem
 }
 
 export async function signOutFromSupabase() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return;
   const { error } = await client.auth.signOut();
   if (error) throw error;

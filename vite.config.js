@@ -85,7 +85,10 @@ export default defineConfig({
             if (id.includes('three')) {
               return 'three';
             }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('gsap') || id.includes('scheduler')) {
+            if (id.includes('gsap')) {
+              return 'gsap';
+            }
+            if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
               return 'vendor';
             }
           }

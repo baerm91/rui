@@ -16,18 +16,14 @@ import { VisitorControls } from './components/VisitorControls.jsx';
 import { useStationConfigFile } from './useStationConfigFile.js';
 import { audioManager } from './utils/audioManager.js';
 import { siteConfig } from './site.config.js';
-import PlatformApp, { getExperienceAccess } from './platform/PlatformApp.jsx';
-import { recordStoryView, saveStory, saveStoryPreview } from './platform/platformStore.js';
+import { recordStoryView, saveStoryPreview } from './platform/platformStore.js';
 import { resolveStoryWatermarkOpacity } from './utils/storyWatermark.js';
 import { SketchfabViewer } from './components/SketchfabViewer.jsx';
 import { isSketchfabModelUrl } from './utils/modelSource.js';
 import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
 import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
-import ExhibitionRoom from './exhibition/ExhibitionRoom.jsx';
-import { isRoomStory } from './utils/storyExperience.js';
-import { SPATIAL_DEMO_STORY } from './exhibition/spatialDemo.js';
 
-function ExperienceApp({
+export function ExperienceApp({
   hasInitialStoryPreview = false,
   initialPreviewEndStation = 2,
   storyAuthorId,
@@ -452,43 +448,3 @@ function ExperienceApp({
     </div>
   );
 }
-
-function App() {
-  if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
-    const initialMode = new URLSearchParams(window.location.search).get('mode') === 'visitor' ? 'visitor' : 'editor';
-    return <ExhibitionRoom story={SPATIAL_DEMO_STORY} initialMode={initialMode} backHref="/" onSaveStory={() => Promise.resolve()} />;
-  }
-  const isExperiencePath = /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(window.location.pathname);
-  const access = getExperienceAccess();
-
-  if (!isExperiencePath) return <PlatformApp />;
-  if (!access.allowed) {
-    window.location.replace(access.isEditor && !access.session ? '/login' : '/');
-    return null;
-  }
-  if (isRoomStory(access.story)) {
-    return (
-      <ExhibitionRoom
-        story={access.story}
-        initialMode={access.isEditor ? 'editor' : 'visitor'}
-        backHref={access.isEditor ? '/dashboard' : '/discover'}
-        onSaveStory={saveStory}
-      />
-    );
-  }
-  return (
-    <ExperienceApp
-      storyAuthorId={access.story.ownerId}
-      hasInitialStoryPreview={!!access.story.previewVideoAssetId}
-      initialPreviewEndStation={access.story.previewEndStationNumber || 2}
-      storyAuthorName={access.story.authorName}
-      storyEditors={access.editors}
-      storyId={access.story.id}
-      storyModelUrl={access.story.models?.primary}
-      viewerId={access.isEditor ? access.story.ownerId : access.session?.id}
-      analyticsEnabled={!access.isEditor && access.story.status === 'published'}
-    />
-  );
-}
-
-export default App;

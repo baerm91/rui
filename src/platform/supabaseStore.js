@@ -29,7 +29,7 @@ const rowToStory = (row) => ({
 });
 
 async function ensureProfile(user) {
-  const client = getSupabase();
+  const client = await getSupabase();
   const profile = authUserToProfile(user);
   if (!client || !profile) return profile;
   const { error } = await client.from('profiles').update({
@@ -58,7 +58,7 @@ async function ensureProfile(user) {
 }
 
 export async function loadSupabaseState() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return { authUser: null, user: null, users: [], stories: [] };
   const { data: sessionData, error: sessionError } = await client.auth.getSession();
   if (sessionError) throw sessionError;
@@ -85,7 +85,7 @@ export async function loadSupabaseState() {
 }
 
 export async function importLegacyStories(stories, authUser, legacyOwnerIds = []) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !authUser) return [];
   const profile = await ensureProfile(authUser);
   const { data: imported, error: importReadError } = await client
@@ -123,7 +123,7 @@ export async function importLegacyStories(stories, authUser, legacyOwnerIds = []
 }
 
 export async function fetchRemoteStories() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return [];
   const { data, error } = await client.from('stories').select('*').order('updated_at', { ascending: false });
   if (error) throw error;
@@ -131,7 +131,7 @@ export async function fetchRemoteStories() {
 }
 
 export async function syncStoryToSupabase(story) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !story?.id) return story;
   const { data: sessionData } = await client.auth.getSession();
   const userId = sessionData.session?.user?.id;
@@ -147,7 +147,7 @@ export async function syncStoriesToSupabase(stories) {
 }
 
 export async function uploadStoryPreviewToSupabase(story, previewBlob, generatedAt) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !story?.id || !(previewBlob instanceof Blob)) return null;
   const { data: sessionData, error: sessionError } = await client.auth.getSession();
   if (sessionError) throw sessionError;
@@ -172,21 +172,21 @@ export async function uploadStoryPreviewToSupabase(story, previewBlob, generated
 }
 
 export async function deleteStoryPreviewFromSupabase(storagePath) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !storagePath) return;
   const { error } = await client.storage.from(STORY_PREVIEW_BUCKET).remove([storagePath]);
   if (error) throw error;
 }
 
 export async function deleteStoryFromSupabase(storyId) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !storyId) return;
   const { error } = await client.from('stories').delete().eq('id', storyId);
   if (error) throw error;
 }
 
 export async function updateSupabaseProfile(userId, { name, username }) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return;
   const { error } = await client.from('profiles').update({
     display_name: name,
@@ -200,7 +200,7 @@ export async function updateSupabaseProfile(userId, { name, username }) {
 }
 
 export async function fetchPlatformAccess() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return { registrationsEnabled: true, defaultRole: 'light-user' };
   const { data, error } = await client.rpc('get_platform_access');
   if (error) throw error;
@@ -212,7 +212,7 @@ export async function fetchPlatformAccess() {
 }
 
 export async function fetchAdminUsers() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return [];
   const { data, error } = await client.rpc('admin_list_users');
   if (error) throw error;
@@ -229,7 +229,7 @@ export async function fetchAdminUsers() {
 }
 
 export async function updateAdminUser(userId, { role, isBlocked }) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist nicht konfiguriert.');
   const { error } = await client.rpc('admin_update_user', {
     target_user_id: userId,
@@ -240,7 +240,7 @@ export async function updateAdminUser(userId, { role, isBlocked }) {
 }
 
 export async function updatePlatformAccess({ registrationsEnabled, defaultRole }) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist nicht konfiguriert.');
   const { error } = await client.rpc('admin_update_platform_settings', {
     new_registrations_enabled: registrationsEnabled,
@@ -250,7 +250,7 @@ export async function updatePlatformAccess({ registrationsEnabled, defaultRole }
 }
 
 export async function fetchStoryVersions(storyId) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist nicht konfiguriert.');
   const { data, error } = await client
     .from('story_versions')
@@ -268,7 +268,7 @@ export async function fetchStoryVersions(storyId) {
 }
 
 export async function restoreStoryVersion(versionId) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist nicht konfiguriert.');
   const { data, error } = await client.rpc('restore_story_version', {
     target_version_id: versionId
@@ -285,7 +285,7 @@ export async function recordStoryAnalyticsEvent(storyId, sessionId, eventType, {
   durationSeconds = null,
   loadMs = null
 } = {}) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client || !storyId || !sessionId) return false;
   const { data, error } = await client.rpc('record_story_analytics_event', {
     target_story_id: storyId,
@@ -302,7 +302,7 @@ export async function recordStoryAnalyticsEvent(storyId, sessionId, eventType, {
 }
 
 export async function fetchStoryAnalytics(storyId) {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) throw new Error('Supabase ist nicht konfiguriert.');
   const { data, error } = await client.rpc('get_story_analytics', {
     target_story_id: storyId
@@ -312,7 +312,7 @@ export async function fetchStoryAnalytics(storyId) {
 }
 
 export async function fetchOwnedStoryViewCounts() {
-  const client = getSupabase();
+  const client = await getSupabase();
   if (!client) return {};
   const { data, error } = await client.rpc('get_owned_story_view_counts');
   if (error) throw error;

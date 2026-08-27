@@ -6,6 +6,9 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "lint": "node scripts/lint-check.mjs",
+    "perf": "node scripts/performance-benchmark.mjs",
+    "perf:baseline": "node scripts/performance-benchmark.mjs --output artifacts/performance/baseline.json",
+    "perf:compare": "node scripts/performance-compare.mjs",
     "prepare-codecs": "node scripts/copy-three-codecs.mjs",
     "predev": "npm run prepare-codecs",
     "dev": "vite --force --port 3005",

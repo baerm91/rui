@@ -699,7 +699,7 @@ function finishLoading(showAlignment) {
   clearInterval(loadingProgressTimer);
   renderLoadingProgress(1.0);
 
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     if (loadingScreen) {
       loadingScreen.style.opacity = '0';
       loadingScreen.style.pointerEvents = 'none';
@@ -709,7 +709,7 @@ function finishLoading(showAlignment) {
     } else {
       enterRevealMode();
     }
-  }, 400);
+  });
 }
 
 function collectRevealHitMeshes(model) {
