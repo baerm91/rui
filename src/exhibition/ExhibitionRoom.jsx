@@ -302,14 +302,24 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           stationPreviewEntries.forEach((entry, entryIndex) => {
             Object.assign(entry, layout[entryIndex]);
             entry.frame.geometry.dispose();
-            entry.frame.geometry = new THREE.BoxGeometry(entry.cardWidth, entry.cardHeight, .075);
+            entry.frame.geometry = new THREE.BoxGeometry(entry.cardWidth, entry.cardHeight, .018);
             entry.frame.position.set(entry.x, entry.y, .23);
           });
         };
         previewItems.forEach((item) => {
           const frame = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 1, .075),
-            new THREE.MeshStandardMaterial({ color: '#f5f0e7', roughness: .82, metalness: 0 })
+            new THREE.BoxGeometry(1, 1, .018),
+            new THREE.MeshPhysicalMaterial({
+              color: '#f8f4ea',
+              roughness: .16,
+              metalness: 0,
+              transmission: .3,
+              transparent: true,
+              opacity: .72,
+              thickness: .06,
+              clearcoat: 1,
+              clearcoatRoughness: .12
+            })
           );
           frame.visible = showOverview;
           frame.castShadow = true;
@@ -342,8 +352,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         if (showOverview) {
           const plaqueTexture = createStationPlaqueTexture(station, index);
           const plaque = new THREE.Mesh(
-            new THREE.BoxGeometry(1.35, 2.65, .065),
-            new THREE.MeshStandardMaterial({ color: '#e9e4da', roughness: .82 })
+            new THREE.BoxGeometry(1.35, 2.65, .022),
+            new THREE.MeshPhysicalMaterial({ color: '#f6f1e8', roughness: .18, transmission: .22, transparent: true, opacity: .76, thickness: .08, clearcoat: 1, clearcoatRoughness: .14 })
           );
           plaque.position.set(-2.45, 2.35, .23);
           plaque.castShadow = true;
@@ -354,7 +364,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             new THREE.PlaneGeometry(1.24, 2.54),
             new THREE.MeshBasicMaterial({ map: plaqueTexture, toneMapped: false })
           );
-          plaqueFace.position.set(-2.45, 2.35, .268);
+          plaqueFace.position.set(-2.45, 2.35, .243);
           plaqueFace.userData.stationIndex = index;
           group.add(plaqueFace);
         }
@@ -392,7 +402,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       overviewHoverKey = nextKey;
       stationVisuals.forEach(({ index, active, group, wall, baseGlow, wash }) => {
         const stationHovered = index === hoveredStationIndex;
-        group.scale.setScalar(stationHovered ? 1.012 : 1);
+        group.scale.setScalar(1);
         wall.material.emissive.set(stationHovered ? '#79513a' : '#30261d');
         wall.material.emissiveIntensity = stationHovered ? .22 : .08;
         baseGlow.material.color.set(stationHovered ? '#ffc08a' : active ? '#d88455' : '#f0d5ae');
@@ -403,9 +413,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         const itemHovered = entryStationIndex === hoveredStationIndex && entryItemId === hoveredItemId;
         element.classList.toggle('is-station-hovered', entryStationIndex === hoveredStationIndex);
         element.classList.toggle('is-hovered', itemHovered);
-        frame.scale.setScalar(itemHovered ? 1.08 : 1);
-        frame.material.emissive.set(itemHovered ? '#9b4e29' : '#000000');
-        frame.material.emissiveIntensity = itemHovered ? .32 : 0;
+        frame.scale.setScalar(1);
+        frame.castShadow = !itemHovered;
+        frame.material.emissive.set(itemHovered ? '#fff0cf' : '#000000');
+        frame.material.emissiveIntensity = itemHovered ? .6 : 0;
       });
     };
     const handlePointerDown = (event) => {
@@ -461,12 +472,13 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const rect = canvas.getBoundingClientRect();
       overlayEntries.forEach(({ element, frame: thumbnailFrame, imageWidth, imageHeight, sourceWidth, sourceHeight }) => {
         thumbnailFrame.updateWorldMatrix(true, false);
-        const worldCenter = thumbnailFrame.localToWorld(new THREE.Vector3(0, 0, .05));
+        const surfaceZ = .013;
+        const worldCenter = thumbnailFrame.localToWorld(new THREE.Vector3(0, 0, surfaceZ));
         const center = projectPoint(worldCenter.clone(), rect);
-        const topLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, imageHeight / 2, .05)), rect);
-        const topRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, imageHeight / 2, .05)), rect);
-        const bottomRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, -imageHeight / 2, .05)), rect);
-        const bottomLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, -imageHeight / 2, .05)), rect);
+        const topLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, imageHeight / 2, surfaceZ)), rect);
+        const topRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, imageHeight / 2, surfaceZ)), rect);
+        const bottomRight = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(imageWidth / 2, -imageHeight / 2, surfaceZ)), rect);
+        const bottomLeft = projectPoint(thumbnailFrame.localToWorld(new THREE.Vector3(-imageWidth / 2, -imageHeight / 2, surfaceZ)), rect);
         const width = Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y);
         const height = Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y);
         const frameNormal = new THREE.Vector3(0, 0, 1).transformDirection(thumbnailFrame.matrixWorld);

@@ -550,15 +550,17 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 }
 
 .overview-wall-thumbnail.is-hovered {
-  filter: brightness(1.15) saturate(1.12) contrast(1.04);
-  box-shadow: 0 0 0 5px rgba(166,83,49,.84), 0 0 24px rgba(255,226,181,.42), 8px 17px 28px rgba(48,34,24,.32);
+  filter: brightness(1.18) saturate(1.06) contrast(1.025);
+  box-shadow: 0 0 0 3px rgba(255,244,221,.96), 0 0 0 5px rgba(193,116,72,.74), 0 0 28px rgba(255,226,181,.62);
 }
 
 /* Museum-like local illumination: the cards carry a warm pool of light while
    their offset shadows keep them visibly detached from the wall. */
 .spatial-story-copy {
+  background: linear-gradient(105deg,rgba(248,245,237,.76),rgba(235,231,220,.58) 78%,rgba(225,220,208,.22));
   border-right: 1px solid rgba(94,85,73,.1);
   border-bottom: 1px solid rgba(94,85,73,.13);
+  backdrop-filter: blur(11px) saturate(1.08);
   box-shadow: 9px 14px 18px rgba(49,42,34,.14), 24px 32px 48px rgba(49,42,34,.13);
 }
 
@@ -585,28 +587,42 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 
 .spatial-thumbnail {
   background:
-    radial-gradient(circle at 50% 32%, rgba(255,252,242,.98), rgba(239,235,225,.92) 72%),
-    rgba(239,235,225,.92);
+    linear-gradient(135deg,rgba(255,255,251,.82),rgba(231,227,216,.64)),
+    rgba(239,235,225,.68);
+  border-color: rgba(255,255,249,.62);
+  backdrop-filter: blur(9px) saturate(1.08);
   box-shadow:
     0 0 22px rgba(255,235,199,.2),
-    inset -3px -4px 0 rgba(134,124,108,.12),
+    inset 0 0 0 1px rgba(255,255,255,.38),
+    inset -1px -1px 0 rgba(134,124,108,.1),
     8px 13px 16px rgba(47,40,32,.21),
     22px 30px 38px rgba(47,40,32,.15);
 }
 
 .spatial-thumbnail:hover {
+  transform: translate(-50%,-50%);
+  border-color: rgba(202,119,69,.82);
   box-shadow:
-    0 0 28px rgba(255,231,189,.32),
-    inset -3px -4px 0 rgba(134,124,108,.1),
-    10px 17px 20px rgba(47,40,32,.2),
-    27px 37px 46px rgba(47,40,32,.17);
+    0 0 0 2px rgba(255,247,226,.94),
+    0 0 0 4px rgba(202,119,69,.7),
+    0 0 30px rgba(255,224,178,.68);
 }
 
 .spatial-thumbnail.is-selected {
   box-shadow:
     0 0 0 1px #a65331,
     0 0 30px rgba(255,222,174,.34),
-    inset -3px -4px 0 rgba(151,102,78,.12),
+    inset -1px -1px 0 rgba(151,102,78,.1),
     10px 17px 20px rgba(75,43,28,.2),
     27px 37px 46px rgba(75,43,28,.18);
+}
+
+.spatial-thumbnail.is-selected:hover {
+  box-shadow: 0 0 0 2px rgba(255,247,226,.96), 0 0 0 4px rgba(166,83,49,.82), 0 0 32px rgba(255,218,165,.72);
+}
+
+.mode-visitor.thumbnail-layout-carousel .spatial-thumbnail:hover,
+.mode-visitor.thumbnail-layout-carousel .spatial-thumbnail.is-selected:hover {
+  transform: none;
+  box-shadow: 0 0 0 2px rgba(255,247,226,.94), 0 0 0 4px rgba(202,119,69,.7), 0 0 30px rgba(255,224,178,.68);
 }
