@@ -810,6 +810,8 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     let spinCamera = null;
     let autoRotating = false;
     let spinGeneration = 0;
+    let spinFrame = null;
+    let previousSpinTime = null;
     let activePointerId = null;
     let pointerX = 0;
     let pointerY = 0;
@@ -822,14 +824,19 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       autoRotating = false;
       spinCamera = null;
       spinGeneration += 1;
+      previousSpinTime = null;
+      if (spinFrame) cancelAnimationFrame(spinFrame);
+      spinFrame = null;
     };
-    const spin = (generation) => {
+    const spin = (time, generation) => {
       if (disposed || !autoRotating || !api || !spinCamera || generation !== spinGeneration) return;
-      const segmentDuration = .9;
-      spinCamera = rotateSketchfabCamera(spinCamera, segmentDuration * .16);
-      api.setCameraEasing?.('easeLinear');
-      api.setCameraLookAtEndAnimationCallback?.(() => spin(generation));
-      api.setCameraLookAt(spinCamera.position, spinCamera.target, segmentDuration);
+      if (previousSpinTime !== null) {
+        const elapsedSeconds = Math.min(.1, Math.max(0, (time - previousSpinTime) / 1000));
+        spinCamera = rotateSketchfabCamera(spinCamera, elapsedSeconds * .16);
+        api.setCameraLookAt(spinCamera.position, spinCamera.target, 0);
+      }
+      previousSpinTime = time;
+      spinFrame = requestAnimationFrame((nextTime) => spin(nextTime, generation));
     };
     const startAutoRotation = () => {
       if (!api || disposed) return;
@@ -838,7 +845,8 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
         spinCamera = camera;
         autoRotating = true;
         spinGeneration += 1;
-        spin(spinGeneration);
+        previousSpinTime = null;
+        spinFrame = requestAnimationFrame((time) => spin(time, spinGeneration));
       });
     };
     const scheduleAutoRotation = () => {
