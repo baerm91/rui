@@ -475,7 +475,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .exhibition-back,
 .station-stepper,
 .exhibition-footer-actions > :not(:last-child) {
-  transition: opacity .45s ease, visibility .45s ease;
+  transition: opacity .9s cubic-bezier(.22,.61,.36,1), visibility .9s ease;
 }
 
 .is-model-interacting .spatial-story-copy,
@@ -489,6 +489,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .is-model-interacting .exhibition-footer-actions > :not(:last-child) {
   opacity: .1;
   pointer-events: none;
+  transition-duration: .16s;
 }
 
 @keyframes spatial-view-wash {
