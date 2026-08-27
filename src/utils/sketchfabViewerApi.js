@@ -68,6 +68,34 @@ export function rotateSketchfabCamera(camera, angle) {
   };
 }
 
+export function orbitSketchfabCamera(camera, deltaX, deltaY, sensitivity = .006) {
+  const position = Array.isArray(camera?.position) ? camera.position.map((value) => Number(value) || 0) : [0, 0, 0];
+  const target = Array.isArray(camera?.target) ? camera.target.map((value) => Number(value) || 0) : [0, 0, 0];
+  const offset = position.map((value, index) => value - target[index]);
+  const radius = Math.max(.001, Math.hypot(...offset));
+  const azimuth = Math.atan2(offset[1], offset[0]) - (Number(deltaX) || 0) * sensitivity;
+  const nextZ = Math.max(-radius * .96, Math.min(radius * .96, offset[2] + (Number(deltaY) || 0) * radius * sensitivity));
+  const horizontalRadius = Math.sqrt(Math.max(0, radius * radius - nextZ * nextZ));
+  return {
+    position: [
+      target[0] + Math.cos(azimuth) * horizontalRadius,
+      target[1] + Math.sin(azimuth) * horizontalRadius,
+      target[2] + nextZ
+    ],
+    target
+  };
+}
+
+export function zoomSketchfabCamera(camera, deltaY) {
+  const position = Array.isArray(camera?.position) ? camera.position.map((value) => Number(value) || 0) : [0, 0, 0];
+  const target = Array.isArray(camera?.target) ? camera.target.map((value) => Number(value) || 0) : [0, 0, 0];
+  const factor = Math.exp(Math.max(-600, Math.min(600, Number(deltaY) || 0)) * .001);
+  return {
+    position: position.map((value, index) => target[index] + (value - target[index]) * factor),
+    target
+  };
+}
+
 export function isSketchfabModelHit(event) {
   return Number.isInteger(event?.instanceID) || (Array.isArray(event?.position3D) && event.position3D.length >= 3);
 }

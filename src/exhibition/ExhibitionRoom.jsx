@@ -8,7 +8,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
-import { isSketchfabModelHit, loadSketchfabViewerApi, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION } from '../utils/sketchfabViewerApi.js';
+import { loadSketchfabViewerApi, orbitSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
 import './exhibitionRoom.css';
 
@@ -796,21 +796,27 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
 
 function SpatialSketchfabViewer({ item, onInteractionChange }) {
   const iframeRef = useRef(null);
+  const interactionLayerRef = useRef(null);
   const interactionRef = useRef(onInteractionChange);
   interactionRef.current = onInteractionChange;
   const uid = getSketchfabModelUid(item?.modelUrl);
 
   useEffect(() => {
-    if (!uid || !iframeRef.current) return undefined;
+    if (!uid || !iframeRef.current || !interactionLayerRef.current) return undefined;
+    const interactionLayer = interactionLayerRef.current;
     let disposed = false;
     let api = null;
     let idleTimer = null;
     let spinCamera = null;
     let autoRotating = false;
-    let expectedProgrammaticCameraStarts = 0;
     let spinGeneration = 0;
-    let modelHovered = false;
-    const coarsePointer = matchMedia('(pointer: coarse)').matches;
+    let activePointerId = null;
+    let pointerX = 0;
+    let pointerY = 0;
+    let interactionCamera = null;
+    let pendingDeltaX = 0;
+    let pendingDeltaY = 0;
+    let interactionFrame = null;
 
     const stopAutoRotation = () => {
       autoRotating = false;
@@ -823,7 +829,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       spinCamera = rotateSketchfabCamera(spinCamera, segmentDuration * .16);
       api.setCameraEasing?.('easeLinear');
       api.setCameraLookAtEndAnimationCallback?.(() => spin(generation));
-      expectedProgrammaticCameraStarts += 1;
       api.setCameraLookAt(spinCamera.position, spinCamera.target, segmentDuration);
     };
     const startAutoRotation = () => {
@@ -841,37 +846,63 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       clearTimeout(idleTimer);
       idleTimer = setTimeout(startAutoRotation, 10000);
     };
-    const endInteraction = () => {
+    const applyPointerOrbit = () => {
+      interactionFrame = null;
+      if (!api || !interactionCamera || activePointerId === null) return;
+      interactionCamera = orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
+      pendingDeltaX = 0;
+      pendingDeltaY = 0;
+      api.setCameraLookAt(interactionCamera.position, interactionCamera.target, 0);
+    };
+    const handlePointerDown = (event) => {
+      if (!api || event.button !== 0) return;
+      event.preventDefault();
+      activePointerId = event.pointerId;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      interactionCamera = null;
+      pendingDeltaX = 0;
+      pendingDeltaY = 0;
+      interactionLayer.setPointerCapture(event.pointerId);
+      scheduleAutoRotation();
+      interactionRef.current?.(true);
+      api.getCameraLookAt((error, camera) => {
+        if (error || disposed || activePointerId !== event.pointerId) return;
+        interactionCamera = camera;
+        if ((pendingDeltaX || pendingDeltaY) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerOrbit);
+      });
+    };
+    const handlePointerMove = (event) => {
+      if (event.pointerId !== activePointerId) return;
+      event.preventDefault();
+      pendingDeltaX += event.clientX - pointerX;
+      pendingDeltaY += event.clientY - pointerY;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      if (!interactionFrame) interactionFrame = requestAnimationFrame(applyPointerOrbit);
+    };
+    const handlePointerEnd = (event) => {
+      if (event.pointerId !== activePointerId) return;
+      if (interactionLayer.hasPointerCapture(event.pointerId)) interactionLayer.releasePointerCapture(event.pointerId);
+      activePointerId = null;
+      interactionCamera = null;
+      pendingDeltaX = 0;
+      pendingDeltaY = 0;
+      if (interactionFrame) cancelAnimationFrame(interactionFrame);
+      interactionFrame = null;
+      scheduleAutoRotation();
       interactionRef.current?.(false);
-      iframeRef.current?.blur();
-      window.focus();
     };
-    const handleCameraStart = () => {
-      if (autoRotating && expectedProgrammaticCameraStarts > 0) {
-        expectedProgrammaticCameraStarts -= 1;
-        return;
-      }
+    const handleWheel = (event) => {
+      if (!api) return;
+      event.preventDefault();
       scheduleAutoRotation();
-      interactionRef.current?.(true);
+      api.getCameraLookAt((error, camera) => {
+        if (error || disposed || !camera) return;
+        const nextCamera = zoomSketchfabCamera(camera, event.deltaY);
+        api.setCameraLookAt(nextCamera.position, nextCamera.target, 0);
+      });
     };
-    const handleCameraStop = () => {
-      if (autoRotating) return;
-      scheduleAutoRotation();
-      endInteraction();
-    };
-    const handleModelClick = (event) => {
-      scheduleAutoRotation();
-      if (!isSketchfabModelHit(event)) return;
-      interactionRef.current?.(true);
-      setTimeout(endInteraction, 0);
-    };
-    const handleIframeFocus = () => {
-      if (document.activeElement !== iframeRef.current) return;
-      scheduleAutoRotation();
-      if (modelHovered || coarsePointer) interactionRef.current?.(true);
-    };
-    const handleNodeEnter = () => { modelHovered = true; };
-    const handleNodeLeave = () => { modelHovered = false; };
 
     loadSketchfabViewerApi().then((Sketchfab) => {
       if (disposed) return;
@@ -883,29 +914,33 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
           api = nextApi;
           api.start();
           api.addEventListener('viewerready', scheduleAutoRotation);
-          api.addEventListener('camerastart', handleCameraStart);
-          api.addEventListener('camerastop', handleCameraStop);
-          api.addEventListener('click', handleModelClick, { pick: 'fast' });
-          api.addEventListener('nodeMouseEnter', handleNodeEnter, { pick: 'fast' });
-          api.addEventListener('nodeMouseLeave', handleNodeLeave, { pick: 'fast' });
         },
         error() {}
       });
     }).catch(() => {});
-    addEventListener('blur', handleIframeFocus);
+    interactionLayer.addEventListener('pointerdown', handlePointerDown);
+    interactionLayer.addEventListener('pointermove', handlePointerMove);
+    interactionLayer.addEventListener('pointerup', handlePointerEnd);
+    interactionLayer.addEventListener('pointercancel', handlePointerEnd);
+    interactionLayer.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       disposed = true;
       clearTimeout(idleTimer);
       stopAutoRotation();
-      removeEventListener('blur', handleIframeFocus);
+      if (interactionFrame) cancelAnimationFrame(interactionFrame);
+      interactionLayer.removeEventListener('pointerdown', handlePointerDown);
+      interactionLayer.removeEventListener('pointermove', handlePointerMove);
+      interactionLayer.removeEventListener('pointerup', handlePointerEnd);
+      interactionLayer.removeEventListener('pointercancel', handlePointerEnd);
+      interactionLayer.removeEventListener('wheel', handleWheel);
       if (iframeRef.current) iframeRef.current.src = 'about:blank';
       interactionRef.current?.(false);
     };
   }, [uid]);
 
   if (!uid) return null;
-  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /></div>;
+  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /><div ref={interactionLayerRef} className="spatial-sketchfab-interaction" aria-label={`${item.title} drehen und zoomen`} /></div>;
 }
 
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {
