@@ -840,19 +840,28 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     };
     const startAutoRotation = () => {
       if (!api || disposed) return;
+      const requestedGeneration = spinGeneration;
       api.getCameraLookAt((error, camera) => {
-        if (error || disposed || !camera) return;
+        if (error || disposed || !camera || activePointerId !== null || requestedGeneration !== spinGeneration) return;
         spinCamera = camera;
         autoRotating = true;
         spinGeneration += 1;
+        const generation = spinGeneration;
         previousSpinTime = null;
-        spinFrame = requestAnimationFrame((time) => spin(time, spinGeneration));
+        spinFrame = requestAnimationFrame((time) => spin(time, generation));
       });
     };
-    const scheduleAutoRotation = () => {
-      stopAutoRotation();
+    const pauseAutoRotation = () => {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(startAutoRotation, 10000);
+      idleTimer = null;
+      stopAutoRotation();
+    };
+    const scheduleAutoRotation = () => {
+      pauseAutoRotation();
+      idleTimer = setTimeout(() => {
+        idleTimer = null;
+        startAutoRotation();
+      }, 10000);
     };
     const applyPointerOrbit = () => {
       interactionFrame = null;
@@ -872,7 +881,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       pendingDeltaX = 0;
       pendingDeltaY = 0;
       interactionLayer.setPointerCapture(event.pointerId);
-      scheduleAutoRotation();
+      pauseAutoRotation();
       interactionRef.current?.(true);
       api.getCameraLookAt((error, camera) => {
         if (error || disposed || activePointerId !== event.pointerId) return;
@@ -904,7 +913,8 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     const handleWheel = (event) => {
       if (!api) return;
       event.preventDefault();
-      scheduleAutoRotation();
+      if (activePointerId === null) scheduleAutoRotation();
+      else pauseAutoRotation();
       api.getCameraLookAt((error, camera) => {
         if (error || disposed || !camera) return;
         const nextCamera = zoomSketchfabCamera(camera, event.deltaY);
