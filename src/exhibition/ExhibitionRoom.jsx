@@ -20,6 +20,14 @@ const disposeObject = (root) => root?.traverse((object) => {
   });
 });
 const smootherStep = (value) => value * value * value * (value * (value * 6 - 15) + 10);
+const resolveOverviewStationOrigin = (stations = [], stationIndex = 0) => {
+  const stationXs = stations.map((entry) => entry.spatial.position[0]);
+  const stationZs = stations.map((entry) => entry.spatial.position[2]);
+  const centerX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
+  const centerZ = stationZs.length ? (Math.min(...stationZs) + Math.max(...stationZs)) / 2 : 0;
+  const offset = stationIndex - (stations.length - 1) / 2;
+  return new THREE.Vector3(centerX + offset * 7.2, 0, centerZ - 5.08);
+};
 const drawWrappedText = (context, text, x, startY, maxWidth, lineHeight, maxLines) => {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines = [];
@@ -95,6 +103,22 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const overviewOverlay = overviewOverlayRef.current;
     const overlayEntries = [];
     const stationVisuals = [];
+    const overviewContentMaterials = [];
+    const overviewContentLights = [];
+    let overviewContentOpacity = overviewModeRef.current ? 1 : 0;
+    const setOverviewContentOpacity = (opacity) => {
+      overviewContentOpacity = THREE.MathUtils.clamp(opacity, 0, 1);
+      overviewContentMaterials.forEach(({ material, maximum }) => {
+        material.opacity = maximum * overviewContentOpacity;
+        material.depthWrite = overviewContentOpacity > .98;
+      });
+      overviewContentMaterials.forEach(({ object }) => {
+        if (object) object.castShadow = overviewContentOpacity > .96;
+      });
+      overviewContentLights.forEach(({ light, maximum }) => {
+        light.intensity = maximum * overviewContentOpacity;
+      });
+    };
     let overviewHoverKey = '';
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#dedbd2');
@@ -148,6 +172,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const overviewCenterZ = stationZs.length ? (Math.min(...stationZs) + Math.max(...stationZs)) / 2 : 0;
       overlayEntries.splice(0);
       stationVisuals.splice(0);
+      overviewContentMaterials.splice(0);
+      overviewContentLights.splice(0);
       overviewHoverKey = '';
       overviewOverlay?.replaceChildren();
       [...world.children].filter((child) => child !== floor).forEach((child) => { world.remove(child); disposeObject(child); });
@@ -326,9 +352,11 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           frame.receiveShadow = true;
           frame.userData.stationIndex = index;
           frame.userData.itemId = item.id;
+          if (showOverview) overviewContentMaterials.push({ material: frame.material, maximum: .72, object: frame });
           const objectGlow = new THREE.PointLight(0xffebcf, .34, 2.35, 2);
           objectGlow.position.set(0, .08, .68);
           frame.add(objectGlow);
+          if (showOverview) overviewContentLights.push({ light: objectGlow, maximum: .34 });
           group.add(frame);
           if (showOverview && overviewOverlay) {
             const image = document.createElement('img');
@@ -359,18 +387,21 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           plaque.castShadow = true;
           plaque.receiveShadow = true;
           plaque.userData.stationIndex = index;
+          overviewContentMaterials.push({ material: plaque.material, maximum: .76, object: plaque });
           group.add(plaque);
           const plaqueFace = new THREE.Mesh(
             new THREE.PlaneGeometry(1.24, 2.54),
-            new THREE.MeshBasicMaterial({ map: plaqueTexture, toneMapped: false })
+            new THREE.MeshBasicMaterial({ map: plaqueTexture, toneMapped: false, transparent: true })
           );
           plaqueFace.position.set(-2.45, 2.35, .243);
           plaqueFace.userData.stationIndex = index;
+          overviewContentMaterials.push({ material: plaqueFace.material, maximum: 1 });
           group.add(plaqueFace);
         }
         if (showOverview) stationVisuals.push({ index, active: index === activeIndex, group, wall, baseGlow, wash });
         world.add(group);
       });
+      setOverviewContentOpacity(overviewContentOpacity);
     };
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -438,8 +469,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     canvas.addEventListener('pointerleave', handlePointerLeave);
     canvas.addEventListener('pointerup', handlePointerUp);
     resize();
-    rebuildStations(stations, stationIndex, overviewMode);
-    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, renderedOverviewMode: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
+    const initialOverviewLayout = overviewMode || (largePresentation && !editorMode);
+    rebuildStations(stations, stationIndex, initialOverviewLayout);
+    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, setOverviewContentOpacity, getOverviewContentOpacity: () => overviewContentOpacity, renderedOverviewMode: initialOverviewLayout, cameraTransitionFrame: null, hasCameraView: false };
     onCameraReady?.(() => ({ position: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov }));
     const projectPoint = (point, rect) => {
       const projected = point.project(camera);
@@ -516,18 +548,25 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime) return undefined;
-    const layoutChanges = runtime.renderedOverviewMode !== overviewMode;
+    const renderOverviewLayout = overviewMode || (largePresentation && !editorMode);
+    const layoutChanges = runtime.renderedOverviewMode !== renderOverviewLayout;
     if (layoutChanges && runtime.hasCameraView && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return undefined;
     }
-    runtime.rebuildStations(stations, stationIndex, overviewMode);
-    runtime.renderedOverviewMode = overviewMode;
+    runtime.rebuildStations(stations, stationIndex, renderOverviewLayout);
+    runtime.renderedOverviewMode = renderOverviewLayout;
     return undefined;
-  }, [stations, stationIndex, overviewMode]);
+  }, [editorMode, largePresentation, stations, stationIndex, overviewMode]);
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime || !activeSpatial) return;
-    const config = overviewMode ? resolveSpatialOverviewCamera(stations) : activeSpatial.camera;
+    const integratedVisitor = largePresentation && !editorMode;
+    const overviewStationOrigin = resolveOverviewStationOrigin(stations, stationIndex);
+    const config = overviewMode
+      ? resolveSpatialOverviewCamera(stations)
+      : integratedVisitor
+        ? { position: [overviewStationOrigin.x, 2.65, overviewStationOrigin.z + 5.35], target: [overviewStationOrigin.x, 2.25, overviewStationOrigin.z], fov: 45 }
+        : activeSpatial.camera;
     const toPosition = new THREE.Vector3().fromArray(config.position);
     const toTarget = new THREE.Vector3().fromArray(config.target);
     const fromPosition = runtime.camera.position.clone();
@@ -535,7 +574,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const fromFov = runtime.camera.fov;
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const immediate = !runtime.hasCameraView || reducedMotion;
-    const layoutChanges = runtime.renderedOverviewMode !== overviewMode;
+    const renderOverviewLayout = overviewMode || integratedVisitor;
+    const layoutChanges = runtime.renderedOverviewMode !== renderOverviewLayout;
+    const fromOverviewContentOpacity = runtime.getOverviewContentOpacity();
+    const toOverviewContentOpacity = overviewMode ? 1 : 0;
     runtime.hasCameraView = true;
     cancelAnimationFrame(runtime.cameraTransitionFrame);
     runtime.controls.enabled = immediate;
@@ -555,6 +597,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     );
     if (immediate) {
       applyView(1);
+      runtime.setOverviewContentOpacity(toOverviewContentOpacity);
     } else if (layoutChanges) {
       const stationXs = stations.map((entry) => entry.spatial.position[0]);
       const stationZs = stations.map((entry) => entry.spatial.position[2]);
@@ -592,8 +635,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           );
         } else {
           if (!swapped) {
-            runtime.rebuildStations(stations, stationIndex, overviewMode);
-            runtime.renderedOverviewMode = overviewMode;
+            runtime.rebuildStations(stations, stationIndex, renderOverviewLayout);
+            runtime.renderedOverviewMode = renderOverviewLayout;
             swapped = true;
           }
           const phaseProgress = smootherStep((progress - split) / (1 - split));
@@ -618,6 +661,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const animateTransition = (now) => {
         const progress = Math.min(1, (now - startedAt) / duration);
         applyView(smootherStep(progress));
+        const linearContentProgress = Math.min(1, progress / .28);
+        const contentProgress = 1 - ((1 - linearContentProgress) ** 3);
+        runtime.setOverviewContentOpacity(THREE.MathUtils.lerp(fromOverviewContentOpacity, toOverviewContentOpacity, contentProgress));
         if (progress < 1) {
           runtime.cameraTransitionFrame = requestAnimationFrame(animateTransition);
         } else {
@@ -632,10 +678,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     runtime.hemi.intensity = activeSpatial.lighting.ambientIntensity;
     runtime.key.color.set(activeSpatial.lighting.keyLightColor);
     runtime.key.intensity = activeSpatial.lighting.keyLightIntensity;
-    const origin = new THREE.Vector3().fromArray(activeSpatial.position);
+    const origin = integratedVisitor ? overviewStationOrigin : new THREE.Vector3().fromArray(activeSpatial.position);
     runtime.key.position.fromArray(activeSpatial.lighting.keyLightPosition).add(origin);
     runtime.key.target.position.fromArray(activeSpatial.lighting.keyLightTarget).add(origin);
-  }, [activeSpatial, overviewMode, stationIndex, stations]);
+  }, [activeSpatial, editorMode, largePresentation, overviewMode, stationIndex, stations]);
   useEffect(() => {
     const runtime = runtimeRef.current;
     const root = modelRootRef.current;
@@ -660,7 +706,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       object.position.sub(center);
       object.scale.setScalar(fit * selectedItem.modelTransform.scale * (largePresentation ? 1.35 : 1));
       const pivot = new THREE.Group();
-      pivot.position.add(new THREE.Vector3().fromArray(activeSpatial.position)).add(new THREE.Vector3().fromArray(selectedItem.modelTransform.position));
+      const presentationOrigin = largePresentation
+        ? resolveOverviewStationOrigin(stations, stationIndex)
+        : new THREE.Vector3().fromArray(activeSpatial.position);
+      pivot.position.add(presentationOrigin).add(new THREE.Vector3().fromArray(selectedItem.modelTransform.position));
       pivot.rotation.fromArray(selectedItem.modelTransform.rotation);
       object.traverse((child) => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
       pivot.add(object);
@@ -668,7 +717,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     }, undefined, () => {});
     return () => { cancelled = true; draco.dispose(); ktx2.dispose(); };
   }, [activeSpatial?.position, largePresentation, selectedItem?.id, selectedItem?.modelTransform, selectedItem?.modelUrl, selectedItem?.sourceType, stationIndex]);
-  return <><canvas ref={canvasRef} className={`exhibition-room-canvas ${editorMode ? 'is-editor' : ''}`} aria-label="Begehbarer 3D-Ausstellungsraum" /><div ref={overviewOverlayRef} className="overview-wall-thumbnails" aria-hidden="true" /></>;
+  return <><canvas ref={canvasRef} className={`exhibition-room-canvas ${editorMode ? 'is-editor' : ''}`} aria-label="Begehbarer 3D-Ausstellungsraum" /><div ref={overviewOverlayRef} className={`overview-wall-thumbnails ${overviewMode ? '' : 'is-faded'}`} aria-hidden="true" /></>;
 }
 
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {
@@ -837,7 +886,8 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     }
     transition.active = true;
     setViewTransitioning(true);
-    transition.changeTimer = setTimeout(applyChange, 170);
+    transition.changeTimer = null;
+    applyChange();
     transition.midTimer = onMidpoint ? setTimeout(onMidpoint, 900) : null;
     transition.endTimer = setTimeout(() => {
       transition.active = false;
