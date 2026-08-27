@@ -613,7 +613,7 @@ async function init() {
         }
       : await loadModels(scene, (progress) => {
           targetLoadingProgress = Math.max(targetLoadingProgress, progress);
-        }, loadableModels);
+        }, loadableModels, renderer);
 
     if (usesSketchfabViewer) {
       scene.add(result.ruinModel, result.reconModel);

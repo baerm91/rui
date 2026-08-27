@@ -46,7 +46,7 @@ export function createSpatialItem(input = {}, index = 0) {
       scale: number(input.thumbnailTransform?.scale, 1, 0.35, 2.5)
     },
     modelTransform: {
-      position: vector(input.modelTransform?.position, [1.35, 1.35, 0.55]),
+      position: vector(input.modelTransform?.position, [1.35, 0.18, 0.55]),
       rotation: vector(input.modelTransform?.rotation, [0, 0, 0]),
       scale: number(input.modelTransform?.scale, 1, 0.02, 20)
     },

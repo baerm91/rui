@@ -1,0 +1,935 @@
+{
+  "label": "final",
+  "origin": "http://localhost:3005",
+  "createdAt": "2026-08-27T16:16:11.833Z",
+  "results": [
+    {
+      "ok": true,
+      "name": "starhemberg-initial",
+      "path": "/stories/starhemberg",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\starhemberg-initial-desktop.png",
+      "state": {
+        "path": "/stories/starhemberg",
+        "title": "Burg Starhemberg",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 2.5984660001471367,
+            "y": 5.5753356908312455,
+            "z": 0.6998918725315233
+          },
+          "cameraTarget": {
+            "x": -7.250941178685292,
+            "y": 7.174458741655243,
+            "z": 0.043029527490774155
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "starhemberg-initial",
+      "path": "/stories/starhemberg",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\starhemberg-initial-mobile.png",
+      "state": {
+        "path": "/stories/starhemberg",
+        "title": "Burg Starhemberg",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 2.599060641359494,
+            "y": 5.575335690831251,
+            "z": 0.6911913199879482
+          },
+          "cameraTarget": {
+            "x": -7.250941178685292,
+            "y": 7.174458741655243,
+            "z": 0.043029527490774155
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 390,
+            "height": 844,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "heidentor-initial",
+      "path": "/stories/heidentor",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\heidentor-initial-desktop.png",
+      "state": {
+        "path": "/stories/heidentor",
+        "title": "Das Heidentor",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 5.689522208548408,
+            "y": 1.5295840719695017,
+            "z": -1.6070016166839358
+          },
+          "cameraTarget": {
+            "x": 2.3056693965160195,
+            "y": 1.7402880055120256,
+            "z": 0.18056794912292418
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "heidentor-initial",
+      "path": "/stories/heidentor",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\heidentor-initial-mobile.png",
+      "state": {
+        "path": "/stories/heidentor",
+        "title": "Das Heidentor",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 5.688860702247483,
+            "y": 1.529584071969499,
+            "z": -1.6082585483187972
+          },
+          "cameraTarget": {
+            "x": 2.3056693965160195,
+            "y": 1.7402880055120253,
+            "z": 0.18056794912292418
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 390,
+            "height": 844,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-overview",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-overview-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "9.0000,3.3500,13.1700",
+          "target": "9.0000,2.4000,-5.7500"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-overview",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-overview-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "9.0000,3.3500,13.1700",
+          "target": "9.0000,2.4000,-5.7500"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-station-one",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-station-content')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-station-one-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.8000,1.8000,1.1700",
+          "target": "1.8000,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-station-one",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-station-content')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-station-one-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.9800,1.9260,4.1100",
+          "target": "1.9800,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-station-two",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "document.querySelectorAll('.station-stepper button')[1]?.click()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-story-copy h1')?.textContent.includes('Form in Bewegung')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-station-two-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "9.0000,1.8000,2.6700",
+          "target": "9.0000,1.5000,-4.3300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-station-two",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "document.querySelectorAll('.station-stepper button')[1]?.click()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-story-copy h1')?.textContent.includes('Form in Bewegung')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-station-two-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "9.1800,1.9260,5.6100",
+          "target": "9.1800,1.5000,-4.3300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-model-loading",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "network": {
+            "offline": false,
+            "latency": 250,
+            "downloadThroughput": 16000,
+            "uploadThroughput": 16000,
+            "connectionType": "cellular3g"
+          }
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-model-status.is-loading')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-model-loading-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.8000,1.8000,1.1700",
+          "target": "1.8000,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-model-loading",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "network": {
+            "offline": false,
+            "latency": 250,
+            "downloadThroughput": 16000,
+            "uploadThroughput": 16000,
+            "connectionType": "cellular3g"
+          }
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "document.querySelector('.spatial-model-status.is-loading')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-model-loading-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.9800,1.9260,4.1100",
+          "target": "1.9800,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-exploration",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "[...document.querySelectorAll('button')].some((element) => !element.disabled && element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\"))"
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\")); if (!target) throw new Error(\"Trigger not found: Frei erkunden\"); target.click(); })()",
+          "wait": 1700
+        },
+        {
+          "drag": {
+            "from": [
+              0.72,
+              0.52
+            ],
+            "to": [
+              0.55,
+              0.43
+            ]
+          },
+          "wait": 700
+        },
+        {
+          "waitFor": "document.querySelector('.exhibition-shell.is-exploring')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-exploration-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "6.7186,1.9201,-0.8580",
+          "target": "1.8000,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-exploration",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "[...document.querySelectorAll('button')].some((element) => !element.disabled && element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\"))"
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\")); if (!target) throw new Error(\"Trigger not found: Frei erkunden\"); target.click(); })()",
+          "wait": 1700
+        },
+        {
+          "drag": {
+            "from": [
+              0.72,
+              0.52
+            ],
+            "to": [
+              0.55,
+              0.43
+            ]
+          },
+          "wait": 700
+        },
+        {
+          "waitFor": "document.querySelector('.exhibition-shell.is-exploring')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-exploration-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "6.6272,2.0966,2.9468",
+          "target": "1.9800,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-restored",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "[...document.querySelectorAll('button')].some((element) => !element.disabled && element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\"))"
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\")); if (!target) throw new Error(\"Trigger not found: Frei erkunden\"); target.click(); })()",
+          "wait": 1700
+        },
+        {
+          "drag": {
+            "from": [
+              0.72,
+              0.52
+            ],
+            "to": [
+              0.55,
+              0.43
+            ]
+          },
+          "wait": 500
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Komposition wiederherstellen\")); if (!target) throw new Error(\"Trigger not found: Komposition wiederherstellen\"); target.click(); })()",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('.exhibition-shell.is-curated')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-restored-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.8000,1.8000,1.1700",
+          "target": "1.8000,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-restored",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "actions": [
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Zur Station\")); if (!target) throw new Error(\"Trigger not found: Zur Station\"); target.click(); })()",
+          "wait": 2300
+        },
+        {
+          "waitFor": "[...document.querySelectorAll('button')].some((element) => !element.disabled && element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\"))"
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Frei erkunden\")); if (!target) throw new Error(\"Trigger not found: Frei erkunden\"); target.click(); })()",
+          "wait": 1700
+        },
+        {
+          "drag": {
+            "from": [
+              0.72,
+              0.52
+            ],
+            "to": [
+              0.55,
+              0.43
+            ]
+          },
+          "wait": 500
+        },
+        {
+          "expression": "(() => { const target = [...document.querySelectorAll('button')].find((element) => element.textContent.replace(/\\s+/g, ' ').trim().includes(\"Komposition wiederherstellen\")); if (!target) throw new Error(\"Trigger not found: Komposition wiederherstellen\"); target.click(); })()",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('.exhibition-shell.is-curated')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-restored-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "1.9800,1.9260,4.1100",
+          "target": "1.9800,1.5000,-5.8300"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-editor",
+      "path": "/__spatial-preview?mode=editor",
+      "ready": "document.querySelector('.exhibition-shell.mode-editor')",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-editor-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=editor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page spatial-editor-mode",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "0.0000,1.8000,7.0000",
+          "target": "0.0000,1.5000,0.0000"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1010,
+            "height": 1000,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-editor",
+      "path": "/__spatial-preview?mode=editor",
+      "ready": "document.querySelector('.exhibition-shell.mode-editor')",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\final\\room-editor-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=editor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page spatial-editor-mode",
+        "camera": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "roomCamera": {
+          "position": "0.0000,1.8000,7.0000",
+          "target": "0.0000,1.5000,0.0000"
+        },
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 50,
+            "height": 760,
+            "label": "Begehbarer 3D-Ausstellungsraum"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    }
+  ]
+}

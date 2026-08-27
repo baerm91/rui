@@ -1,0 +1,175 @@
+{
+  "label": "baseline",
+  "origin": "http://localhost:3005",
+  "createdAt": "2026-08-27T15:35:46.685Z",
+  "results": [
+    {
+      "ok": true,
+      "name": "starhemberg-initial",
+      "path": "/stories/starhemberg",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\baseline\\starhemberg-initial-desktop.png",
+      "state": {
+        "path": "/stories/starhemberg",
+        "title": "Burg Starhemberg",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 2.5980574584927423,
+            "y": 5.575335690831248,
+            "z": 0.7058205547422913
+          },
+          "cameraTarget": {
+            "x": -7.250941178685292,
+            "y": 7.174458741655243,
+            "z": 0.043029527490774155
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "webglCanvases": [
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "starhemberg-initial",
+      "path": "/stories/starhemberg",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\baseline\\starhemberg-initial-mobile.png",
+      "state": {
+        "path": "/stories/starhemberg",
+        "title": "Burg Starhemberg",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 2.5982347976840883,
+            "y": 5.575335690831247,
+            "z": 0.7032499528941869
+          },
+          "cameraTarget": {
+            "x": -7.250941178685292,
+            "y": 7.174458741655243,
+            "z": 0.043029527490774155
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "webglCanvases": [
+          {
+            "width": 390,
+            "height": 844,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "heidentor-initial",
+      "path": "/stories/heidentor",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\baseline\\heidentor-initial-desktop.png",
+      "state": {
+        "path": "/stories/heidentor",
+        "title": "Das Heidentor",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 5.692350181670165,
+            "y": 1.529584071969502,
+            "z": -1.601611773191635
+          },
+          "cameraTarget": {
+            "x": 2.3056693965160195,
+            "y": 1.7402880055120256,
+            "z": 0.18056794912292418
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "webglCanvases": [
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "heidentor-initial",
+      "path": "/stories/heidentor",
+      "ready": "window.appState?.baseModelStatus === 'ready'",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\baseline\\heidentor-initial-mobile.png",
+      "state": {
+        "path": "/stories/heidentor",
+        "title": "Das Heidentor",
+        "bodyClass": "experience-page",
+        "camera": {
+          "cameraPos": {
+            "x": 5.689288861414299,
+            "y": 1.5295840719695,
+            "z": -1.6074453349461026
+          },
+          "cameraTarget": {
+            "x": 2.3056693965160195,
+            "y": 1.7402880055120256,
+            "z": 0.18056794912292418
+          }
+        },
+        "baseModelStatus": "ready",
+        "externalViewerStatus": null,
+        "webglCanvases": [
+          {
+            "width": 390,
+            "height": 844,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "errors": []
+    }
+  ]
+}

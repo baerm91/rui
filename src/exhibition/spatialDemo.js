@@ -36,7 +36,11 @@ const makeStation = (index, title, introduction, itemOffset = 0) => ({
     ...model,
     id: `demo-${index}-${modelIndex}`,
     thumbnailTransform: { position: [-2 + modelIndex * 1.7, 1.35, .08], scale: .9 },
-    modelTransform: { position: [1.4, 1.45, .55], rotation: [0, .35, 0], scale: .9 }
+    modelTransform: {
+      position: [1.35, .18, .55],
+      rotation: [0, model.title === 'Ente' ? -.42 : .35, 0],
+      scale: model.title === 'Ente' ? .78 : model.title === 'Avocado' ? .88 : .94
+    }
   }, modelIndex)),
   selectedItemId: `demo-${index}-0`
 });

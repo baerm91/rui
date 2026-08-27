@@ -64,10 +64,61 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   white-space: nowrap;
 }
 
+.spatial-model-status {
+  position: absolute;
+  z-index: 14;
+  top: 48%;
+  left: 65%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 300px;
+  padding: 11px 15px;
+  border: 1px solid rgba(43, 40, 35, .16);
+  border-radius: 999px;
+  background: rgba(238, 234, 224, .86);
+  color: #4f504a;
+  box-shadow: 0 10px 30px rgba(40, 35, 29, .14);
+  font-size: .72rem;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(10px);
+}
+
+.spatial-model-status i {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid rgba(166, 83, 49, .25);
+  border-top-color: #a65331;
+  border-radius: 50%;
+  animation: spatial-model-loading .8s linear infinite;
+}
+
+.spatial-model-status.is-error {
+  border-color: rgba(153, 45, 45, .28);
+  color: #7f2929;
+}
+
+.spatial-model-status.is-error i {
+  border: 0;
+  animation: none;
+}
+
+.spatial-model-status.is-error i::before { content: '!'; font-weight: 800; }
+
+@keyframes spatial-model-loading { to { transform: rotate(1turn); } }
+
+@media (max-width: 720px) {
+  .spatial-model-status { top: 52%; left: 62%; max-width: 220px; }
+}
+
 .walk-hint {
   border: 0;
   cursor: pointer;
 }
+
+.walk-hint:disabled { opacity: .42; cursor: wait; }
 
 .walk-hint.is-active {
   background: #8e431d;
@@ -408,7 +459,24 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   }
 
   .mode-visitor .spatial-object-caption {
-    width: min(70vw, 320px);
+    right: auto;
+    bottom: 100px;
+    left: 20px;
+    width: min(64vw, 250px);
+  }
+
+  .mode-visitor .exploration-toggle {
+    position: fixed;
+    right: 18px;
+    bottom: 70px;
+    display: flex;
+    min-height: 38px;
+    padding: 0 13px;
+    border-radius: 999px;
+    background: rgba(45, 42, 36, .84);
+    color: #f3efe5;
+    box-shadow: 0 8px 24px rgba(38, 34, 28, .2);
+    backdrop-filter: blur(12px);
   }
 }
 

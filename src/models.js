@@ -134,6 +134,18 @@ function collectMaterials(model) {
   return materials;
 }
 
+function improveTextureSampling(model, renderer) {
+  const maximum = Math.min(8, renderer?.capabilities?.getMaxAnisotropy?.() || 1);
+  if (maximum <= 1) return;
+  collectMaterials(model).forEach((material) => {
+    Object.values(material).forEach((value) => {
+      if (!value?.isTexture || value.anisotropy >= maximum) return;
+      value.anisotropy = maximum;
+      value.needsUpdate = true;
+    });
+  });
+}
+
 /**
  * Inject custom shader code into all materials of a model
  * This modifies the onBeforeCompile to add reveal logic
@@ -340,7 +352,7 @@ export function setupRevealMaterials(model, isReconstruction, revealUniforms) {
 /**
  * Load both models and return them
  */
-export async function loadModels(scene, onProgress, modelConfig = siteConfig.models) {
+export async function loadModels(scene, onProgress, modelConfig = siteConfig.models, renderer = null) {
   const manager = new THREE.LoadingManager();
   if (usesOptimizedModelTextures(modelConfig)) {
     manager.setURLModifier(resolveModelAssetUrl);
@@ -362,6 +374,9 @@ export async function loadModels(scene, onProgress, modelConfig = siteConfig.mod
       ? loadModel(modelConfig.reconstruction, manager)
       : Promise.resolve(null)
   ]);
+
+  improveTextureSampling(ruinAsset.scene, renderer);
+  if (reconAsset) improveTextureSampling(reconAsset.scene, renderer);
 
   onProgress?.(1);
 

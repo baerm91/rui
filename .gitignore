@@ -6,3 +6,4 @@ dist/
 *.log
 public/three-codecs/
 artifacts/performance/
+artifacts/visual-quality/iteration-*/
