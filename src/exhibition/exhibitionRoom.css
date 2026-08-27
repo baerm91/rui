@@ -414,6 +414,40 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   cursor: pointer;
 }
 
+.spatial-view-wash {
+  position: absolute;
+  z-index: 16;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 44%, rgba(239,232,216,.72), rgba(210,204,191,.5) 48%, rgba(181,174,160,.34));
+  backdrop-filter: blur(0);
+  pointer-events: none;
+}
+
+.is-view-transitioning .spatial-view-wash {
+  pointer-events: auto;
+  animation: spatial-view-wash 1.45s cubic-bezier(.22,.61,.36,1) both;
+}
+
+.is-view-transitioning .spatial-story-copy,
+.is-view-transitioning .spatial-thumbnails,
+.is-view-transitioning .spatial-sketchfab,
+.is-view-transitioning .spatial-object-caption,
+.is-view-transitioning .spatial-station-content > .model-interaction-hint,
+.is-view-transitioning .spatial-overview-hint {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes spatial-view-wash {
+  0% { opacity: 0; backdrop-filter: blur(0); }
+  14% { opacity: .72; backdrop-filter: blur(4px); }
+  34% { opacity: .38; backdrop-filter: blur(3px); }
+  78% { opacity: .25; backdrop-filter: blur(1px); }
+  100% { opacity: 0; backdrop-filter: blur(0); }
+}
+
 .spatial-overview-hint {
   position: absolute;
   z-index: 18;
@@ -463,7 +497,18 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   object-fit: fill;
   background: #ddd7cc;
   box-shadow: 0 3px 9px rgba(52, 43, 34, .18);
+  filter: brightness(1) saturate(1);
   transform-origin: 0 0;
   user-select: none;
-  will-change: transform;
+  will-change: transform, filter;
+  transition: filter .18s ease, box-shadow .18s ease;
+}
+
+.overview-wall-thumbnail.is-station-hovered {
+  filter: brightness(1.06) saturate(1.03);
+}
+
+.overview-wall-thumbnail.is-hovered {
+  filter: brightness(1.15) saturate(1.12) contrast(1.04);
+  box-shadow: 0 0 0 7px rgba(166,83,49,.9), 0 16px 30px rgba(48,34,24,.38);
 }

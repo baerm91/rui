@@ -19,7 +19,7 @@ const disposeObject = (root) => root?.traverse((object) => {
     material.dispose?.();
   });
 });
-const easeInOutCubic = (value) => (value < .5 ? 4 * value * value * value : 1 - ((-2 * value + 2) ** 3) / 2);
+const smootherStep = (value) => value * value * value * (value * (value * 6 - 15) + 10);
 const drawWrappedText = (context, text, x, startY, maxWidth, lineHeight, maxLines) => {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines = [];
@@ -94,6 +94,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const canvas = canvasRef.current;
     const overviewOverlay = overviewOverlayRef.current;
     const overlayEntries = [];
+    const stationVisuals = [];
+    let overviewHoverKey = '';
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#dedbd2');
     scene.fog = new THREE.Fog('#dedbd2', 13, 42);
@@ -125,11 +127,14 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     scene.add(key, key.target);
     const rebuildStations = (nextStations = [], activeIndex = 0, showOverview = false) => {
       world.userData.stationBuildVersion = (world.userData.stationBuildVersion || 0) + 1;
+      world.userData.showOverview = showOverview;
       const stationXs = nextStations.map((entry) => entry.spatial.position[0]);
       const stationZs = nextStations.map((entry) => entry.spatial.position[2]);
       const overviewCenterX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
       const overviewCenterZ = stationZs.length ? (Math.min(...stationZs) + Math.max(...stationZs)) / 2 : 0;
       overlayEntries.splice(0);
+      stationVisuals.splice(0);
+      overviewHoverKey = '';
       overviewOverlay?.replaceChildren();
       [...world.children].filter((child) => child !== floor).forEach((child) => { world.remove(child); disposeObject(child); });
       if (showOverview) {
@@ -187,14 +192,16 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         wall.castShadow = !showOverview;
         wall.userData.stationIndex = index;
         group.add(wall);
+        let baseGlow = null;
+        let wash = null;
         if (showOverview) {
-          const baseGlow = new THREE.Mesh(
+          baseGlow = new THREE.Mesh(
             new THREE.BoxGeometry(6.48, .075, .07),
             new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#d88455' : '#f0d5ae', transparent: true, opacity: .86, side: THREE.DoubleSide })
           );
           baseGlow.position.set(0, .13, .12);
           group.add(baseGlow);
-          const wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.8 : 2.1, 7, 2);
+          wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.8 : 2.1, 7, 2);
           wash.position.set(0, .48, 1.25);
           group.add(wash);
         } else {
@@ -234,7 +241,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             image.className = 'overview-wall-thumbnail';
             image.alt = '';
             image.draggable = false;
-            const entry = { element: image, frame, aspect: 1, imageWidth: .82, imageHeight: .82, cardWidth: 1, cardHeight: 1, sourceWidth: 512, sourceHeight: 512 };
+            const entry = { element: image, frame, stationIndex: index, itemId: item.id, aspect: 1, imageWidth: .82, imageHeight: .82, cardWidth: 1, cardHeight: 1, sourceWidth: 512, sourceHeight: 512 };
             image.addEventListener('load', () => {
               entry.aspect = Math.max(.58, Math.min(1.9, image.naturalWidth / Math.max(1, image.naturalHeight)));
               entry.sourceWidth = 512 * entry.aspect;
@@ -265,6 +272,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           plaqueFace.userData.stationIndex = index;
           group.add(plaqueFace);
         }
+        if (showOverview) stationVisuals.push({ index, active: index === activeIndex, group, wall, baseGlow, wash });
         world.add(group);
       });
     };
@@ -279,30 +287,62 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const pointerStart = { x: 0, y: 0 };
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const handlePointerDown = (event) => {
-      pointerStart.x = event.clientX;
-      pointerStart.y = event.clientY;
-    };
-    const handlePointerUp = (event) => {
-      if (!overviewModeRef.current || Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8) return;
+    const resolveOverviewHit = (event) => {
+      if (!overviewModeRef.current) return null;
       const rect = canvas.getBoundingClientRect();
       pointer.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1
       );
       raycaster.setFromCamera(pointer, camera);
-      const stationHit = raycaster.intersectObjects(world.children, true)
-        .find((hit) => Number.isInteger(hit.object.userData.stationIndex));
+      return raycaster.intersectObjects(world.children, true)
+        .find((hit) => Number.isInteger(hit.object.userData.stationIndex)) || null;
+    };
+    const applyOverviewHover = (hit) => {
+      const hoveredStationIndex = hit?.object.userData.stationIndex;
+      const hoveredItemId = hit?.object.userData.itemId || null;
+      const nextKey = Number.isInteger(hoveredStationIndex) ? `${hoveredStationIndex}:${hoveredItemId || ''}` : '';
+      if (nextKey === overviewHoverKey) return;
+      overviewHoverKey = nextKey;
+      stationVisuals.forEach(({ index, active, group, wall, baseGlow, wash }) => {
+        const stationHovered = index === hoveredStationIndex;
+        group.scale.setScalar(stationHovered ? 1.012 : 1);
+        wall.material.emissive.set(stationHovered ? '#79513a' : '#30261d');
+        wall.material.emissiveIntensity = stationHovered ? .22 : .08;
+        baseGlow.material.color.set(stationHovered ? '#ffc08a' : active ? '#d88455' : '#f0d5ae');
+        baseGlow.material.opacity = stationHovered ? 1 : .86;
+        wash.intensity = stationHovered ? 3.5 : active ? 2.8 : 2.1;
+      });
+      overlayEntries.forEach(({ element, frame, stationIndex: entryStationIndex, itemId: entryItemId }) => {
+        const itemHovered = entryStationIndex === hoveredStationIndex && entryItemId === hoveredItemId;
+        element.classList.toggle('is-station-hovered', entryStationIndex === hoveredStationIndex);
+        element.classList.toggle('is-hovered', itemHovered);
+        frame.scale.setScalar(itemHovered ? 1.08 : 1);
+        frame.material.emissive.set(itemHovered ? '#9b4e29' : '#000000');
+        frame.material.emissiveIntensity = itemHovered ? .32 : 0;
+      });
+    };
+    const handlePointerDown = (event) => {
+      pointerStart.x = event.clientX;
+      pointerStart.y = event.clientY;
+    };
+    const handlePointerMove = (event) => applyOverviewHover(resolveOverviewHit(event));
+    const handlePointerLeave = () => applyOverviewHover(null);
+    const handlePointerUp = (event) => {
+      if (!overviewModeRef.current || Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8) return;
+      const stationHit = resolveOverviewHit(event);
       if (!stationHit) return;
       const { stationIndex: hitStationIndex, itemId } = stationHit.object.userData;
       if (itemId) selectItemRef.current?.(hitStationIndex, itemId);
       else selectStationRef.current?.(hitStationIndex);
     };
     canvas.addEventListener('pointerdown', handlePointerDown);
+    canvas.addEventListener('pointermove', handlePointerMove);
+    canvas.addEventListener('pointerleave', handlePointerLeave);
     canvas.addEventListener('pointerup', handlePointerUp);
     resize();
     rebuildStations(stations, stationIndex, overviewMode);
-    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, cameraTransitionFrame: null, hasCameraView: false };
+    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, stationRebuildTimer: null, renderedOverviewMode: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
     onCameraReady?.(() => ({ position: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov }));
     const projectPoint = (point, rect) => {
       const projected = point.project(camera);
@@ -350,7 +390,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           .find((hit) => Number.isInteger(hit.object.userData.stationIndex));
         const facesCamera = frameNormal.dot(toCamera) > .02;
         const isUnoccluded = firstStationHit?.object.userData.stationIndex === thumbnailFrame.userData.stationIndex;
-        const visible = overviewModeRef.current && facesCamera && isUnoccluded && center.z > -1 && center.z < 1 && width > 2 && height > 2;
+        const visible = world.userData.showOverview && facesCamera && isUnoccluded && center.z > -1 && center.z < 1 && width > 2 && height > 2;
         element.style.display = visible ? 'block' : 'none';
         if (!visible) return;
         element.style.zIndex = String(Math.round((1 - center.z) * 100000));
@@ -363,8 +403,11 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     return () => {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(runtimeRef.current?.cameraTransitionFrame);
+      clearTimeout(runtimeRef.current?.stationRebuildTimer);
       observer.disconnect();
       canvas.removeEventListener('pointerdown', handlePointerDown);
+      canvas.removeEventListener('pointermove', handlePointerMove);
+      canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('pointerup', handlePointerUp);
       overviewOverlay?.replaceChildren();
       controls.dispose();
@@ -373,7 +416,23 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       runtimeRef.current = null;
     };
   }, []);
-  useEffect(() => { runtimeRef.current?.rebuildStations(stations, stationIndex, overviewMode); }, [stations, stationIndex, overviewMode]);
+  useEffect(() => {
+    const runtime = runtimeRef.current;
+    if (!runtime) return undefined;
+    clearTimeout(runtime.stationRebuildTimer);
+    const layoutChanges = runtime.renderedOverviewMode !== overviewMode;
+    const rebuild = () => {
+      runtime.rebuildStations(stations, stationIndex, overviewMode);
+      runtime.renderedOverviewMode = overviewMode;
+      runtime.stationRebuildTimer = null;
+    };
+    if (layoutChanges && runtime.hasCameraView && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      runtime.stationRebuildTimer = setTimeout(rebuild, overviewMode ? 850 : 1220);
+    } else {
+      rebuild();
+    }
+    return () => clearTimeout(runtime.stationRebuildTimer);
+  }, [stations, stationIndex, overviewMode]);
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime || !activeSpatial) return;
@@ -404,7 +463,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const duration = overviewMode ? 1100 : 1450;
       const animateTransition = (now) => {
         const progress = Math.min(1, (now - startedAt) / duration);
-        applyView(easeInOutCubic(progress));
+        applyView(smootherStep(progress));
         if (progress < 1) {
           runtime.cameraTransitionFrame = requestAnimationFrame(animateTransition);
         } else {
@@ -541,10 +600,12 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const [mode, setMode] = useState(initialMode);
   const [openItemId, setOpenItemId] = useState(() => initialMode === 'visitor' ? null : undefined);
   const [overviewMode, setOverviewMode] = useState(() => initialMode === 'visitor');
+  const [viewTransitioning, setViewTransitioning] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedThumbnailIds, setSelectedThumbnailIds] = useState([]);
   const captureCameraRef = useRef(null);
+  const viewTransitionRef = useRef({ active: false, changeTimer: null, endTimer: null });
   const station = stations[stationIndex];
   const editorItem = station?.items.find((item) => item.id === station.selectedItemId) || station?.items[0] || null;
   const visitorItemId = openItemId === undefined ? station?.initialItemId : openItemId;
@@ -611,17 +672,52 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     const camera = captureCameraRef.current?.();
     if (camera) updateStation(index, { spatial: { ...stations[index].spatial, camera } });
   };
+  const transitionSpatialView = (applyChange, onComplete) => {
+    const transition = viewTransitionRef.current;
+    if (transition.active) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      applyChange();
+      onComplete?.();
+      return;
+    }
+    transition.active = true;
+    setViewTransitioning(true);
+    transition.changeTimer = setTimeout(applyChange, 170);
+    transition.endTimer = setTimeout(() => {
+      transition.active = false;
+      transition.changeTimer = null;
+      transition.endTimer = null;
+      setViewTransitioning(false);
+      onComplete?.();
+    }, 1580);
+  };
   const enterStation = (index) => {
-    setStationIndex(index);
-    setOverviewMode(false);
-    setOpenItemId(undefined);
-    setAudioPlaying(false);
+    const applyChange = () => {
+      setStationIndex(index);
+      setOverviewMode(false);
+      setOpenItemId(overviewMode ? null : undefined);
+      setAudioPlaying(false);
+    };
+    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(undefined));
+    else applyChange();
   };
   const enterItem = (index, itemId) => {
-    setStationIndex(index);
-    setOverviewMode(false);
-    setOpenItemId(itemId);
-    setAudioPlaying(false);
+    const applyChange = () => {
+      setStationIndex(index);
+      setOverviewMode(false);
+      setOpenItemId(overviewMode ? null : itemId);
+      setAudioPlaying(false);
+    };
+    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(itemId));
+    else applyChange();
+  };
+  const toggleOverview = () => {
+    const nextOverviewMode = !overviewMode;
+    transitionSpatialView(() => {
+      setOverviewMode(nextOverviewMode);
+      setOpenItemId(null);
+      setAudioPlaying(false);
+    }, nextOverviewMode ? undefined : () => setOpenItemId(undefined));
   };
   const selectThumbnailItem = (id, event) => {
     const additive = mode === 'editor' && (event?.shiftKey || event?.ctrlKey || event?.metaKey);
@@ -638,6 +734,10 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   };
   const save = async () => { await onSaveStory?.({ ...story, stations }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   useEffect(() => { document.body.classList.toggle('spatial-editor-mode', mode === 'editor'); return () => document.body.classList.remove('spatial-editor-mode'); }, [mode]);
+  useEffect(() => () => {
+    clearTimeout(viewTransitionRef.current.changeTimer);
+    clearTimeout(viewTransitionRef.current.endTimer);
+  }, []);
   useEffect(() => {
     if (mode !== 'editor') return;
     const active = stations[stationIndex];
@@ -661,8 +761,9 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     return () => { clearInterval(volumeTimer); player.pause(); player.src = ''; };
   }, [audioPlaying, stationIndex, mode, station?.spatial]);
   if (!station) return null;
-  return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''}`}>
+  return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''} ${viewTransitioning ? 'is-view-transitioning' : ''}`}>
     <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} largePresentation={mode === 'visitor'} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} />
+    <div className="spatial-view-wash" aria-hidden="true" />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
     {overviewMode && <div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>}
     <section className="spatial-station-content"><div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else setOpenItemId(item.id); }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
@@ -670,7 +771,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       {selectedItem && <div className="spatial-object-caption"><b>{selectedItem.title}</b><span>{selectedItem.description}</span>{(selectedItem.attribution || selectedItem.license) && <small>{[selectedItem.attribution, selectedItem.license].filter(Boolean).join(' · ')}</small>}</div>}
       {selectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>
-    <footer className="exhibition-footer"><a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a><div className="station-stepper"><button disabled={stationIndex === 0} onClick={() => enterStation(stationIndex - 1)}><ChevronLeft /></button><span><b>{String(stationIndex + 1).padStart(2, '0')}</b> / {String(stations.length).padStart(2, '0')}</span><button disabled={stationIndex === stations.length - 1} onClick={() => enterStation(stationIndex + 1)}><ChevronRight /></button></div><div className="exhibition-footer-actions">{mode === 'visitor' && station.spatial.audio.url && !station.spatial.audio.autoplay && <button className="walk-hint" type="button" onClick={() => setAudioPlaying((value) => !value)}>{audioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />} {audioPlaying ? 'Ton stoppen' : 'Ton starten'}</button>}<button className={`walk-hint ${overviewMode ? 'is-active' : ''}`} type="button" onClick={() => { const nextOverviewMode = !overviewMode; setOverviewMode(nextOverviewMode); setOpenItemId(nextOverviewMode ? null : undefined); }}><Footprints size={15} /> {overviewMode ? 'Zur Station' : 'Raumübersicht'}</button></div></footer>
+    <footer className="exhibition-footer"><a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a><div className="station-stepper"><button disabled={stationIndex === 0} onClick={() => enterStation(stationIndex - 1)}><ChevronLeft /></button><span><b>{String(stationIndex + 1).padStart(2, '0')}</b> / {String(stations.length).padStart(2, '0')}</span><button disabled={stationIndex === stations.length - 1} onClick={() => enterStation(stationIndex + 1)}><ChevronRight /></button></div><div className="exhibition-footer-actions">{mode === 'visitor' && station.spatial.audio.url && !station.spatial.audio.autoplay && <button className="walk-hint" type="button" onClick={() => setAudioPlaying((value) => !value)}>{audioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />} {audioPlaying ? 'Ton stoppen' : 'Ton starten'}</button>}<button className={`walk-hint ${overviewMode ? 'is-active' : ''}`} type="button" onClick={toggleOverview}><Footprints size={15} /> {overviewMode ? 'Zur Station' : 'Raumübersicht'}</button></div></footer>
     {mode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => setStationIndex(index)} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? undefined : null); setOverviewMode(false); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} onSelectSpatialItem={selectThumbnailItem} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
     {saved && <div className="spatial-save-toast"><Check size={14} /> Story gespeichert</div>}
   </main>;
