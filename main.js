@@ -32,6 +32,8 @@ import {
 import { normalizeProjectCameraFov, normalizeProjectOrbitTarget } from './src/projects/projectSettings.js';
 import { isSketchfabModelUrl } from './src/utils/modelSource.js';
 import { interpolateCameraView } from './src/utils/cameraInterpolation.js';
+import { showLoadingFailure } from './src/utils/loadingFailure.js';
+import { resolveInterpretationStation } from './src/utils/interpretationComparison.js';
 
 // ─── DOM & CANVAS ─────────────────────────────────────
 const canvas = document.getElementById('scene-canvas');
@@ -75,13 +77,7 @@ try {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 } catch (error) {
   console.error("WebGL Initialization failed:", error);
-  if (loadingPercent) {
-    loadingPercent.innerHTML = '<span style="color: #ff5252; font-weight: 600; display: block; max-width: 400px; margin: 10px auto; line-height: 1.5; font-size: 13px;">WebGL-Fehler: Der WebGL-Kontext konnte nicht erstellt werden.<br>Grafikbeschleunigung wurde blockiert oder ist inaktiv. Bitte starten Sie Ihren Browser vollständig neu oder öffnen Sie diese Seite an einem anderen Port (z.B. localhost:3005).</span>';
-  }
-  const loadingSubtitle = document.querySelector('.loading-subtitle');
-  if (loadingSubtitle) {
-    loadingSubtitle.textContent = '3D-Engine konnte nicht gestartet werden.';
-  }
+  showLoadingFailure({}, new Error('Der WebGL-Kontext konnte nicht erstellt werden. Grafikbeschleunigung ist möglicherweise nicht verfügbar.'));
   throw error;
 }
 
@@ -566,10 +562,11 @@ function resolveScrollCamera(stations, stationIndex, station) {
 // ─── LOADING & INITIALIZATION ─────────────────────────
 async function init() {
   const isEditPage = window.location.pathname === '/edits' || window.location.pathname.startsWith('/studio/');
+  let config;
   try {
     // Stations and editor controls are lightweight and should be available
     // independently from the potentially large 3D model download.
-    const config = await loadStationConfig();
+    config = await loadStationConfig();
     const initialStations = isEditPage
       ? (loadDraftStations(config.project?.id) ?? config.stations)
       : config.stations;
@@ -688,9 +685,7 @@ async function init() {
       }
       return;
     }
-    if (loadingPercent) {
-      loadingPercent.innerHTML = `<span style="color: #ff5252; font-weight: 600;">Fehler beim Laden der 3D-Modelle: ${error.message}</span>`;
-    }
+    showLoadingFailure(config, error);
   }
 }
 
@@ -1042,7 +1037,7 @@ function applyScrollProgress(progress) {
   const N = stations.length;
   if (N === 0) return;
   if (N === 1) {
-    const onlyStation = stations[0];
+    const onlyStation = resolveInterpretationStation(stations[0], window.appState.interpretationViewOverride);
     const onlyStationCamera = resolveScrollCamera(stations, 0, onlyStation);
     ctx.targetCameraPos.copy(onlyStationCamera.cameraPos);
     ctx.targetCameraTarget.copy(onlyStationCamera.cameraTarget);
@@ -1067,8 +1062,10 @@ function applyScrollProgress(progress) {
 
   const t = THREE.MathUtils.smoothstep(tRaw, 0, 1);
 
-  const currentStation = stations[index];
-  const nextStation = stations[nextIndex];
+  const currentStation = resolveInterpretationStation(stations[index], window.appState.interpretationViewOverride);
+  const nextStation = resolveInterpretationStation(stations[nextIndex], window.appState.interpretationViewOverride);
+  const activeInterpretationStation = t < 0.5 ? currentStation : nextStation;
+  const interpretationOverrideActive = window.appState.interpretationViewOverride?.stationId === activeInterpretationStation.id;
   const currentCamera = resolveScrollCamera(stations, index, currentStation);
   const nextCamera = resolveScrollCamera(stations, nextIndex, nextStation);
   const transitionConfig = getPortalTransitionConfig(currentStation, nextStation);
@@ -1146,7 +1143,13 @@ function applyScrollProgress(progress) {
     }
   }
 
-  if (scrollDrivenPortalTransition) {
+  if (interpretationOverrideActive) {
+    if (ctx.scrollTransitionTween) {
+      ctx.scrollTransitionTween.kill();
+      ctx.scrollTransitionTween = null;
+    }
+    ctx.lastTargetP = tRaw < 0.5 ? 0 : 1;
+  } else if (scrollDrivenPortalTransition) {
     if (ctx.scrollTransitionTween) {
       ctx.scrollTransitionTween.kill();
       ctx.scrollTransitionTween = null;
@@ -1205,6 +1208,26 @@ function applyScrollProgress(progress) {
   );
 
   applyTransitionState(state);
+  if (interpretationOverrideActive) {
+    applyTransitionState(computeTransitionState(
+      activeInterpretationStation.viewMode,
+      activeInterpretationStation.viewMode,
+      activeInterpretationStation.revealRadius,
+      activeInterpretationStation.revealSoftness,
+      activeInterpretationStation.revealRadius,
+      activeInterpretationStation.revealSoftness,
+      1,
+      getPortalTransitionConfig(activeInterpretationStation, activeInterpretationStation)
+    ));
+    const overrideIsNotRendered = window.appState.viewMode !== activeInterpretationStation.viewMode
+      || Math.abs(ctx.revealUniforms.uOpacityRuin.value - ctx.targetOpacityRuin) > 0.001
+      || Math.abs(ctx.revealUniforms.uOpacityRecon.value - ctx.targetOpacityRecon) > 0.001;
+    if (overrideIsNotRendered) {
+      // Apply immediately after the scroll state so the labelled semantic state
+      // and the rendered models cannot diverge for even one captured frame.
+      window.appState.setViewMode(activeInterpretationStation.viewMode);
+    }
+  }
   ctx.previousScrollProgress = clampedProgress;
   updateActiveStationUi(t, currentStation, nextStation, index, nextIndex);
 }

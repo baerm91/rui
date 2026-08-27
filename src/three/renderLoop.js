@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { resolveInterpretationStation } from '../utils/interpretationComparison.js';
 import { ctx } from './context.js';
 import { updateLighting } from './lighting.js';
 import { updateBillboardPlanes } from './imagePlanes.js';
@@ -194,7 +195,10 @@ export function animate() {
           Math.round(targetProg * stationIntervals),
           Math.max(stations.length - 1, 0)
         );
-        const station = stations[stationIndex];
+        const station = resolveInterpretationStation(
+          stations[stationIndex],
+          window.appState.interpretationViewOverride
+        );
         if (station) {
           window.appState.setViewMode(station.viewMode);
           ctx.targetRevealRadius = station.revealRadius;

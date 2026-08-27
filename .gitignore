@@ -7,3 +7,4 @@ dist/
 public/three-codecs/
 artifacts/performance/
 artifacts/visual-quality/iteration-*/
+artifacts/visual-quality/story-system-*/

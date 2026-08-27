@@ -10,6 +10,7 @@ import { ProjectSoundsPanel } from './ProjectSoundsPanel.jsx';
 import { stripHighlights } from '../../utils/textFormatting.jsx';
 import ImportExportDialog from '../../ImportExportDialog.jsx';
 import { SpatialStationEditor } from './SpatialStationEditor.jsx';
+import { StoryReadinessPanel } from './StoryReadinessPanel.jsx';
 
 export function EditorSidebar({
   editingStations,
@@ -59,6 +60,7 @@ export function EditorSidebar({
   onLocalModelFiles,
   canCreateProjects = true,
   spatialMode = false,
+  projectControlsAvailable = true,
   selectedSpatialItemIds,
   onSelectSpatialItem,
   onUpdateSpatialStation,
@@ -222,28 +224,48 @@ export function EditorSidebar({
         onDeleteProject={onDeleteProject}
         onLocalModelFiles={onLocalModelFiles}
         canCreateProjects={canCreateProjects}
+        projectControlsAvailable={projectControlsAvailable}
         modelPanelOpen={openSettingsPanel === 'models'}
         onModelPanelOpenChange={(isOpen) => setOpenSettingsPanel(isOpen ? 'models' : null)}
+      />
+
+      <StoryReadinessPanel
+        project={activeProject}
+        stations={editingStations}
+        annotations={editingAnnotations}
+        spatialMode={spatialMode}
       />
 
       <section className="shrink-0 border-b border-white/10 bg-zinc-950/75">
         <button
           type="button"
           onClick={() => setOpenSettingsPanel((value) => value === 'project' ? null : 'project')}
+          disabled={!projectControlsAvailable}
           className="flex w-full items-center justify-between px-5 py-3 text-left hover:bg-white/[0.03]"
-          aria-expanded={showProjectSettings}
+          aria-expanded={projectControlsAvailable ? showProjectSettings : undefined}
+          aria-describedby={!projectControlsAvailable ? 'room-project-controls-note' : undefined}
         >
           <span className="flex items-center gap-2.5">
             <Settings size={14} className="text-amber-400" />
             <span>
               <span className="block text-xs font-semibold text-zinc-200">Projekteinstellungen</span>
-              <span className="block text-[9px] text-zinc-500">Darstellung, Sounds, Licht, Nullpunkt und Annotationen</span>
+              <span className="block text-[9px] text-zinc-500">
+                {projectControlsAvailable
+                  ? 'Darstellung, Sounds, Licht, Nullpunkt und Annotationen'
+                  : 'Globale Modellstory-Regler sind für Raumstories nicht verfügbar'}
+              </span>
             </span>
           </span>
-          {showProjectSettings ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />}
+          {projectControlsAvailable && (showProjectSettings ? <ChevronUp size={14} className="text-zinc-500" /> : <ChevronDown size={14} className="text-zinc-500" />)}
         </button>
 
-        {showProjectSettings && (
+        {!projectControlsAvailable && (
+          <p id="room-project-controls-note" className="border-t border-white/5 px-5 py-2.5 text-[8px] leading-relaxed text-zinc-600">
+            Licht, Atmosphäre, Sound, Kamera und Modelle werden in Raumstories pro Station oder Objekt konfiguriert und beim Speichern gemeinsam mit den Stationen gesichert.
+          </p>
+        )}
+
+        {projectControlsAvailable && showProjectSettings && (
           <div className="max-h-[52vh] overflow-y-auto border-t border-white/5">
             <div className="sticky top-0 z-10 grid grid-cols-5 gap-1 border-b border-zinc-800 bg-zinc-950/95 p-2" role="tablist" aria-label="Bereiche der Projekteinstellungen">
               {[

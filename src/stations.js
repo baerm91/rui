@@ -3,6 +3,7 @@ import { siteConfig } from './site.config.js';
 import { preserveDistinctAnnotations } from './utils/annotationIdentity.js';
 import { findCrossStoryStationSource, getRouteStory, platformReady, readStories } from './platform/platformStore.js';
 import { normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId } from './utils/spatialStory.js';
+import { normalizeInterpretationComparison } from './utils/interpretationComparison.js';
 
 const STATIONS_DRAFT_KEY = `${siteConfig.storagePrefix}_custom_stations`;
 export const getStationsDraftKey = (projectId = '') => (
@@ -169,6 +170,7 @@ const normalizeStation = (station, index, stationCount) => {
     selectedItemId: station.selectedItemId ?? station.items?.[0]?.id ?? null,
     initialItemId: resolveSpatialInitialItemId(station, items),
     viewMode: station.viewMode ?? "reveal",
+    interpretationComparison: normalizeInterpretationComparison(station.interpretationComparison),
     ...normalizeStationCamera(station),
     revealRadius: typeof station.revealRadius === 'number' ? station.revealRadius : 0.26,
     revealSoftness: typeof station.revealSoftness === 'number' ? station.revealSoftness : 0.05,

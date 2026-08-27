@@ -12,6 +12,8 @@ import { resolveStationCamera } from './stationCamera.js';
 import { resolveFreeNavigationMaxDistance } from './freeOrbit.js';
 import { resolveAnnotationFocusView } from './annotationCamera.js';
 import { horizontalFovToVertical, normalizeProjectCameraFov } from '../projects/projectSettings.js';
+import { resolveCameraTransitionDuration } from '../utils/cameraTransition.js';
+import { createInterpretationViewOverride } from '../utils/interpretationComparison.js';
 
 const getVisibleAnnotationModels = () => [ctx.localModel, ctx.ruinModel, ctx.reconModel]
   .filter((model) => model?.visible);
@@ -54,11 +56,14 @@ window.appState = {
   activeProjectId: '',
   showBaseModels: true,
   firstPersonActive: false,
+  interpretationViewOverride: null,
 
   realign: null,
   resetAlignment: null,
   skipAlignment: null,
   setViewMode: null,
+  setInterpretationViewMode: null,
+  captureModelRenderState: null,
   setRevealRadius: null,
   setRevealSoftness: null,
   setLensZoom: null,
@@ -109,6 +114,15 @@ window.appState = {
 };
 
 export function setupStateBridge() {
+  window.appState.captureModelRenderState = () => ({
+    ruinVisible: Boolean(ctx.ruinModel?.visible),
+    reconstructionVisible: Boolean(ctx.reconModel?.visible),
+    ruinOpacity: ctx.revealUniforms.uOpacityRuin.value,
+    reconstructionOpacity: ctx.revealUniforms.uOpacityRecon.value,
+    targetRuinOpacity: ctx.targetOpacityRuin,
+    targetReconstructionOpacity: ctx.targetOpacityRecon,
+    revealActive: ctx.targetRevealActive
+  });
   let annotationDragPlane = null;
   let annotationDragMode = 'plane';
   let annotationHeightDragStartY = 0;
@@ -274,6 +288,20 @@ export function setupStateBridge() {
     ctx.revealUniforms.uPortalTint.value = portalTint;
     ctx.revealUniforms.uRevealActive.value = revActive;
     ctx.revealUniforms.uShowAlways.value = shAlways;
+  };
+
+  window.appState.setInterpretationViewMode = (stationId, mode) => {
+    const station = window.appState.stations?.find((candidate) => candidate?.id === stationId);
+    const override = createInterpretationViewOverride(station, mode);
+    if (!override) return false;
+    if (ctx.scrollTransitionTween) {
+      ctx.scrollTransitionTween.kill();
+      ctx.scrollTransitionTween = null;
+    }
+    window.appState.update({ interpretationViewOverride: override });
+    window.appState.setViewMode(mode);
+    ctx.actions.applyScrollProgress?.(window.appState.scrollProgress);
+    return true;
   };
 
   window.appState.setRevealRadius = (r) => {
@@ -475,11 +503,15 @@ export function setupStateBridge() {
 
     const cameraTravel = ctx.camera.position.distanceTo(cameraPosition);
     const targetTravel = ctx.controls.target.distanceTo(cameraTarget);
-    const resetDuration = THREE.MathUtils.clamp(
-      0.85 + Math.max(cameraTravel, targetTravel) * 0.045,
-      0.85,
-      1.6
-    );
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const resetDuration = resolveCameraTransitionDuration({
+      distance: Math.max(cameraTravel, targetTravel),
+      base: 0.85,
+      multiplier: 0.045,
+      minimum: 0.85,
+      maximum: 1.6,
+      reducedMotion: reduceMotion
+    });
 
     window.appState.update({
       hasUserManipulatedCamera: false,
@@ -935,7 +967,15 @@ export function setupStateBridge() {
     const cameraTravel = ctx.camera.position.distanceTo(cameraPosition);
     const targetTravel = ctx.controls.target.distanceTo(target);
     const focusTravel = Math.max(cameraTravel, targetTravel);
-    const focusDuration = THREE.MathUtils.clamp(1.45 + focusTravel * 0.055, 1.45, 2.6);
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const focusDuration = resolveCameraTransitionDuration({
+      distance: focusTravel,
+      base: 1.45,
+      multiplier: 0.055,
+      minimum: 1.45,
+      maximum: 2.6,
+      reducedMotion: reduceMotion
+    });
 
     const timeline = gsap.timeline({
       defaults: { duration: focusDuration, ease: 'sine.inOut' },

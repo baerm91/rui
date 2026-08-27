@@ -323,6 +323,34 @@
       "title": "Der sichtbare Wandel",
       "description": "Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.",
       "viewMode": "reveal",
+      "interpretationComparison": {
+        "title": "Befund und Rekonstruktion",
+        "states": [
+          {
+            "id": "evidence",
+            "label": "Erhaltener Befund",
+            "viewMode": "ruin",
+            "description": "Zeigt den heute erhaltenen und digital dokumentierten Bestand des Heidentors."
+          },
+          {
+            "id": "reconstruction",
+            "label": "Rekonstruktion",
+            "viewMode": "recon",
+            "description": "Zeigt eine fachlich zu belegende Ergänzung des Bauzustands im 4. Jahrhundert n. Chr."
+          }
+        ],
+        "explanation": {
+          "label": "Warum so rekonstruiert?",
+          "title": "Befund, Ergänzung und offene Begründung",
+          "text": "Das Rekonstruktionsmodell ergänzt nicht erhaltene Bauteile. Welche Befunde, Vergleiche und Annahmen die einzelnen Ergänzungen tragen, muss die Redaktion vor einer Veröffentlichung mit Quellen belegen.",
+          "sourceLabel": "Quellenangaben sind noch redaktionell zu ergänzen."
+        },
+        "experimentalMode": {
+          "label": "Interaktiv vergleichen",
+          "viewMode": "reveal",
+          "description": "Der Reveal legt Rekonstruktion punktuell frei. Er ist ein experimentelles Zusatzangebot und ersetzt nicht die beschrifteten Zustände."
+        }
+      },
       "cameraPos": {
         "x": 7.7023637888507706,
         "y": 4.268611878764572,

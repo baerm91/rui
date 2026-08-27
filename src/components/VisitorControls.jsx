@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Home, Info, MousePointer2, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { InterpretationComparison } from './InterpretationComparison.jsx';
 
 export function VisitorControls({
   activeStation,
@@ -29,6 +30,13 @@ export function VisitorControls({
   }, [infoOpen]);
 
   if (appState.stationMode !== 'scroll') return null;
+
+  const selectInterpretationView = (mode) => {
+    const liveState = window.appState;
+    const station = liveState?.stations?.[liveState.currentStationIndex];
+    if (!station?.interpretationComparison || station.id !== activeStation?.id) return;
+    liveState.setInterpretationViewMode?.(station.id, mode);
+  };
 
   return (
     <>
@@ -115,7 +123,7 @@ export function VisitorControls({
         </button>
       )}
 
-      {activeStation?.freeNavigation && !appState.freeNavigationActive && (
+      {activeStation?.freeNavigation && !appState.freeNavigationActive && !activeStation?.interpretationComparison && (
         <button
           type="button"
           onClick={() => window.appState?.activateFreeNavigation?.()}
@@ -125,6 +133,15 @@ export function VisitorControls({
           <MousePointer2 size={14} />
           Freie Ansicht per Klick aktivieren
         </button>
+      )}
+
+      {activeStation?.interpretationComparison && !appState.freeNavigationActive && (
+        <InterpretationComparison
+          comparison={activeStation.interpretationComparison}
+          viewMode={appState.viewMode}
+          onExplore={activeStation.freeNavigation ? () => window.appState?.activateFreeNavigation?.() : null}
+          onViewModeChange={selectInterpretationView}
+        />
       )}
     </>
   );

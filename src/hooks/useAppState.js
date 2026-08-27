@@ -31,7 +31,8 @@ export function useAppState() {
     localModelEnvironmentRemoved: [],
     localModelMaterialsConverted: 0,
     localModelProjectId: '',
-    firstPersonActive: false
+    firstPersonActive: false,
+    interpretationViewOverride: null
   });
 
   // Synchronize React state with Three.js state bridge

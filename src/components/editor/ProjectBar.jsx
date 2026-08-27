@@ -3,7 +3,7 @@ import { AlertTriangle, Box, Check, ChevronDown, ChevronUp, ClipboardPaste, Copy
 import { getStationsUsingModel, getStationsUsingModelId } from '../../utils/modelAssignments.js';
 import { extractModelUrl, isSketchfabModelUrl, isSupportedModelUrl, normalizeModelUrl } from '../../utils/modelSource.js';
 
-export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, onLocalModelFiles, canCreateProjects = true, modelPanelOpen, onModelPanelOpenChange }) {
+export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, onSwitchProject, onCreateProject, onUpdateProject, onDeleteProject, onLocalModelFiles, canCreateProjects = true, projectControlsAvailable = true, modelPanelOpen, onModelPanelOpenChange }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -64,6 +64,7 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
   });
 
   const toggleModels = () => {
+    if (!projectControlsAvailable) return;
     const nextValue = !modelsAreOpen;
     setShowModels(nextValue);
     onModelPanelOpenChange?.(nextValue);
@@ -139,26 +140,36 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
         <button
           type="button"
           onClick={toggleModels}
+          disabled={!projectControlsAvailable}
           className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-white/[0.025]"
-          aria-expanded={modelsAreOpen}
+          aria-expanded={projectControlsAvailable ? modelsAreOpen : undefined}
+          aria-describedby={!projectControlsAvailable ? 'room-model-controls-note' : undefined}
         >
           <span className="flex min-w-0 items-center gap-3">
             <Box size={14} className="shrink-0 text-amber-400" />
             <span className="min-w-0">
               <span className="block text-xs font-semibold text-zinc-200">Modelle</span>
               <span className="block truncate text-[9px] text-zinc-500">
-                {activeProject?.name ?? 'Projekt'} · {connectedModelCount} {connectedModelCount === 1 ? 'Modell' : 'Modelle'} verbunden
+                {projectControlsAvailable
+                  ? `${activeProject?.name ?? 'Projekt'} · ${connectedModelCount} ${connectedModelCount === 1 ? 'Modell' : 'Modelle'} verbunden`
+                  : 'In Raumstories werden Modelle direkt an Stationen bearbeitet'}
               </span>
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-3">
             {saveState}
-            {modelsAreOpen ? <ChevronUp size={13} className="text-zinc-500" /> : <ChevronDown size={13} className="text-zinc-500" />}
+            {projectControlsAvailable && (modelsAreOpen ? <ChevronUp size={13} className="text-zinc-500" /> : <ChevronDown size={13} className="text-zinc-500" />)}
           </span>
         </button>
       )}
 
-      {!canCreateProjects && modelsAreOpen && activeProject && (
+      {!canCreateProjects && !projectControlsAvailable && (
+        <p id="room-model-controls-note" className="border-t border-white/5 px-5 py-2 text-[8px] leading-relaxed text-zinc-600">
+          Globale Modellrollen gelten nur für Modellstories. Modelle, URLs und Vorschauen dieser Raumstory bleiben in der jeweiligen Station vollständig bearbeitbar.
+        </p>
+      )}
+
+      {!canCreateProjects && projectControlsAvailable && modelsAreOpen && activeProject && (
         <div className="flex flex-col gap-2 border-t border-white/5 bg-zinc-950/40 px-5 py-4">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Verbundene Modelle</span>

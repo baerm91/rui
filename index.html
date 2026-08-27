@@ -31,7 +31,7 @@
 <body>
   <!-- Loading Screen -->
   <div id="loading-screen">
-    <div class="loading-content">
+    <div class="loading-content loading-state" role="status" aria-live="polite" aria-label="3D-Story wird geladen">
       <div class="spinner">
         <div class="spinner-ring"></div>
         <div class="spinner-ring"></div>
@@ -44,6 +44,24 @@
       </div>
       <p class="loading-percent" id="loading-percent">0%</p>
     </div>
+    <section id="loading-failure" class="loading-failure" role="alert" aria-live="assertive" hidden>
+      <img id="loading-failure-poster" class="loading-failure-poster" alt="" hidden />
+      <div class="loading-failure-copy">
+        <p class="loading-failure-kicker">Story ohne 3D</p>
+        <h1 id="loading-failure-heading" tabindex="-1">3D-Ansicht nicht verfügbar</h1>
+        <h2 id="loading-failure-title">RIU Story</h2>
+        <p id="loading-failure-summary">Die 3D-Ansicht ist momentan nicht verfügbar.</p>
+        <p id="loading-failure-rights" class="loading-failure-rights"></p>
+        <details>
+          <summary>Technische Einzelheiten</summary>
+          <p id="loading-failure-detail"></p>
+        </details>
+        <div class="loading-failure-actions">
+          <button id="loading-failure-retry" type="button">Erneut versuchen</button>
+          <a href="/">Zurück zur Story-Übersicht</a>
+        </div>
+      </div>
+    </section>
   </div>
 
   <!-- Three.js Canvas -->

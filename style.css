@@ -464,6 +464,8 @@ html, body {
   gap: 20px;
 }
 
+.loading-state[hidden] { display: none; }
+
 .loading-content::before {
   content: '';
   position: absolute;
@@ -492,6 +494,54 @@ html, body {
   font-weight: 300;
   color: var(--text-secondary);
   letter-spacing: 0.03em;
+}
+
+.loading-failure {
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  border: 1px solid rgba(201, 169, 110, 0.32);
+  background: rgba(9, 11, 20, 0.96);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+}
+
+.loading-failure:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(220px, 42%) 1fr;
+}
+
+.loading-failure-poster {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+  object-position: 78% center;
+}
+
+.loading-failure-copy { padding: clamp(28px, 5vw, 58px); }
+.loading-failure-kicker { margin: 0 0 12px; color: var(--accent); font-size: .72rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.loading-failure h1 { margin: 0 0 28px; font-size: .85rem; font-weight: 500; color: #ffb4a8; letter-spacing: .08em; text-transform: uppercase; }
+.loading-failure h1:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+.loading-failure h2 { margin: 0 0 18px; color: var(--text-primary); font: 600 clamp(2rem, 5vw, 3.4rem)/1 var(--font-display); }
+.loading-failure-copy > p:not(.loading-failure-kicker) { color: var(--text-secondary); line-height: 1.65; }
+.loading-failure-rights { font-size: .78rem; }
+.loading-failure details { margin-top: 22px; color: var(--text-secondary); font-size: .78rem; }
+.loading-failure summary { cursor: pointer; }
+.loading-failure-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.loading-failure-actions button,
+.loading-failure-actions a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid var(--accent); background: var(--accent); color: #090b14; font: 600 .78rem/1 var(--font-body); text-decoration: none; cursor: pointer; }
+.loading-failure-actions a { background: transparent; color: var(--text-primary); }
+.loading-failure-actions button:focus-visible,
+.loading-failure-actions a:focus-visible,
+.loading-failure summary:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+@media (max-width: 620px) {
+  .loading-failure:not([hidden]) { display: block; }
+  .loading-failure-poster { height: 180px; min-height: 0; object-position: center; }
+  .loading-failure-copy { padding: 24px; }
+  .loading-failure-actions { flex-direction: column; }
+  .loading-failure-actions button,
+  .loading-failure-actions a { justify-content: center; }
 }
 
 /* Spinner */

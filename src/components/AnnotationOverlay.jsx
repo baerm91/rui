@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, RotateCcw, X } from 'lucide-react';
 
 export function AnnotationOverlay({ activeStation, annotations: projectAnnotations = [], appState, isEditorMode, onDragAnnotation, onAnnotationOpen }) {
   const modelIsVisible = isEditorMode
@@ -26,6 +26,10 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
   const onDragAnnotationRef = useRef(onDragAnnotation);
   const isEditorModeRef = useRef(isEditorMode);
   const popoverPlacementAnnotationIdRef = useRef(null);
+  const popoverRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const navigationStatusRef = useRef(null);
+  const returnFocusRef = useRef(null);
 
   annotationsRef.current = annotations;
   dragAnnotationIdRef.current = dragAnnotationId;
@@ -79,6 +83,28 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
     setPopoverPlacement(projected.x >= window.innerWidth / 2 ? 'left' : 'right');
     popoverPlacementAnnotationIdRef.current = activeAnnotationId;
   }, [activeAnnotationId, positions]);
+
+  useEffect(() => {
+    if (!activeAnnotationId) return undefined;
+    if (!returnFocusRef.current) returnFocusRef.current = document.activeElement;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      const marker = document.querySelector(`[data-annotation-id="${CSS.escape(activeAnnotationId)}"]`);
+      const rememberedTarget = returnFocusRef.current;
+      const returnTarget = rememberedTarget?.isConnected && rememberedTarget !== document.body
+        ? rememberedTarget
+        : marker || navigationStatusRef.current;
+      setActiveAnnotationId(null);
+      returnFocusRef.current = null;
+      requestAnimationFrame(() => returnTarget?.focus?.());
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [activeAnnotationId]);
 
   useEffect(() => {
     setNavigationListOpen(false);
@@ -187,6 +213,24 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
     if (!isEditorMode) onAnnotationOpen?.(annotation);
   };
 
+  const closeAnnotation = () => {
+    const marker = activeAnnotationId
+      ? document.querySelector(`[data-annotation-id="${CSS.escape(activeAnnotationId)}"]`)
+      : null;
+    const rememberedTarget = returnFocusRef.current;
+    const returnTarget = rememberedTarget?.isConnected && rememberedTarget !== document.body
+      ? rememberedTarget
+      : marker || navigationStatusRef.current;
+    setActiveAnnotationId(null);
+    returnFocusRef.current = null;
+    requestAnimationFrame(() => returnTarget?.focus?.());
+  };
+
+  const returnToStationView = () => {
+    window.appState?.resetFreeView?.();
+    closeAnnotation();
+  };
+
   return (
     <div className="annotation-layer">
       {dragGuide && (
@@ -212,6 +256,8 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
             key={annotation.id}
             type="button"
             className={`annotation-marker ${activeAnnotationId === annotation.id ? 'is-active' : ''} ${isDragging ? 'is-dragging' : ''} ${isDragging && dragMode === 'height' ? 'is-height-dragging' : ''} ${isEditorMode ? 'is-editor-draggable' : ''}`}
+            data-annotation-id={annotation.id}
+            aria-label={annotation.title || 'Annotation'}
             style={{ left: visualPosition.x, top: visualPosition.y }}
             onPointerDown={(event) => {
               if (!isEditorMode || event.button !== 0) return;
@@ -293,11 +339,13 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
             <ChevronLeft size={16} />
           </button>
           <button
+            ref={navigationStatusRef}
             type="button"
             className="annotation-navigation-status"
             onClick={() => setNavigationListOpen((isOpen) => !isOpen)}
             aria-expanded={navigationListOpen}
             aria-haspopup="listbox"
+            aria-label={`Annotationsliste, aktuell ${activeAnnotation?.title || 'keine Annotation'}`}
             title="Alle Annotationen anzeigen"
           >
             <strong>{activeAnnotation?.title || 'Annotationen'}</strong>
@@ -316,17 +364,19 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
 
       {activeAnnotation && (
         <div
+          ref={popoverRef}
           className={`annotation-popover is-${popoverPlacement}`}
           data-placement={popoverPlacement}
           role="dialog"
-          aria-label={activeAnnotation.title || 'Annotation'}
+          aria-labelledby={`annotation-title-${activeAnnotation.id}`}
+          aria-describedby={activeAnnotation.text ? `annotation-text-${activeAnnotation.id}` : undefined}
         >
           <div className="annotation-popover-header">
             <div>
               <span className="annotation-kicker">{isEditorMode ? 'Editor-Annotation' : 'Fundpunkt'}</span>
-              <h3>{activeAnnotation.title || 'Annotation'}</h3>
+              <h3 id={`annotation-title-${activeAnnotation.id}`}>{activeAnnotation.title || 'Annotation'}</h3>
             </div>
-            <button type="button" onClick={() => setActiveAnnotationId(null)} className="annotation-close" title="SchlieÃŸen">
+            <button ref={closeButtonRef} type="button" onClick={closeAnnotation} className="annotation-close" aria-label="Annotation schließen" title="Schließen">
               <X size={16} />
             </button>
           </div>
@@ -334,13 +384,20 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
           {activeAnnotation.images?.length > 0 && (
             <div className={`annotation-images count-${Math.min(activeAnnotation.images.length, 4)}`}>
               {activeAnnotation.images.slice(0, 4).map((image, index) => (
-                <img key={`${activeAnnotation.id}-image-${index}`} src={image} alt="" />
+                <img key={`${activeAnnotation.id}-image-${index}`} src={image} alt={`Abbildung zu ${activeAnnotation.title || 'dieser Annotation'}, ${index + 1} von ${Math.min(activeAnnotation.images.length, 4)}`} />
               ))}
             </div>
           )}
 
           {activeAnnotation.text && (
-            <p className="annotation-text">{activeAnnotation.text}</p>
+            <p id={`annotation-text-${activeAnnotation.id}`} className="annotation-text">{activeAnnotation.text}</p>
+          )}
+
+          {!isEditorMode && activeStation?.freeNavigation && (
+            <button type="button" className="annotation-focus-button" onClick={returnToStationView}>
+              <RotateCcw size={14} />
+              Zur Stationsansicht
+            </button>
           )}
 
         </div>
