@@ -746,6 +746,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     runtime.controls.maxDistance = overviewMode ? Math.max(24.5, (stations.length - 1) * 7.2 * .55 + 11.5) : activeSpatial.movementRadius;
     runtime.controls.minPolarAngle = overviewMode ? 1.05 : 0;
     runtime.controls.maxPolarAngle = overviewMode ? 1.56 : Math.PI;
+    runtime.controls.enablePan = !overviewMode;
+    runtime.controls.minAzimuthAngle = overviewMode ? -1.1 : -Infinity;
+    runtime.controls.maxAzimuthAngle = overviewMode ? 1.1 : Infinity;
     const applyPose = (position, target, fov) => {
       runtime.camera.position.copy(position);
       runtime.controls.target.copy(target);
