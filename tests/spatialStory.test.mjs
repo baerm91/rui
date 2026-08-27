@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -37,12 +37,22 @@ test('Sketchfab and direct glTF sources use separate adapter types', () => {
   assert.equal(getSpatialSourceType('https://example.org/model.obj'), 'unknown');
 });
 
-test('station start model is explicit and falls back safely for legacy data', () => {
+test('station start model is explicit and visitors get a random fallback', () => {
   const items = [{ id: 'one' }, { id: 'two' }];
   assert.equal(resolveSpatialInitialItemId({ initialItemId: 'two', selectedItemId: 'one' }, items), 'two');
-  assert.equal(resolveSpatialInitialItemId({ selectedItemId: 'two' }, items), 'two');
-  assert.equal(resolveSpatialInitialItemId({ initialItemId: 'missing' }, items), 'one');
+  assert.equal(resolveSpatialInitialItemId({ selectedItemId: 'two' }, items), null);
+  assert.equal(resolveSpatialInitialItemId({ initialItemId: 'missing' }, items), null);
   assert.equal(resolveSpatialInitialItemId({}, []), null);
+  assert.equal(resolveSpatialVisitorItemId({ initialItemId: 'two' }, items, 0), 'two');
+  assert.equal(resolveSpatialVisitorItemId({}, items, 0), 'one');
+  assert.equal(resolveSpatialVisitorItemId({}, items, .999), 'two');
+  assert.equal(resolveSpatialVisitorItemId({}, [], .5), null);
+});
+
+test('spatial model auto rotation starts only after ten seconds of inactivity', () => {
+  assert.equal(shouldAutoRotateSpatialModel(1000, 10999), false);
+  assert.equal(shouldAutoRotateSpatialModel(1000, 11000), true);
+  assert.equal(shouldAutoRotateSpatialModel(8000, 12000), false);
 });
 
 test('carousel items can be reordered without changing their data', () => {

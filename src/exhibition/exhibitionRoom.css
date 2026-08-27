@@ -431,6 +431,10 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   animation: spatial-view-wash 1.45s cubic-bezier(.22,.61,.36,1) both;
 }
 
+.is-view-transitioning.transition-enter .spatial-view-wash {
+  animation-name: spatial-view-enter-wash;
+}
+
 .is-view-transitioning .spatial-story-copy,
 .is-view-transitioning .spatial-thumbnails,
 .is-view-transitioning .spatial-sketchfab,
@@ -462,12 +466,44 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   animation: spatial-content-departure .9s cubic-bezier(.4,0,.6,1) both;
 }
 
+.spatial-story-copy,
+.spatial-thumbnails,
+.spatial-object-caption,
+.spatial-station-content > .model-interaction-hint,
+.exhibition-mode-switch,
+.exhibition-progress,
+.exhibition-back,
+.station-stepper,
+.exhibition-footer-actions > :not(:last-child) {
+  transition: opacity .45s ease, visibility .45s ease;
+}
+
+.is-model-interacting .spatial-story-copy,
+.is-model-interacting .spatial-thumbnails,
+.is-model-interacting .spatial-object-caption,
+.is-model-interacting .spatial-station-content > .model-interaction-hint,
+.is-model-interacting .exhibition-mode-switch,
+.is-model-interacting .exhibition-progress,
+.is-model-interacting .exhibition-back,
+.is-model-interacting .station-stepper,
+.is-model-interacting .exhibition-footer-actions > :not(:last-child) {
+  opacity: .1;
+  pointer-events: none;
+}
+
 @keyframes spatial-view-wash {
   0% { opacity: 0; backdrop-filter: blur(0); }
   34% { opacity: .025; backdrop-filter: blur(0); }
   52% { opacity: .07; backdrop-filter: blur(0); }
   62% { opacity: .13; backdrop-filter: blur(1px); }
   72% { opacity: .05; backdrop-filter: blur(0); }
+  100% { opacity: 0; backdrop-filter: blur(0); }
+}
+
+@keyframes spatial-view-enter-wash {
+  0% { opacity: .3; backdrop-filter: blur(2px); }
+  18% { opacity: .2; backdrop-filter: blur(1px); }
+  48% { opacity: .04; backdrop-filter: blur(0); }
   100% { opacity: 0; backdrop-filter: blur(0); }
 }
 
@@ -533,6 +569,11 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 }
 
 .overview-wall-thumbnails.is-faded {
+  opacity: 0;
+  filter: blur(1.5px);
+}
+
+.is-view-transitioning.is-overview.transition-enter .overview-wall-thumbnails {
   opacity: 0;
   filter: blur(1.5px);
 }

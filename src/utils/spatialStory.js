@@ -156,8 +156,19 @@ export function resolveSpatialOverviewThumbnailLayout(aspects = [], options = {}
 export function resolveSpatialInitialItemId(station = {}, items = station.items) {
   const availableItems = Array.isArray(items) ? items : [];
   const availableIds = new Set(availableItems.map((item) => item?.id).filter(Boolean));
-  return [station.initialItemId, station.selectedItemId, availableItems[0]?.id]
-    .find((id) => availableIds.has(id)) || null;
+  return availableIds.has(station.initialItemId) ? station.initialItemId : null;
+}
+
+export function resolveSpatialVisitorItemId(station = {}, items = station.items, randomValue = Math.random()) {
+  const availableItems = Array.isArray(items) ? items.filter((item) => item?.id) : [];
+  const initialItemId = resolveSpatialInitialItemId(station, availableItems);
+  if (initialItemId || !availableItems.length) return initialItemId;
+  const safeRandomValue = Math.max(0, Math.min(.999999999, Number(randomValue) || 0));
+  return availableItems[Math.floor(safeRandomValue * availableItems.length)].id;
+}
+
+export function shouldAutoRotateSpatialModel(lastInteractionAt, now, delay = 10000) {
+  return Number.isFinite(lastInteractionAt) && Number.isFinite(now) && now - lastInteractionAt >= delay;
 }
 
 export function resolveSpatialOverviewCamera(stations = []) {
