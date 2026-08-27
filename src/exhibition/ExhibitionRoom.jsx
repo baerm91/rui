@@ -342,7 +342,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     canvas.addEventListener('pointerup', handlePointerUp);
     resize();
     rebuildStations(stations, stationIndex, overviewMode);
-    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, stationRebuildTimer: null, renderedOverviewMode: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
+    runtimeRef.current = { camera, controls, renderer, hemi, key, rebuildStations, renderedOverviewMode: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
     onCameraReady?.(() => ({ position: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov }));
     const projectPoint = (point, rect) => {
       const projected = point.project(camera);
@@ -403,7 +403,6 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     return () => {
       cancelAnimationFrame(frame);
       cancelAnimationFrame(runtimeRef.current?.cameraTransitionFrame);
-      clearTimeout(runtimeRef.current?.stationRebuildTimer);
       observer.disconnect();
       canvas.removeEventListener('pointerdown', handlePointerDown);
       canvas.removeEventListener('pointermove', handlePointerMove);
@@ -419,19 +418,13 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   useEffect(() => {
     const runtime = runtimeRef.current;
     if (!runtime) return undefined;
-    clearTimeout(runtime.stationRebuildTimer);
     const layoutChanges = runtime.renderedOverviewMode !== overviewMode;
-    const rebuild = () => {
-      runtime.rebuildStations(stations, stationIndex, overviewMode);
-      runtime.renderedOverviewMode = overviewMode;
-      runtime.stationRebuildTimer = null;
-    };
     if (layoutChanges && runtime.hasCameraView && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      runtime.stationRebuildTimer = setTimeout(rebuild, overviewMode ? 850 : 1220);
-    } else {
-      rebuild();
+      return undefined;
     }
-    return () => clearTimeout(runtime.stationRebuildTimer);
+    runtime.rebuildStations(stations, stationIndex, overviewMode);
+    runtime.renderedOverviewMode = overviewMode;
+    return undefined;
   }, [stations, stationIndex, overviewMode]);
   useEffect(() => {
     const runtime = runtimeRef.current;
@@ -444,20 +437,83 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const fromFov = runtime.camera.fov;
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const immediate = !runtime.hasCameraView || reducedMotion;
+    const layoutChanges = runtime.renderedOverviewMode !== overviewMode;
     runtime.hasCameraView = true;
     cancelAnimationFrame(runtime.cameraTransitionFrame);
     runtime.controls.enabled = immediate;
     runtime.controls.enableDamping = immediate;
     runtime.controls.maxDistance = overviewMode ? 36 : activeSpatial.movementRadius;
-    const applyView = (progress) => {
-      runtime.camera.position.lerpVectors(fromPosition, toPosition, progress);
-      runtime.controls.target.lerpVectors(fromTarget, toTarget, progress);
-      runtime.camera.fov = THREE.MathUtils.lerp(fromFov, config.fov, progress);
+    const applyPose = (position, target, fov) => {
+      runtime.camera.position.copy(position);
+      runtime.controls.target.copy(target);
+      runtime.camera.fov = fov;
       runtime.camera.updateProjectionMatrix();
       runtime.controls.update();
     };
+    const applyView = (progress) => applyPose(
+      new THREE.Vector3().lerpVectors(fromPosition, toPosition, progress),
+      new THREE.Vector3().lerpVectors(fromTarget, toTarget, progress),
+      THREE.MathUtils.lerp(fromFov, config.fov, progress)
+    );
     if (immediate) {
       applyView(1);
+    } else if (layoutChanges) {
+      const stationXs = stations.map((entry) => entry.spatial.position[0]);
+      const stationZs = stations.map((entry) => entry.spatial.position[2]);
+      const overviewCenterX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
+      const overviewCenterZ = stationZs.length ? (Math.min(...stationZs) + Math.max(...stationZs)) / 2 : 0;
+      const overviewOffset = stationIndex - (stations.length - 1) / 2;
+      const overviewFocusTarget = new THREE.Vector3(overviewCenterX + overviewOffset * 7.2, 2.4, overviewCenterZ - 5.08);
+      const overviewFocusPosition = overviewFocusTarget.clone().add(new THREE.Vector3(0, .25, 8.6));
+      const stationOrigin = new THREE.Vector3().fromArray(activeSpatial.position);
+      const stationWallCenter = new THREE.Vector3(0, 2.25, 0)
+        .applyEuler(new THREE.Euler().fromArray(activeSpatial.rotation))
+        .add(stationOrigin);
+      const finalViewDirection = new THREE.Vector3().fromArray(activeSpatial.camera.position)
+        .sub(new THREE.Vector3().fromArray(activeSpatial.camera.target))
+        .normalize();
+      const stationFocusPosition = stationWallCenter.clone().addScaledVector(finalViewDirection, 8.6);
+      const focusFov = 46;
+      const firstPosition = overviewMode ? stationFocusPosition : overviewFocusPosition;
+      const firstTarget = overviewMode ? stationWallCenter : overviewFocusTarget;
+      const secondPosition = overviewMode ? overviewFocusPosition : stationFocusPosition;
+      const secondTarget = overviewMode ? overviewFocusTarget : stationWallCenter;
+      const startedAt = performance.now();
+      const duration = 1400;
+      const split = .52;
+      let swapped = false;
+      const animateLayoutTransition = (now) => {
+        const progress = Math.min(1, (now - startedAt) / duration);
+        if (progress < split) {
+          const phaseProgress = smootherStep(progress / split);
+          const targetProgress = overviewMode ? phaseProgress : smootherStep(Math.min(1, (progress / split) * 1.35));
+          applyPose(
+            new THREE.Vector3().lerpVectors(fromPosition, firstPosition, phaseProgress),
+            new THREE.Vector3().lerpVectors(fromTarget, firstTarget, targetProgress),
+            THREE.MathUtils.lerp(fromFov, focusFov, phaseProgress)
+          );
+        } else {
+          if (!swapped) {
+            runtime.rebuildStations(stations, stationIndex, overviewMode);
+            runtime.renderedOverviewMode = overviewMode;
+            swapped = true;
+          }
+          const phaseProgress = smootherStep((progress - split) / (1 - split));
+          applyPose(
+            new THREE.Vector3().lerpVectors(secondPosition, toPosition, phaseProgress),
+            new THREE.Vector3().lerpVectors(secondTarget, toTarget, phaseProgress),
+            THREE.MathUtils.lerp(focusFov, config.fov, phaseProgress)
+          );
+        }
+        if (progress < 1) {
+          runtime.cameraTransitionFrame = requestAnimationFrame(animateLayoutTransition);
+        } else {
+          runtime.cameraTransitionFrame = null;
+          runtime.controls.enabled = true;
+          runtime.controls.enableDamping = true;
+        }
+      };
+      runtime.cameraTransitionFrame = requestAnimationFrame(animateLayoutTransition);
     } else {
       const startedAt = performance.now();
       const duration = overviewMode ? 1100 : 1450;
@@ -605,7 +661,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const [saved, setSaved] = useState(false);
   const [selectedThumbnailIds, setSelectedThumbnailIds] = useState([]);
   const captureCameraRef = useRef(null);
-  const viewTransitionRef = useRef({ active: false, changeTimer: null, endTimer: null });
+  const viewTransitionRef = useRef({ active: false, changeTimer: null, midTimer: null, endTimer: null });
   const station = stations[stationIndex];
   const editorItem = station?.items.find((item) => item.id === station.selectedItemId) || station?.items[0] || null;
   const visitorItemId = openItemId === undefined ? station?.initialItemId : openItemId;
@@ -672,20 +728,23 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     const camera = captureCameraRef.current?.();
     if (camera) updateStation(index, { spatial: { ...stations[index].spatial, camera } });
   };
-  const transitionSpatialView = (applyChange, onComplete) => {
+  const transitionSpatialView = (applyChange, onComplete, onMidpoint) => {
     const transition = viewTransitionRef.current;
     if (transition.active) return;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       applyChange();
+      onMidpoint?.();
       onComplete?.();
       return;
     }
     transition.active = true;
     setViewTransitioning(true);
     transition.changeTimer = setTimeout(applyChange, 170);
+    transition.midTimer = onMidpoint ? setTimeout(onMidpoint, 900) : null;
     transition.endTimer = setTimeout(() => {
       transition.active = false;
       transition.changeTimer = null;
+      transition.midTimer = null;
       transition.endTimer = null;
       setViewTransitioning(false);
       onComplete?.();
@@ -715,9 +774,9 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     const nextOverviewMode = !overviewMode;
     transitionSpatialView(() => {
       setOverviewMode(nextOverviewMode);
-      setOpenItemId(null);
+      if (!nextOverviewMode) setOpenItemId(null);
       setAudioPlaying(false);
-    }, nextOverviewMode ? undefined : () => setOpenItemId(undefined));
+    }, nextOverviewMode ? undefined : () => setOpenItemId(undefined), nextOverviewMode ? () => setOpenItemId(null) : undefined);
   };
   const selectThumbnailItem = (id, event) => {
     const additive = mode === 'editor' && (event?.shiftKey || event?.ctrlKey || event?.metaKey);
@@ -736,6 +795,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   useEffect(() => { document.body.classList.toggle('spatial-editor-mode', mode === 'editor'); return () => document.body.classList.remove('spatial-editor-mode'); }, [mode]);
   useEffect(() => () => {
     clearTimeout(viewTransitionRef.current.changeTimer);
+    clearTimeout(viewTransitionRef.current.midTimer);
     clearTimeout(viewTransitionRef.current.endTimer);
   }, []);
   useEffect(() => {

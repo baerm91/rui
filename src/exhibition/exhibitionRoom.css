@@ -440,12 +440,51 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   pointer-events: none;
 }
 
+.is-view-transitioning:not(.is-overview) .spatial-story-copy,
+.is-view-transitioning:not(.is-overview) .spatial-thumbnails {
+  visibility: visible;
+  pointer-events: none;
+  animation: spatial-content-arrival 1.4s cubic-bezier(.22,.61,.36,1) both;
+}
+
+.is-view-transitioning:not(.is-overview) .spatial-thumbnails {
+  animation-name: spatial-thumbnails-arrival;
+}
+
+.is-view-transitioning.is-overview .spatial-story-copy,
+.is-view-transitioning.is-overview .spatial-thumbnails,
+.is-view-transitioning.is-overview .spatial-object-caption,
+.is-view-transitioning.is-overview .spatial-station-content > .model-interaction-hint {
+  visibility: visible;
+  pointer-events: none;
+  animation: spatial-content-departure .9s cubic-bezier(.4,0,.6,1) both;
+}
+
 @keyframes spatial-view-wash {
   0% { opacity: 0; backdrop-filter: blur(0); }
-  14% { opacity: .72; backdrop-filter: blur(4px); }
-  34% { opacity: .38; backdrop-filter: blur(3px); }
-  78% { opacity: .25; backdrop-filter: blur(1px); }
+  34% { opacity: .06; backdrop-filter: blur(0); }
+  52% { opacity: .18; backdrop-filter: blur(1px); }
+  62% { opacity: .42; backdrop-filter: blur(4px); }
+  72% { opacity: .16; backdrop-filter: blur(1px); }
   100% { opacity: 0; backdrop-filter: blur(0); }
+}
+
+@keyframes spatial-content-arrival {
+  0%, 52% { opacity: 0; transform: translateX(-12px); }
+  72% { opacity: .72; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spatial-thumbnails-arrival {
+  0%, 60% { opacity: 0; transform: translateY(10px); }
+  82% { opacity: .78; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spatial-content-departure {
+  0%, 24% { opacity: 1; transform: translateY(0); }
+  72% { opacity: .45; }
+  100% { opacity: 0; transform: translateY(-8px); }
 }
 
 .spatial-overview-hint {
