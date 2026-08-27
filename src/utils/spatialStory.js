@@ -65,6 +65,10 @@ export function normalizeSpatialStation(station = {}, index = 0) {
     rotation: stationRotation,
     movementRadius: number(station.spatial?.movementRadius, 5, 1, 30),
     wallMaterial: station.spatial?.wallMaterial || 'warm-white',
+    wallBackground: {
+      url: String(station.spatial?.wallBackground?.url || station.spatial?.wallBackgroundImage || '').trim(),
+      opacity: number(station.spatial?.wallBackground?.opacity, 0.72, 0.05, 1)
+    },
     camera: {
       position: cameraPosition,
       target: cameraTarget,

@@ -95,6 +95,14 @@ test('legacy stations receive complete spatial camera, light, and audio defaults
   assert.equal(spatial.position[0], 18);
   assert.equal(spatial.lighting.keyLightColor, '#f2dfc3');
   assert.equal(spatial.audio.autoplay, false);
+  assert.deepEqual(spatial.wallBackground, { url: '', opacity: 0.72 });
+});
+
+test('wall background images normalize legacy URLs and safe opacity', () => {
+  const legacy = normalizeSpatialStation({ spatial: { wallBackgroundImage: ' https://example.org/mural.jpg ' } }, 0);
+  const configured = normalizeSpatialStation({ spatial: { wallBackground: { url: 'data:image/png;base64,abc', opacity: 1.7 } } }, 0);
+  assert.deepEqual(legacy.wallBackground, { url: 'https://example.org/mural.jpg', opacity: 0.72 });
+  assert.deepEqual(configured.wallBackground, { url: 'data:image/png;base64,abc', opacity: 1 });
 });
 
 test('spatial station fields survive the existing RIU storage pipeline', () => {
@@ -107,7 +115,7 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
     id: 'station-room',
     title: 'Raumstation',
     introduction: 'Ein räumlicher Auftakt.',
-    spatial: normalizeSpatialStation({}, 0),
+    spatial: normalizeSpatialStation({ spatial: { wallBackground: { url: 'https://example.org/wall.jpg', opacity: 0.55 } } }, 0),
     items: [createSpatialItem({ id: 'object-1', modelUrl: 'https://example.org/object.glb', title: 'Objekt', thumbnailTransform })],
     thumbnailLayout: 'carousel',
     thumbnailGridSpacing: 125,
@@ -124,4 +132,5 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
   assert.deepEqual(stored.spatial.camera, source.spatial.camera);
   assert.deepEqual(stored.spatial.lighting, source.spatial.lighting);
   assert.deepEqual(stored.spatial.audio, source.spatial.audio);
+  assert.deepEqual(stored.spatial.wallBackground, source.spatial.wallBackground);
 });

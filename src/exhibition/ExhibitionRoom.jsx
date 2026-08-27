@@ -106,6 +106,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const textureLoader = new THREE.TextureLoader();
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.enablePan = true;
@@ -124,6 +126,18 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     scene.add(hemi);
     const key = new THREE.DirectionalLight(0xffead0, 1.2);
     key.castShadow = true;
+    key.position.set(5.5, 8.5, 8);
+    key.target.position.set(0, 2.1, -4.8);
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -24;
+    key.shadow.camera.right = 24;
+    key.shadow.camera.top = 14;
+    key.shadow.camera.bottom = -8;
+    key.shadow.camera.near = .5;
+    key.shadow.camera.far = 45;
+    key.shadow.bias = -.00018;
+    key.shadow.normalBias = .035;
+    key.shadow.radius = 5;
     scene.add(key, key.target);
     const rebuildStations = (nextStations = [], activeIndex = 0, showOverview = false) => {
       world.userData.stationBuildVersion = (world.userData.stationBuildVersion || 0) + 1;
@@ -181,28 +195,93 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           emissiveIntensity: showOverview ? .08 : index === activeIndex ? .08 : 0,
           side: showOverview ? THREE.DoubleSide : THREE.FrontSide
         });
-        const wall = new THREE.Mesh(
-          showOverview
-            ? new THREE.BoxGeometry(6.72, 4.8, .14)
-            : new THREE.BoxGeometry(7.4, 4.5, .18),
-          wallMat
-        );
+        const wallWidth = showOverview ? 6.72 : 7.4;
+        const wallHeight = showOverview ? 4.8 : 4.5;
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(wallWidth, wallHeight, showOverview ? .14 : .18), wallMat);
         wall.position.set(0, showOverview ? 2.4 : 2.25, 0);
         wall.receiveShadow = true;
         wall.castShadow = !showOverview;
         wall.userData.stationIndex = index;
         group.add(wall);
+        const wallBackgroundUrl = spatial.wallBackground?.url;
+        if (wallBackgroundUrl) {
+          const backgroundMaterial = new THREE.MeshStandardMaterial({
+            color: '#ffffff',
+            roughness: .94,
+            metalness: 0,
+            transparent: true,
+            opacity: spatial.wallBackground.opacity,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -1
+          });
+          const background = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth - .08, wallHeight - .08), backgroundMaterial);
+          background.position.set(0, showOverview ? 2.4 : 2.25, showOverview ? .076 : .096);
+          background.visible = false;
+          background.receiveShadow = true;
+          background.userData.stationIndex = index;
+          group.add(background);
+          const buildVersion = world.userData.stationBuildVersion;
+          textureLoader.load(wallBackgroundUrl, (texture) => {
+            if (world.userData.stationBuildVersion !== buildVersion || !background.parent) { texture.dispose(); return; }
+            const imageWidth = texture.image?.naturalWidth || texture.image?.width || 1;
+            const imageHeight = texture.image?.naturalHeight || texture.image?.height || 1;
+            const imageAspect = imageWidth / Math.max(1, imageHeight);
+            const wallAspect = wallWidth / wallHeight;
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
+            texture.repeat.set(1, 1);
+            texture.offset.set(0, 0);
+            if (imageAspect > wallAspect) {
+              texture.repeat.x = wallAspect / imageAspect;
+              texture.offset.x = (1 - texture.repeat.x) / 2;
+            } else {
+              texture.repeat.y = imageAspect / wallAspect;
+              texture.offset.y = (1 - texture.repeat.y) / 2;
+            }
+            texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            backgroundMaterial.map = texture;
+            backgroundMaterial.needsUpdate = true;
+            background.visible = true;
+          });
+        }
+        const step = new THREE.Mesh(
+          new THREE.BoxGeometry(showOverview ? 6.5 : 7.18, .15, .7),
+          new THREE.MeshStandardMaterial({ color: showOverview ? '#b8ae9d' : '#c7c0b2', roughness: .92 })
+        );
+        step.position.set(0, .075, .38);
+        step.castShadow = true;
+        step.receiveShadow = true;
+        group.add(step);
+
         let baseGlow = null;
         let wash = null;
+        const ledWidth = showOverview ? 6.34 : 7.02;
+        const ledColor = index === activeIndex ? '#ffc18c' : '#ffe0b5';
+        baseGlow = new THREE.Mesh(
+          new THREE.BoxGeometry(ledWidth, .038, .055),
+          new THREE.MeshBasicMaterial({ color: ledColor, transparent: true, opacity: .96, toneMapped: false })
+        );
+        baseGlow.position.set(0, .175, .095);
+        group.add(baseGlow);
+        const stepGlow = new THREE.Mesh(
+          new THREE.BoxGeometry(ledWidth + .1, .032, .045),
+          new THREE.MeshBasicMaterial({ color: '#fff0cf', transparent: true, opacity: .88, toneMapped: false })
+        );
+        stepGlow.position.set(0, .035, .745);
+        group.add(stepGlow);
+        const floorBloom = new THREE.Mesh(
+          new THREE.PlaneGeometry(ledWidth + .35, .92),
+          new THREE.MeshBasicMaterial({ color: '#ffdca9', transparent: true, opacity: showOverview ? .11 : .14, depthWrite: false, blending: THREE.AdditiveBlending })
+        );
+        floorBloom.rotation.x = -Math.PI / 2;
+        floorBloom.position.set(0, .024, 1.03);
+        group.add(floorBloom);
+
         if (showOverview) {
-          baseGlow = new THREE.Mesh(
-            new THREE.BoxGeometry(6.48, .075, .07),
-            new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#d88455' : '#f0d5ae', transparent: true, opacity: .86, side: THREE.DoubleSide })
-          );
-          baseGlow.position.set(0, .13, .12);
-          group.add(baseGlow);
           wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.8 : 2.1, 7, 2);
-          wash.position.set(0, .48, 1.25);
+          wash.position.set(0, .38, 1.08);
           group.add(wash);
         } else {
           const pad = new THREE.Mesh(new THREE.PlaneGeometry(8.1, 5.2), new THREE.MeshStandardMaterial({ color: '#bcb5a6', roughness: 1 }));
@@ -210,9 +289,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           pad.position.set(0, .018, 1.65);
           pad.receiveShadow = true;
           group.add(pad);
-          const glow = new THREE.Mesh(new THREE.BoxGeometry(7.1, .055, .08), new THREE.MeshBasicMaterial({ color: index === activeIndex ? '#c35f32' : '#e6dfd2' }));
-          glow.position.set(0, 4.24, .14);
-          group.add(glow);
+          wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.4 : 1.8, 7.5, 2);
+          wash.position.set(0, .42, 1.18);
+          group.add(wash);
         }
 
         const previewItems = station.items.filter((item) => item.thumbnailUrl).slice(0, 6);
@@ -230,11 +309,16 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         previewItems.forEach((item) => {
           const frame = new THREE.Mesh(
             new THREE.BoxGeometry(1, 1, .075),
-            new THREE.MeshStandardMaterial({ color: '#f2eee6', roughness: .76, metalness: 0 })
+            new THREE.MeshStandardMaterial({ color: '#f5f0e7', roughness: .82, metalness: 0 })
           );
           frame.visible = showOverview;
+          frame.castShadow = true;
+          frame.receiveShadow = true;
           frame.userData.stationIndex = index;
           frame.userData.itemId = item.id;
+          const objectGlow = new THREE.PointLight(0xffebcf, .34, 2.35, 2);
+          objectGlow.position.set(0, .08, .68);
+          frame.add(objectGlow);
           group.add(frame);
           if (showOverview && overviewOverlay) {
             const image = document.createElement('img');
@@ -262,6 +346,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             new THREE.MeshStandardMaterial({ color: '#e9e4da', roughness: .82 })
           );
           plaque.position.set(-2.45, 2.35, .12);
+          plaque.castShadow = true;
+          plaque.receiveShadow = true;
           plaque.userData.stationIndex = index;
           group.add(plaque);
           const plaqueFace = new THREE.Mesh(

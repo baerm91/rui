@@ -13,6 +13,7 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
   const [urlError, setUrlError] = useState('');
   const [resolving, setResolving] = useState(false);
   const fileRef = useRef(null);
+  const wallImageRef = useRef(null);
   const selectedItem = station.items?.find((item) => item.id === station.selectedItemId) || station.items?.[0];
   const selectedItemIndex = station.items?.findIndex((item) => item.id === selectedItem?.id) ?? -1;
   const updateSpatial = (section, patch) => onUpdateStation(index, { spatial: { ...station.spatial, [section]: { ...station.spatial?.[section], ...patch } } });
@@ -31,6 +32,15 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
     if (!file?.type?.startsWith('image/') || !selectedItem) return;
     const reader = new FileReader();
     reader.onload = () => onUpdateItem(index, selectedItem.id, { thumbnailUrl: reader.result });
+    reader.readAsDataURL(file);
+  };
+  const updateWallBackground = (patch) => onUpdateStation(index, {
+    spatial: { ...station.spatial, wallBackground: { ...station.spatial.wallBackground, ...patch } }
+  });
+  const uploadWallBackground = (file) => {
+    if (!file?.type?.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => updateWallBackground({ url: reader.result });
     reader.readAsDataURL(file);
   };
   const tabs = [['content', 'Inhalt', Box], ['camera', 'Kamera', Camera], ['light', 'Licht', Lightbulb], ['audio', 'Audio', Music2]];
@@ -115,6 +125,15 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
       <VectorFields label="Lichtposition" value={station.spatial.lighting.keyLightPosition} onChange={(keyLightPosition) => updateSpatial('lighting', { keyLightPosition })} />
       <VectorFields label="Lichtrichtung / Ziel" value={station.spatial.lighting.keyLightTarget} onChange={(keyLightTarget) => updateSpatial('lighting', { keyLightTarget })} />
       <label>Stationsmaterial<select value={station.spatial.wallMaterial} onChange={(event) => onUpdateStation(index, { spatial: { ...station.spatial, wallMaterial: event.target.value } })}><option value="warm-white">Warmweiß</option><option value="limestone">Kalkstein</option><option value="soft-grey">Hellgrau</option></select></label>
+      <div className="spatial-wall-background">
+        <div className="spatial-wall-background-heading"><span><ImagePlus size={14} /> Wandhintergrund</span>{station.spatial.wallBackground.url && <button type="button" onClick={() => updateWallBackground({ url: '' })}><Trash2 size={12} /> Entfernen</button>}</div>
+        {station.spatial.wallBackground.url ? <img src={station.spatial.wallBackground.url} alt="Vorschau des Wandhintergrunds" /> : <div className="spatial-wall-background-empty"><ImagePlus size={20} /><span>Noch kein Hintergrundbild</span></div>}
+        <label>Bild-URL<input value={station.spatial.wallBackground.url} onChange={(event) => updateWallBackground({ url: event.target.value })} placeholder="https://…/wandbild.jpg" /></label>
+        <button className="spatial-upload" type="button" onClick={() => wallImageRef.current?.click()}><ImagePlus size={13} /> Eigenes Wandbild hochladen</button>
+        <input ref={wallImageRef} hidden type="file" accept="image/*" onChange={(event) => uploadWallBackground(event.target.files?.[0])} />
+        {station.spatial.wallBackground.url && <RangeField label="Deckkraft des Wandbilds" value={station.spatial.wallBackground.opacity} min={.05} max={1} step={.05} onChange={(opacity) => updateWallBackground({ opacity })} />}
+        <small>Das Bild wird flächig zugeschnitten und bleibt hinter Texttafeln und Objekten.</small>
+      </div>
     </div>}
     {tab === 'audio' && <div className="spatial-editor-section">
       <label>Audiodatei oder Audio-URL<input value={station.spatial.audio.url} onChange={(event) => updateSpatial('audio', { url: event.target.value })} placeholder="https://…/atmosphäre.ogg" /></label>
