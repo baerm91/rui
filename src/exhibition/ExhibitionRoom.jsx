@@ -173,6 +173,11 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const rebuildStations = (nextStations = [], activeIndex = 0, showOverview = false) => {
       world.userData.stationBuildVersion = (world.userData.stationBuildVersion || 0) + 1;
       world.userData.showOverview = showOverview;
+      const environmentColor = showOverview ? '#d3cabb' : '#dedbd2';
+      scene.background.set(environmentColor);
+      scene.fog.color.set(environmentColor);
+      scene.fog.near = showOverview ? 17 : 13;
+      scene.fog.far = showOverview ? 55 : 42;
       const stationXs = nextStations.map((entry) => entry.spatial.position[0]);
       const stationZs = nextStations.map((entry) => entry.spatial.position[2]);
       const overviewCenterX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
@@ -185,14 +190,93 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       overviewOverlay?.replaceChildren();
       [...world.children].filter((child) => child !== floor).forEach((child) => { world.remove(child); disposeObject(child); });
       if (showOverview) {
+        hemi.intensity = .85;
+        key.intensity = .95;
+        key.color.set('#ffead0');
         const stationSpan = Math.max(7.2, nextStations.length * 7.2);
+        const roomWidth = stationSpan + 9.4;
+        const roomHeight = 6.35;
+        const backWallZ = overviewCenterZ - 5.24;
+        const shellColor = '#b6ac99';
+        const createRadialTexture = (stops) => {
+          const radialCanvas = document.createElement('canvas');
+          radialCanvas.width = radialCanvas.height = 256;
+          const radialContext = radialCanvas.getContext('2d');
+          const gradient = radialContext.createRadialGradient(128, 128, 8, 128, 128, 128);
+          stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+          radialContext.fillStyle = gradient;
+          radialContext.fillRect(0, 0, 256, 256);
+          return new THREE.CanvasTexture(radialCanvas);
+        };
         const backWall = new THREE.Mesh(
-          new THREE.BoxGeometry(stationSpan + 1.25, 5.65, .18),
-          new THREE.MeshStandardMaterial({ color: '#aaa18f', roughness: .96 })
+          new THREE.BoxGeometry(roomWidth, roomHeight, .18),
+          new THREE.MeshStandardMaterial({ color: shellColor, roughness: .96 })
         );
-        backWall.position.set(overviewCenterX, 2.825, overviewCenterZ - 5.24);
+        backWall.position.set(overviewCenterX, roomHeight / 2, backWallZ);
         backWall.receiveShadow = true;
         world.add(backWall);
+        [-1, 1].forEach((side) => {
+          const wing = new THREE.Mesh(
+            new THREE.CylinderGeometry(4.6, 4.6, roomHeight, 48, 1, true, side === 1 ? Math.PI / 2 : Math.PI, Math.PI / 2),
+            new THREE.MeshStandardMaterial({ color: shellColor, roughness: .96, side: THREE.DoubleSide })
+          );
+          wing.position.set(overviewCenterX + side * roomWidth / 2, roomHeight / 2, backWallZ + 4.6);
+          wing.receiveShadow = true;
+          world.add(wing);
+          const coveArc = new THREE.Mesh(
+            new THREE.TorusGeometry(4.52, .028, 8, 40, Math.PI / 2),
+            new THREE.MeshBasicMaterial({ color: '#ffe9c4', toneMapped: false })
+          );
+          coveArc.rotation.set(-Math.PI / 2, 0, side === 1 ? 0 : Math.PI / 2);
+          coveArc.position.set(overviewCenterX + side * roomWidth / 2, .09, backWallZ + 4.6);
+          world.add(coveArc);
+          const uplight = new THREE.PointLight(0xffe3bd, 1.35, 17, 1.9);
+          uplight.position.set(overviewCenterX + side * stationSpan / 3.2, roomHeight - .9, overviewCenterZ - 1.4);
+          world.add(uplight);
+        });
+        const ceiling = new THREE.Mesh(
+          new THREE.PlaneGeometry(roomWidth + 12, 30),
+          new THREE.MeshStandardMaterial({ color: '#c6bda9', roughness: .98 })
+        );
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.set(overviewCenterX, roomHeight, overviewCenterZ + 4.5);
+        world.add(ceiling);
+        const glowTexture = createRadialTexture([[0, 'rgba(255,239,214,.9)'], [.55, 'rgba(255,226,188,.32)'], [1, 'rgba(255,220,180,0)']]);
+        const ceilingGlow = new THREE.Mesh(
+          new THREE.PlaneGeometry(stationSpan + 8, 13),
+          new THREE.MeshBasicMaterial({ map: glowTexture, transparent: true, opacity: .8, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })
+        );
+        ceilingGlow.rotation.x = Math.PI / 2;
+        ceilingGlow.position.set(overviewCenterX, roomHeight - .03, overviewCenterZ - 1.2);
+        world.add(ceilingGlow);
+        const floorGlow = new THREE.Mesh(
+          new THREE.PlaneGeometry(stationSpan + 9, 11),
+          new THREE.MeshBasicMaterial({ map: glowTexture, transparent: true, opacity: .42, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })
+        );
+        floorGlow.rotation.x = -Math.PI / 2;
+        floorGlow.position.set(overviewCenterX, .02, overviewCenterZ - .8);
+        world.add(floorGlow);
+        const vignetteTexture = createRadialTexture([[0, 'rgba(46,39,31,0)'], [.62, 'rgba(46,39,31,.06)'], [1, 'rgba(46,39,31,.52)']]);
+        const vignette = new THREE.Mesh(
+          new THREE.PlaneGeometry(72, 34),
+          new THREE.MeshBasicMaterial({ map: vignetteTexture, transparent: true, depthWrite: false })
+        );
+        vignette.rotation.x = -Math.PI / 2;
+        vignette.position.set(overviewCenterX, .015, overviewCenterZ + 2);
+        world.add(vignette);
+        const cove = new THREE.Mesh(
+          new THREE.BoxGeometry(roomWidth - .2, .05, .06),
+          new THREE.MeshBasicMaterial({ color: '#ffe9c4', toneMapped: false })
+        );
+        cove.position.set(overviewCenterX, .09, backWallZ + .12);
+        world.add(cove);
+        const coveBloom = new THREE.Mesh(
+          new THREE.PlaneGeometry(roomWidth - .2, 1.7),
+          new THREE.MeshBasicMaterial({ color: '#ffdca9', transparent: true, opacity: .16, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false })
+        );
+        coveBloom.rotation.x = -Math.PI / 2;
+        coveBloom.position.set(overviewCenterX, .022, backWallZ + 1);
+        world.add(coveBloom);
       }
       if (nextStations.length > 1 && !showOverview) {
         const guidePoints = nextStations.map((station) => new THREE.Vector3(station.spatial.position[0], .035, station.spatial.position[2] + 1.75));
