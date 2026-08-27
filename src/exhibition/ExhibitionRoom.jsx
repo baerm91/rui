@@ -176,8 +176,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       const environmentColor = showOverview ? '#d3cabb' : '#dedbd2';
       scene.background.set(environmentColor);
       scene.fog.color.set(environmentColor);
-      scene.fog.near = showOverview ? 17 : 13;
-      scene.fog.far = showOverview ? 55 : 42;
+      scene.fog.near = showOverview ? 20 : 13;
+      scene.fog.far = showOverview ? 68 : 42;
       const stationXs = nextStations.map((entry) => entry.spatial.position[0]);
       const stationZs = nextStations.map((entry) => entry.spatial.position[2]);
       const overviewCenterX = stationXs.length ? (Math.min(...stationXs) + Math.max(...stationXs)) / 2 : 0;
@@ -236,7 +236,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         });
         const ceiling = new THREE.Mesh(
           new THREE.PlaneGeometry(roomWidth + 12, 30),
-          new THREE.MeshStandardMaterial({ color: '#c6bda9', roughness: .98 })
+          new THREE.MeshStandardMaterial({ color: '#c6bda9', roughness: .98, side: THREE.DoubleSide })
         );
         ceiling.rotation.x = Math.PI / 2;
         ceiling.position.set(overviewCenterX, roomHeight, overviewCenterZ + 4.5);
@@ -317,7 +317,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         const wall = new THREE.Mesh(new THREE.BoxGeometry(wallWidth, wallHeight, showOverview ? .14 : .18), wallMat);
         wall.position.set(0, showOverview ? 2.4 : 2.25, 0);
         wall.receiveShadow = true;
-        wall.castShadow = !showOverview;
+        wall.castShadow = true;
         wall.userData.stationIndex = index;
         group.add(wall);
         const wallBackgroundUrl = spatial.wallBackground?.url;
@@ -743,7 +743,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     cancelAnimationFrame(runtime.cameraTransitionFrame);
     runtime.controls.enabled = immediate;
     runtime.controls.enableDamping = immediate;
-    runtime.controls.maxDistance = overviewMode ? 36 : activeSpatial.movementRadius;
+    runtime.controls.maxDistance = overviewMode ? Math.max(24.5, (stations.length - 1) * 7.2 * .55 + 11.5) : activeSpatial.movementRadius;
+    runtime.controls.minPolarAngle = overviewMode ? 1.05 : 0;
+    runtime.controls.maxPolarAngle = overviewMode ? 1.56 : Math.PI;
     const applyPose = (position, target, fov) => {
       runtime.camera.position.copy(position);
       runtime.controls.target.copy(target);
