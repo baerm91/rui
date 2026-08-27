@@ -537,7 +537,7 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   height: 512px;
   object-fit: fill;
   background: #ddd7cc;
-  box-shadow: 0 0 18px rgba(255, 236, 201, .22), 5px 9px 13px rgba(52, 43, 34, .2), 14px 20px 30px rgba(52, 43, 34, .13);
+  box-shadow: 0 0 18px rgba(255, 236, 201, .22), 8px 13px 17px rgba(52, 43, 34, .2), 20px 28px 36px rgba(52, 43, 34, .15);
   filter: brightness(1.035) saturate(.98);
   transform-origin: 0 0;
   user-select: none;
@@ -557,7 +557,30 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 /* Museum-like local illumination: the cards carry a warm pool of light while
    their offset shadows keep them visibly detached from the wall. */
 .spatial-story-copy {
-  box-shadow: 8px 13px 30px rgba(49,42,34,.12), 18px 27px 48px rgba(49,42,34,.08);
+  border-right: 1px solid rgba(94,85,73,.1);
+  border-bottom: 1px solid rgba(94,85,73,.13);
+  box-shadow: 9px 14px 18px rgba(49,42,34,.14), 24px 32px 48px rgba(49,42,34,.13);
+}
+
+.spatial-story-copy::before,
+.spatial-story-copy::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid rgba(92,85,75,.32);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f4efe4, #aaa294 70%);
+  box-shadow: 1px 2px 3px rgba(45,39,33,.28);
+}
+
+.spatial-story-copy::before {
+  left: 10px;
+}
+
+.spatial-story-copy::after {
+  right: 10px;
 }
 
 .spatial-thumbnail {
@@ -566,21 +589,24 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     rgba(239,235,225,.92);
   box-shadow:
     0 0 22px rgba(255,235,199,.2),
-    5px 9px 13px rgba(47,40,32,.18),
-    15px 22px 34px rgba(47,40,32,.13);
+    inset -3px -4px 0 rgba(134,124,108,.12),
+    8px 13px 16px rgba(47,40,32,.21),
+    22px 30px 38px rgba(47,40,32,.15);
 }
 
 .spatial-thumbnail:hover {
   box-shadow:
     0 0 28px rgba(255,231,189,.32),
-    7px 13px 17px rgba(47,40,32,.18),
-    18px 28px 40px rgba(47,40,32,.16);
+    inset -3px -4px 0 rgba(134,124,108,.1),
+    10px 17px 20px rgba(47,40,32,.2),
+    27px 37px 46px rgba(47,40,32,.17);
 }
 
 .spatial-thumbnail.is-selected {
   box-shadow:
     0 0 0 1px #a65331,
     0 0 30px rgba(255,222,174,.34),
-    7px 13px 18px rgba(75,43,28,.19),
-    18px 27px 38px rgba(75,43,28,.17);
+    inset -3px -4px 0 rgba(151,102,78,.12),
+    10px 17px 20px rgba(75,43,28,.2),
+    27px 37px 46px rgba(75,43,28,.18);
 }

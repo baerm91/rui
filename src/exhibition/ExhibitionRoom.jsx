@@ -303,7 +303,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             Object.assign(entry, layout[entryIndex]);
             entry.frame.geometry.dispose();
             entry.frame.geometry = new THREE.BoxGeometry(entry.cardWidth, entry.cardHeight, .075);
-            entry.frame.position.set(entry.x, entry.y, .12);
+            entry.frame.position.set(entry.x, entry.y, .23);
           });
         };
         previewItems.forEach((item) => {
@@ -345,7 +345,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             new THREE.BoxGeometry(1.35, 2.65, .065),
             new THREE.MeshStandardMaterial({ color: '#e9e4da', roughness: .82 })
           );
-          plaque.position.set(-2.45, 2.35, .12);
+          plaque.position.set(-2.45, 2.35, .23);
           plaque.castShadow = true;
           plaque.receiveShadow = true;
           plaque.userData.stationIndex = index;
@@ -354,7 +354,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             new THREE.PlaneGeometry(1.24, 2.54),
             new THREE.MeshBasicMaterial({ map: plaqueTexture, toneMapped: false })
           );
-          plaqueFace.position.set(-2.45, 2.35, .157);
+          plaqueFace.position.set(-2.45, 2.35, .268);
           plaqueFace.userData.stationIndex = index;
           group.add(plaqueFace);
         }
