@@ -7,7 +7,8 @@ import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
-import { getModelSourceAdapter } from '../utils/modelSourceAdapters.js';
+import { getSketchfabModelUid } from '../utils/modelSource.js';
+import { isSketchfabModelHit, loadSketchfabViewerApi, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
 import './exhibitionRoom.css';
 
@@ -430,16 +431,24 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     };
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const resolveOverviewHit = (event) => {
-      if (!overviewModeRef.current) return null;
+    const setPointerFromEvent = (event) => {
       const rect = canvas.getBoundingClientRect();
       pointer.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
         -((event.clientY - rect.top) / rect.height) * 2 + 1
       );
       raycaster.setFromCamera(pointer, camera);
+    };
+    const resolveOverviewHit = (event) => {
+      if (!overviewModeRef.current) return null;
+      setPointerFromEvent(event);
       return raycaster.intersectObjects(world.children, true)
         .find((hit) => Number.isInteger(hit.object.userData.stationIndex)) || null;
+    };
+    const resolveModelHit = (event) => {
+      if (overviewModeRef.current || !modelRoot.children.length) return null;
+      setPointerFromEvent(event);
+      return raycaster.intersectObjects(modelRoot.children, true).find((hit) => hit.object.isMesh) || null;
     };
     const applyOverviewHover = (hit) => {
       const hoveredStationIndex = hit?.object.userData.stationIndex;
@@ -470,7 +479,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       pointerStart.x = event.clientX;
       pointerStart.y = event.clientY;
       markModelActivity();
-      if (!overviewModeRef.current && !editorModeRef.current && selectedItemRef.current) {
+      if (!overviewModeRef.current && !editorModeRef.current && selectedItemRef.current?.sourceType === 'gltf' && resolveModelHit(event)) {
         activeModelPointerId = event.pointerId;
         modelInteractionRef.current?.(true);
       }
@@ -771,6 +780,115 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   return <><canvas ref={canvasRef} className={`exhibition-room-canvas ${editorMode ? 'is-editor' : ''}`} aria-label="Begehbarer 3D-Ausstellungsraum" /><div ref={overviewOverlayRef} className={`overview-wall-thumbnails ${overviewMode ? '' : 'is-faded'}`} aria-hidden="true" /></>;
 }
 
+function SpatialSketchfabViewer({ item, onInteractionChange }) {
+  const iframeRef = useRef(null);
+  const interactionRef = useRef(onInteractionChange);
+  interactionRef.current = onInteractionChange;
+  const uid = getSketchfabModelUid(item?.modelUrl);
+
+  useEffect(() => {
+    if (!uid || !iframeRef.current) return undefined;
+    let disposed = false;
+    let api = null;
+    let idleTimer = null;
+    let spinCamera = null;
+    let interactionEndTimer = null;
+    let autoRotating = false;
+    let expectedProgrammaticCameraStarts = 0;
+    let spinGeneration = 0;
+
+    const stopAutoRotation = () => {
+      autoRotating = false;
+      spinCamera = null;
+      spinGeneration += 1;
+    };
+    const spin = (generation) => {
+      if (disposed || !autoRotating || !api || !spinCamera || generation !== spinGeneration) return;
+      const segmentDuration = .9;
+      spinCamera = rotateSketchfabCamera(spinCamera, segmentDuration * .16);
+      api.setCameraEasing?.('easeLinear');
+      api.setCameraLookAtEndAnimationCallback?.(() => spin(generation));
+      expectedProgrammaticCameraStarts += 1;
+      api.setCameraLookAt(spinCamera.position, spinCamera.target, segmentDuration);
+    };
+    const startAutoRotation = () => {
+      if (!api || disposed) return;
+      api.getCameraLookAt((error, camera) => {
+        if (error || disposed || !camera) return;
+        spinCamera = camera;
+        autoRotating = true;
+        spinGeneration += 1;
+        spin(spinGeneration);
+      });
+    };
+    const scheduleAutoRotation = () => {
+      stopAutoRotation();
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(startAutoRotation, 10000);
+    };
+    const endInteraction = () => {
+      clearTimeout(interactionEndTimer);
+      interactionRef.current?.(false);
+    };
+    const handleCameraStart = () => {
+      if (autoRotating && expectedProgrammaticCameraStarts > 0) {
+        expectedProgrammaticCameraStarts -= 1;
+        return;
+      }
+      scheduleAutoRotation();
+      interactionRef.current?.(true);
+    };
+    const handleCameraStop = () => {
+      if (autoRotating) return;
+      scheduleAutoRotation();
+      endInteraction();
+    };
+    const handleModelClick = (event) => {
+      scheduleAutoRotation();
+      if (!isSketchfabModelHit(event)) return;
+      interactionRef.current?.(true);
+      clearTimeout(interactionEndTimer);
+      interactionEndTimer = setTimeout(endInteraction, 180);
+    };
+    const handleIframeFocus = () => {
+      if (document.activeElement !== iframeRef.current) return;
+      scheduleAutoRotation();
+    };
+
+    loadSketchfabViewerApi().then((Sketchfab) => {
+      if (disposed) return;
+      const client = new Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
+      client.init(uid, {
+        autostart: 1, camera: 0, dnt: 1, transparent: 1, ui_hint: 0, ui_infos: 0, ui_controls: 0, ui_stop: 0, ui_watermark: 0,
+        success(nextApi) {
+          if (disposed) return;
+          api = nextApi;
+          api.start();
+          api.addEventListener('viewerready', scheduleAutoRotation);
+          api.addEventListener('camerastart', handleCameraStart);
+          api.addEventListener('camerastop', handleCameraStop);
+          api.addEventListener('click', handleModelClick, { pick: 'fast' });
+        },
+        error() {}
+      });
+    }).catch(() => {});
+    addEventListener('blur', handleIframeFocus);
+
+    return () => {
+      disposed = true;
+      clearTimeout(idleTimer);
+      clearTimeout(interactionEndTimer);
+      stopAutoRotation();
+      removeEventListener('blur', handleIframeFocus);
+      if (iframeRef.current) iframeRef.current.src = 'about:blank';
+      interactionRef.current?.(false);
+    };
+  }, [uid]);
+
+  if (!uid) return null;
+  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /></div>;
+}
+
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {
   const buttonRef = useRef(null);
   const dragRef = useRef(null);
@@ -873,7 +991,6 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       additional: stations.flatMap((entry) => entry.items.map((item) => ({ id: item.id, name: item.title, url: item.modelUrl, thumbnailUrl: item.thumbnailUrl })))
     }
   };
-  const adapter = selectedItem ? getModelSourceAdapter(selectedItem.sourceType) : null;
   const updateStation = (index, patch) => setStations((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const updateItem = (index, id, patch) => setStations((current) => current.map((entry, itemIndex) => itemIndex !== index ? entry : { ...entry, items: entry.items.map((item) => item.id === id ? { ...item, ...patch } : item) }));
   const updateItemPositions = (index, positions) => setStations((current) => current.map((entry, itemIndex) => itemIndex !== index ? entry : {
@@ -1035,7 +1152,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
     {overviewMode && <div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>}
     {!overviewMode && <section className="spatial-station-content"><div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else setOpenItemId(item.id); }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
-      {selectedItem?.sourceType === 'sketchfab' && <div className="spatial-sketchfab"><iframe src={adapter.getViewerUrl(selectedItem.modelUrl)} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={selectedItem.title} /></div>}
+      {selectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={selectedItem} onInteractionChange={setModelInteracting} />}
       {selectedItem && <div className="spatial-object-caption"><b>{selectedItem.title}</b><span>{selectedItem.description}</span>{(selectedItem.attribution || selectedItem.license) && <small>{[selectedItem.attribution, selectedItem.license].filter(Boolean).join(' · ')}</small>}</div>}
       {selectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>}

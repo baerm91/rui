@@ -51,6 +51,27 @@ export function setSketchfabCamera(api, camera, duration = 0) {
   ));
 }
 
+export function rotateSketchfabCamera(camera, angle) {
+  const position = Array.isArray(camera?.position) ? camera.position : [0, 0, 0];
+  const target = Array.isArray(camera?.target) ? camera.target : [0, 0, 0];
+  const cosine = Math.cos(Number(angle) || 0);
+  const sine = Math.sin(Number(angle) || 0);
+  const offsetX = (Number(position[0]) || 0) - (Number(target[0]) || 0);
+  const offsetY = (Number(position[1]) || 0) - (Number(target[1]) || 0);
+  return {
+    position: [
+      (Number(target[0]) || 0) + offsetX * cosine - offsetY * sine,
+      (Number(target[1]) || 0) + offsetX * sine + offsetY * cosine,
+      Number(position[2]) || 0
+    ],
+    target: target.map((value) => Number(value) || 0)
+  };
+}
+
+export function isSketchfabModelHit(event) {
+  return Number.isInteger(event?.instanceID) || (Array.isArray(event?.position3D) && event.position3D.length >= 3);
+}
+
 export function getSketchfabScreenshot(api, width, height) {
   return new Promise((resolve, reject) => api.getScreenShot(width, height, 'image/png', (error, result) => {
     if (error) reject(error);
