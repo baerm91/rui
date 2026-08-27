@@ -86,6 +86,28 @@ export function orbitSketchfabCamera(camera, deltaX, deltaY, sensitivity = .006)
   };
 }
 
+export function panSketchfabCamera(camera, deltaX, deltaY, sensitivity = .0015) {
+  const position = Array.isArray(camera?.position) ? camera.position.map((value) => Number(value) || 0) : [0, 0, 0];
+  const target = Array.isArray(camera?.target) ? camera.target.map((value) => Number(value) || 0) : [0, 0, 0];
+  const view = target.map((value, index) => value - position[index]);
+  const radius = Math.max(.001, Math.hypot(...view));
+  const viewDirection = view.map((value) => value / radius);
+  let right = [viewDirection[1], -viewDirection[0], 0];
+  const rightLength = Math.hypot(...right);
+  right = rightLength > .001 ? right.map((value) => value / rightLength) : [1, 0, 0];
+  const screenUp = [
+    right[1] * viewDirection[2] - right[2] * viewDirection[1],
+    right[2] * viewDirection[0] - right[0] * viewDirection[2],
+    right[0] * viewDirection[1] - right[1] * viewDirection[0]
+  ];
+  const scale = radius * sensitivity;
+  const translation = position.map((_, index) => right[index] * -(Number(deltaX) || 0) * scale + screenUp[index] * (Number(deltaY) || 0) * scale);
+  return {
+    position: position.map((value, index) => value + translation[index]),
+    target: target.map((value, index) => value + translation[index])
+  };
+}
+
 export function zoomSketchfabCamera(camera, deltaY) {
   const position = Array.isArray(camera?.position) ? camera.position.map((value) => Number(value) || 0) : [0, 0, 0];
   const target = Array.isArray(camera?.target) ? camera.target.map((value) => Number(value) || 0) : [0, 0, 0];

@@ -8,7 +8,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
-import { loadSketchfabViewerApi, orbitSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
+import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
 import './exhibitionRoom.css';
 
@@ -810,9 +810,9 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     let spinCamera = null;
     let autoRotating = false;
     let spinGeneration = 0;
-    let spinFrame = null;
-    let previousSpinTime = null;
+    let spinTimer = null;
     let activePointerId = null;
+    let activePointerButton = 0;
     let pointerX = 0;
     let pointerY = 0;
     let interactionCamera = null;
@@ -824,19 +824,16 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       autoRotating = false;
       spinCamera = null;
       spinGeneration += 1;
-      previousSpinTime = null;
-      if (spinFrame) cancelAnimationFrame(spinFrame);
-      spinFrame = null;
+      clearTimeout(spinTimer);
+      spinTimer = null;
     };
-    const spin = (time, generation) => {
+    const spin = (generation) => {
       if (disposed || !autoRotating || !api || !spinCamera || generation !== spinGeneration) return;
-      if (previousSpinTime !== null) {
-        const elapsedSeconds = Math.min(.1, Math.max(0, (time - previousSpinTime) / 1000));
-        spinCamera = rotateSketchfabCamera(spinCamera, elapsedSeconds * .16);
-        api.setCameraLookAt(spinCamera.position, spinCamera.target, 0);
-      }
-      previousSpinTime = time;
-      spinFrame = requestAnimationFrame((nextTime) => spin(nextTime, generation));
+      const segmentDuration = 2.4;
+      spinCamera = rotateSketchfabCamera(spinCamera, segmentDuration * .16);
+      api.setCameraEasing?.('easeLinear');
+      api.setCameraLookAt(spinCamera.position, spinCamera.target, segmentDuration);
+      spinTimer = setTimeout(() => spin(generation), 2300);
     };
     const startAutoRotation = () => {
       if (!api || disposed) return;
@@ -847,8 +844,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
         autoRotating = true;
         spinGeneration += 1;
         const generation = spinGeneration;
-        previousSpinTime = null;
-        spinFrame = requestAnimationFrame((time) => spin(time, generation));
+        spin(generation);
       });
     };
     const pauseAutoRotation = () => {
@@ -863,18 +859,21 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
         startAutoRotation();
       }, 10000);
     };
-    const applyPointerOrbit = () => {
+    const applyPointerTransform = () => {
       interactionFrame = null;
       if (!api || !interactionCamera || activePointerId === null) return;
-      interactionCamera = orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
+      interactionCamera = activePointerButton === 2
+        ? panSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY)
+        : orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
       pendingDeltaX = 0;
       pendingDeltaY = 0;
       api.setCameraLookAt(interactionCamera.position, interactionCamera.target, 0);
     };
     const handlePointerDown = (event) => {
-      if (!api || event.button !== 0) return;
+      if (!api || (event.button !== 0 && event.button !== 2)) return;
       event.preventDefault();
       activePointerId = event.pointerId;
+      activePointerButton = event.button;
       pointerX = event.clientX;
       pointerY = event.clientY;
       interactionCamera = null;
@@ -886,7 +885,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       api.getCameraLookAt((error, camera) => {
         if (error || disposed || activePointerId !== event.pointerId) return;
         interactionCamera = camera;
-        if ((pendingDeltaX || pendingDeltaY) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerOrbit);
+        if ((pendingDeltaX || pendingDeltaY) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
       });
     };
     const handlePointerMove = (event) => {
@@ -896,12 +895,13 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       pendingDeltaY += event.clientY - pointerY;
       pointerX = event.clientX;
       pointerY = event.clientY;
-      if (!interactionFrame) interactionFrame = requestAnimationFrame(applyPointerOrbit);
+      if (!interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
     };
     const handlePointerEnd = (event) => {
       if (event.pointerId !== activePointerId) return;
       if (interactionLayer.hasPointerCapture(event.pointerId)) interactionLayer.releasePointerCapture(event.pointerId);
       activePointerId = null;
+      activePointerButton = 0;
       interactionCamera = null;
       pendingDeltaX = 0;
       pendingDeltaY = 0;
@@ -910,6 +910,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       scheduleAutoRotation();
       interactionRef.current?.(false);
     };
+    const handleContextMenu = (event) => event.preventDefault();
     const handleWheel = (event) => {
       if (!api) return;
       event.preventDefault();
@@ -940,6 +941,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     interactionLayer.addEventListener('pointermove', handlePointerMove);
     interactionLayer.addEventListener('pointerup', handlePointerEnd);
     interactionLayer.addEventListener('pointercancel', handlePointerEnd);
+    interactionLayer.addEventListener('contextmenu', handleContextMenu);
     interactionLayer.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
@@ -951,6 +953,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       interactionLayer.removeEventListener('pointermove', handlePointerMove);
       interactionLayer.removeEventListener('pointerup', handlePointerEnd);
       interactionLayer.removeEventListener('pointercancel', handlePointerEnd);
+      interactionLayer.removeEventListener('contextmenu', handleContextMenu);
       interactionLayer.removeEventListener('wheel', handleWheel);
       if (iframeRef.current) iframeRef.current.src = 'about:blank';
       interactionRef.current?.(false);
@@ -958,7 +961,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
   }, [uid]);
 
   if (!uid) return null;
-  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /><div ref={interactionLayerRef} className="spatial-sketchfab-interaction" aria-label={`${item.title} drehen und zoomen`} /></div>;
+  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /><div ref={interactionLayerRef} className="spatial-sketchfab-interaction" aria-label={`${item.title} drehen, verschieben und zoomen`} /></div>;
 }
 
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {

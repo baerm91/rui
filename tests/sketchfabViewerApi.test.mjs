@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, positionKey, rotateSketchfabCamera, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
+import { isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, rotateSketchfabCamera, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
 
 test('converts Sketchfab vectors to RIU coordinate objects and back', () => {
   assert.deepEqual(vectorToObject([1.25, -2, 3]), { x: 1.25, y: -2, z: 3 });
@@ -40,6 +40,14 @@ test('custom Sketchfab controls preserve orbit distance and zoom around the targ
   const zoomed = zoomSketchfabCamera(camera, 100);
   const zoomDistance = Math.hypot(...zoomed.position.map((value, index) => value - zoomed.target[index]));
   assert.ok(zoomDistance > 2);
+});
+
+test('right-drag pans a Sketchfab camera and target together in the screen plane', () => {
+  const camera = { position: [3, 0, 1], target: [1, 0, 1] };
+  const panned = panSketchfabCamera(camera, 100, 50, .001);
+  assert.deepEqual(panned.position.map((value) => Number(value.toFixed(4))), [3, -.2, 1.1]);
+  assert.deepEqual(panned.target.map((value) => Number(value.toFixed(4))), [1, -.2, 1.1]);
+  assert.deepEqual(panned.position.map((value, index) => Number((value - panned.target[index]).toFixed(4))), [2, 0, 0]);
 });
 
 test('recognizes only confirmed Sketchfab geometry hits', () => {
