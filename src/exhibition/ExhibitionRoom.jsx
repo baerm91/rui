@@ -579,7 +579,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       lastFrameAt = now;
       if (!overviewModeRef.current && !editorModeRef.current && selectedItemRef.current && shouldAutoRotateSpatialModel(lastModelInteractionAt, now)) {
         const modelPivot = modelRoot.children[0];
-        if (modelPivot) modelPivot.rotation.y += elapsedSeconds * .16;
+        if (modelPivot) {
+          const rampProgress = Math.min(1, (now - lastModelInteractionAt - 10000) / 1600);
+          modelPivot.rotation.y += elapsedSeconds * .16 * rampProgress * (2 - rampProgress);
+        }
       }
       controls.update();
       renderer.render(scene, camera);
@@ -809,8 +812,9 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     let idleTimer = null;
     let spinCamera = null;
     let autoRotating = false;
-    let spinGeneration = 0;
-    let spinTimer = null;
+    let spinFrame = null;
+    let spinLastAt = 0;
+    let spinRampStartAt = 0;
     let activePointerId = null;
     let activePointerButton = 0;
     let pointerX = 0;
@@ -823,28 +827,29 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     const stopAutoRotation = () => {
       autoRotating = false;
       spinCamera = null;
-      spinGeneration += 1;
-      clearTimeout(spinTimer);
-      spinTimer = null;
+      if (spinFrame) cancelAnimationFrame(spinFrame);
+      spinFrame = null;
     };
-    const spin = (generation) => {
-      if (disposed || !autoRotating || !api || !spinCamera || generation !== spinGeneration) return;
-      const segmentDuration = 2.4;
-      spinCamera = rotateSketchfabCamera(spinCamera, segmentDuration * .16);
-      api.setCameraEasing?.('easeLinear');
-      api.setCameraLookAt(spinCamera.position, spinCamera.target, segmentDuration);
-      spinTimer = setTimeout(() => spin(generation), 2300);
+    const spin = (now) => {
+      spinFrame = null;
+      if (disposed || !autoRotating || !api || !spinCamera) return;
+      const elapsedSeconds = Math.min(.05, Math.max(0, now - spinLastAt) / 1000);
+      spinLastAt = now;
+      const rampProgress = Math.min(1, (now - spinRampStartAt) / 1600);
+      const easedSpeed = .16 * rampProgress * (2 - rampProgress);
+      spinCamera = rotateSketchfabCamera(spinCamera, elapsedSeconds * easedSpeed);
+      api.setCameraLookAt(spinCamera.position, spinCamera.target, 0);
+      spinFrame = requestAnimationFrame(spin);
     };
     const startAutoRotation = () => {
       if (!api || disposed) return;
-      const requestedGeneration = spinGeneration;
       api.getCameraLookAt((error, camera) => {
-        if (error || disposed || !camera || activePointerId !== null || requestedGeneration !== spinGeneration) return;
+        if (error || disposed || !camera || activePointerId !== null || autoRotating) return;
         spinCamera = camera;
         autoRotating = true;
-        spinGeneration += 1;
-        const generation = spinGeneration;
-        spin(generation);
+        spinLastAt = performance.now();
+        spinRampStartAt = spinLastAt;
+        spinFrame = requestAnimationFrame(spin);
       });
     };
     const pauseAutoRotation = () => {
