@@ -188,7 +188,7 @@ const persistStories = () => {
   persistStoriesNow().catch(reportDatabaseError);
 };
 
-const LEGACY_HEIDENTOR_REVEAL_DESCRIPTION = 'Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.';
+const LEGACY_HEIDENTOR_REVEAL_DESCRIPTION_PREFIX = 'Bewegen Sie die Maus über die Ruine';
 
 export function migrateHeidentorRevealStation(savedStations, bundledStations = heidentorConfig.stations) {
   if (!Array.isArray(savedStations)) return clone(bundledStations || []);
@@ -196,7 +196,7 @@ export function migrateHeidentorRevealStation(savedStations, bundledStations = h
   if (!bundledReveal) return clone(savedStations);
   return savedStations.map((station) => station?.id === bundledReveal.id ? {
     ...station,
-    ...(station.description === LEGACY_HEIDENTOR_REVEAL_DESCRIPTION
+    ...(String(station.description || '').trim().startsWith(LEGACY_HEIDENTOR_REVEAL_DESCRIPTION_PREFIX)
       ? { description: bundledReveal.description }
       : {}),
     interpretationComparison: station.interpretationComparison
