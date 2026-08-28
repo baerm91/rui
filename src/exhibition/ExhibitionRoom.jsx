@@ -11,6 +11,7 @@ import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
+import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import './exhibitionRoom.css';
 
 const materialColors = { 'warm-white': '#ded9cd', limestone: '#c9c0ae', 'soft-grey': '#c9cbc7' };
@@ -330,6 +331,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         group.add(wall);
         const wallBackgroundUrl = spatial.wallBackground?.url;
         if (wallBackgroundUrl) {
+          const backgroundSide = resolveWallBackgroundSide(spatial, showOverview);
           const backgroundMaterial = new THREE.MeshStandardMaterial({
             color: '#ffffff',
             roughness: .94,
@@ -341,7 +343,8 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             polygonOffsetUnits: -1
           });
           const background = new THREE.Mesh(new THREE.PlaneGeometry(wallWidth - .08, wallHeight - .08), backgroundMaterial);
-          background.position.set(0, showOverview ? 2.4 : 2.25, showOverview ? .076 : .096);
+          background.position.set(0, showOverview ? 2.4 : 2.25, backgroundSide * (showOverview ? .076 : .096));
+          if (backgroundSide < 0) background.rotation.y = Math.PI;
           background.visible = false;
           background.receiveShadow = true;
           background.userData.stationIndex = index;
