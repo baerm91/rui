@@ -14,6 +14,7 @@ export function resolveAnnotationFocusView({
   annotation,
   currentCameraPos,
   currentCameraTarget,
+  orbitAroundAnnotation = false,
   minDistance = 0.25,
   maxDistance = Infinity
 }) {
@@ -26,7 +27,9 @@ export function resolveAnnotationFocusView({
   ) {
     return {
       cameraPos: { ...annotation.cameraPos },
-      cameraTarget: { ...annotation.cameraTarget },
+      cameraTarget: orbitAroundAnnotation
+        ? { ...annotation.position }
+        : { ...annotation.cameraTarget },
       usesSavedView: true
     };
   }

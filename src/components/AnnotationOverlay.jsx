@@ -182,6 +182,9 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
   const focusAnnotationCamera = (annotation = activeAnnotation) => {
     if (!annotation) return;
     const liveState = window.appState;
+    const orbitAroundAnnotation = !isEditorMode && window.matchMedia?.(
+      '(max-width: 768px), (orientation: landscape) and (max-height: 520px)'
+    ).matches;
     const freeNavigationNeedsActivation = !isEditorMode
       && liveState?.stationMode === 'scroll'
       && activeStation?.freeNavigation
@@ -191,7 +194,7 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
     if (freeNavigationNeedsActivation) {
       liveState.activateFreeNavigation?.();
     }
-    liveState?.focusAnnotation?.(annotation);
+    liveState?.focusAnnotation?.(annotation, { orbitAroundAnnotation });
   };
 
   const navigateAnnotations = (direction) => {

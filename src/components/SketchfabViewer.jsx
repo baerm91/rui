@@ -65,12 +65,14 @@ export function SketchfabViewer({
                 ? setSketchfabCamera(api, station, 0.85)
                 : Promise.resolve();
             });
-            replace('focusAnnotation', async (annotation) => {
+            replace('focusAnnotation', async (annotation, { orbitAroundAnnotation = false } = {}) => {
               if (!annotation?.position) return;
               const current = await getSketchfabCamera(api);
               return setSketchfabCamera(api, {
                 cameraPos: annotation.cameraExplicitlySet ? annotation.cameraPos : current.cameraPos,
-                cameraTarget: annotation.cameraExplicitlySet ? annotation.cameraTarget : annotation.position
+                cameraTarget: annotation.cameraExplicitlySet && !orbitAroundAnnotation
+                  ? annotation.cameraTarget
+                  : annotation.position
               }, 1.2);
             });
             replace('startAnnotationPlacement', (callback) => {

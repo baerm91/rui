@@ -918,13 +918,14 @@ export function setupStateBridge() {
     });
   };
 
-  window.appState.focusAnnotation = (annotation) => {
+  window.appState.focusAnnotation = (annotation, { orbitAroundAnnotation = false } = {}) => {
     if (!annotation?.position || !ctx.camera || !ctx.controls) return;
 
     const focusView = resolveAnnotationFocusView({
       annotation,
       currentCameraPos: ctx.camera.position,
       currentCameraTarget: ctx.controls.target,
+      orbitAroundAnnotation,
       minDistance: Math.max(0.25, (ctx.controls.minDistance || 0) * 1.5),
       maxDistance: Number.isFinite(ctx.controls.maxDistance)
         ? ctx.controls.maxDistance * 0.9
