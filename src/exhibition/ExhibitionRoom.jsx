@@ -1170,6 +1170,28 @@ function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect,
   return <button ref={buttonRef} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
 }
 
+function MobileOverviewNavigator({ stations, stationIndex, onPreviewStation, onOpenStation, onOpenItem }) {
+  const activeStation = stations[stationIndex];
+  if (!activeStation) return null;
+  return <nav className="mobile-overview-navigator" aria-label="Stationen und Objekte auswählen">
+    <div className="mobile-overview-stations" aria-label="Station auswählen">
+      {stations.map((entry, index) => <button key={entry.id} type="button" aria-pressed={index === stationIndex} className={index === stationIndex ? 'is-active' : ''} onClick={() => onPreviewStation(index)}><span>{String(index + 1).padStart(2, '0')}</span>{entry.title}</button>)}
+    </div>
+    <div className="mobile-overview-heading">
+      <div><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><b>{activeStation.title}</b></div>
+      <button type="button" onClick={() => onOpenStation(stationIndex)}>Station öffnen <ChevronRight size={16} /></button>
+    </div>
+    {activeStation.items.length > 0
+      ? <div className="mobile-overview-items" aria-label={`Objekte in ${activeStation.title}`}>
+        {activeStation.items.map((item) => {
+          const thumbnailUrl = resolveSpatialThumbnailUrl(item);
+          return <button key={item.id} type="button" onClick={() => onOpenItem(stationIndex, item.id)} aria-label={`${item.title} öffnen`}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={26} />}</span><b>{item.title}</b><small>Objekt öffnen</small></button>;
+        })}
+      </div>
+      : <div className="mobile-overview-empty"><Box size={22} /> Diese Station wird noch kuratiert.</div>}
+  </nav>;
+}
+
 export default function ExhibitionRoom({ story, initialMode = 'visitor', backHref = '/', onSaveStory }) {
   const [stations, setStations] = useState(() => normalizeStoryStations(story));
   const [stationIndex, setStationIndex] = useState(0);
@@ -1413,7 +1435,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />
     <div className="spatial-view-wash" aria-hidden="true" />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
-    {overviewMode && <div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>}
+    {overviewMode && <><div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>{mode === 'visitor' && <MobileOverviewNavigator stations={stations} stationIndex={stationIndex} onPreviewStation={(index) => { setStationIndex(index); setAudioPlaying(false); }} onOpenStation={enterStation} onOpenItem={enterItem} />}</>}
     {!overviewMode && <section className="spatial-station-content"><div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
       {selectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={selectedItem} onInteractionChange={changeModelInteraction} />}
       {selectedItem?.sourceType === 'gltf' && modelStatus.state !== 'ready' && <div className={`spatial-model-status is-${modelStatus.state}`} role={modelStatus.state === 'error' ? 'alert' : 'status'} aria-live="polite"><i aria-hidden="true" /><span>{modelStatus.message || '3D-Modell wird vorbereitet'}</span></div>}
