@@ -26,3 +26,12 @@ test('retired blueprint backgrounds are not rendered in the Heidentor story', ()
   assert.equal(normalized.stations[0].bgImage, '');
   assert.equal(normalized.stations[1].bgImage, '');
 });
+
+test('legacy mouse-only reveal copy becomes device-neutral during normalization', () => {
+  const config = structuredClone(heidentorConfig);
+  config.stations[3].description = 'Bewegen Sie die Maus über die Ruine, um verborgene Bauteile sichtbar zu machen.';
+
+  const normalized = normalizeStationConfig(config);
+
+  assert.match(normalized.stations[3].description, /^Untersuchen Sie die Ruine mit dem Reveal/);
+});

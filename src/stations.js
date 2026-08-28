@@ -156,13 +156,25 @@ const normalizeStationImages = (images) => {
     .map(normalizeStationImage);
 };
 
+const normalizeStationDescription = (station) => {
+  const description = String(station.description ?? '');
+  if (
+    station.title === 'Der sichtbare Wandel'
+    && description.trim().startsWith('Bewegen Sie die Maus über die Ruine')
+  ) {
+    return 'Untersuchen Sie die Ruine mit dem Reveal, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.';
+  }
+  return description;
+};
+
 const normalizeStation = (station, index, stationCount) => {
   const items = normalizeSpatialItems(station.items);
+  const description = normalizeStationDescription(station);
   return {
     id: station.id ?? `station_${index}`,
     title: station.title ?? `Station ${index + 1}`,
-    description: station.description ?? "",
-    introduction: station.introduction ?? station.description ?? "",
+    description,
+    introduction: station.introduction ?? description,
     spatial: normalizeSpatialStation(station, index),
     items,
     thumbnailLayout: normalizeThumbnailLayout(station.thumbnailLayout),
