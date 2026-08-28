@@ -465,19 +465,6 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     width: min(64vw, 250px);
   }
 
-  .mode-visitor .exploration-toggle {
-    position: fixed;
-    right: 18px;
-    bottom: 70px;
-    display: flex;
-    min-height: 38px;
-    padding: 0 13px;
-    border-radius: 999px;
-    background: rgba(45, 42, 36, .84);
-    color: #f3efe5;
-    box-shadow: 0 8px 24px rgba(38, 34, 28, .2);
-    backdrop-filter: blur(12px);
-  }
 }
 
 .mode-visitor.is-overview .exhibition-room-canvas {
