@@ -20,7 +20,7 @@ import { recordStoryView, saveStoryPreview } from './platform/platformStore.js';
 import { resolveStoryWatermarkOpacity } from './utils/storyWatermark.js';
 import { SketchfabViewer } from './components/SketchfabViewer.jsx';
 import { isSketchfabModelUrl } from './utils/modelSource.js';
-import { hasVisibleStationAnnotations, resolveStoryFreeNavigationStationIndex } from './utils/visitorControls.js';
+import { hasVisibleStationAnnotations } from './utils/visitorControls.js';
 import { recordStoryAnalyticsEvent } from './platform/supabaseStore.js';
 import { getAnalyticsSessionId, getDeviceClass } from './platform/storyAnalytics.js';
 
@@ -54,7 +54,6 @@ export function ExperienceApp({
   const [hasStoryPreview, setHasStoryPreview] = useState(hasInitialStoryPreview);
   const [previewEndStation, setPreviewEndStation] = useState(Math.max(2, initialPreviewEndStation));
   const [annotationsVisible, setAnnotationsVisible] = useState(true);
-  const pendingFreeNavigationIndex = useRef(null);
   const analyticsStartedAt = useRef(performance.now());
   const analyticsSessionId = useRef(analyticsEnabled ? getAnalyticsSessionId(storyId) : '');
   const trackedStations = useRef(new Set());
@@ -222,13 +221,6 @@ export function ExperienceApp({
     })
   });
 
-  useEffect(() => {
-    if (pendingFreeNavigationIndex.current !== appState.currentStationIndex) return undefined;
-    pendingFreeNavigationIndex.current = null;
-    const frame = requestAnimationFrame(() => window.appState?.activateFreeNavigation?.());
-    return () => cancelAnimationFrame(frame);
-  }, [appState.currentStationIndex]);
-
   if (appState.mode === 'loading') {
     return null; // Rendered inside HTML template loading screen
   }
@@ -249,22 +241,13 @@ export function ExperienceApp({
   const activeStation = getActiveStation(editor.editingStations, editor.editingIndex);
   const activeIndex = getActiveIndex(editor.editingIndex);
   const isEditorMode = appState.stationMode === 'editor';
-  const freeNavigationStationIndex = resolveStoryFreeNavigationStationIndex(appState.stations, appState.currentStationIndex);
   const hasVisitorAnnotations = hasVisibleStationAnnotations(appState.annotations, activeStation?.id);
   const displayedAnnotations = isEditorMode
     ? editor.editingAnnotations
     : annotationsVisible
       ? appState.annotations
       : [];
-  const enterStoryFreeView = () => {
-    if (freeNavigationStationIndex < 0) return;
-    if (freeNavigationStationIndex === appState.currentStationIndex) {
-      window.appState?.activateFreeNavigation?.();
-      return;
-    }
-    pendingFreeNavigationIndex.current = freeNavigationStationIndex;
-    scrollToStation(freeNavigationStationIndex);
-  };
+  const enterStationFreeView = () => window.appState?.activateFreeNavigation?.();
 
   const isEditorInteractionMode = editorWorkspace.isEditing;
   const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
@@ -331,8 +314,8 @@ export function ExperienceApp({
         editorNames={storyEditors.map((editor) => editor.name || `@${editor.username}`)}
         isMuted={isMuted}
         onToggleMute={toggleMute}
-        canEnterFreeView={freeNavigationStationIndex >= 0}
-        onEnterFreeView={enterStoryFreeView}
+        canEnterFreeView={!!activeStation?.freeNavigation}
+        onEnterFreeView={enterStationFreeView}
         hasAnnotations={hasVisitorAnnotations}
         annotationsVisible={annotationsVisible}
         onToggleAnnotations={() => setAnnotationsVisible((visible) => !visible)}

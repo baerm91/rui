@@ -738,37 +738,6 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 /* Mobile overview: explicit labelled controls replace tiny projected wall cards. */
 .mobile-overview-navigator { display: none; }
 
-.room-free-view-toggle {
-  position: absolute;
-  z-index: 20;
-  top: 20px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 15px;
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 999px;
-  background: rgba(35,33,29,.76);
-  box-shadow: 0 5px 20px rgba(31,27,22,.2);
-  color: #eee8dd;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  backdrop-filter: blur(14px);
-}
-
-.room-free-view-toggle.is-active { background: #8e431d; color: #fff; }
-.mode-visitor.is-exploring .spatial-story-copy,
-.mode-visitor.is-exploring .spatial-thumbnails,
-.mode-visitor.is-exploring .spatial-object-caption,
-.mode-visitor.is-exploring .model-interaction-hint {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 @media (max-width: 720px) {
   .mode-visitor.is-overview .overview-wall-thumbnails,
   .mode-visitor.is-overview .spatial-overview-hint { display: none; }
@@ -778,8 +747,6 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
     display: flex;
     min-height: 34px;
   }
-
-  .room-free-view-toggle { top: 16px; right: 14px; min-height: 40px; }
 
   .mobile-overview-navigator {
     position: absolute;
