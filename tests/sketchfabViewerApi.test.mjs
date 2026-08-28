@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
+import { getSketchfabPinchZoomDelta, isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
 
 test('converts Sketchfab vectors to RIU coordinate objects and back', () => {
   assert.deepEqual(vectorToObject([1.25, -2, 3]), { x: 1.25, y: -2, z: 3 });
@@ -34,6 +34,17 @@ test('custom Sketchfab controls preserve orbit distance and zoom around the targ
   const zoomed = zoomSketchfabCamera(camera, 100);
   const zoomDistance = Math.hypot(...zoomed.position.map((value, index) => value - zoomed.target[index]));
   assert.ok(zoomDistance > 2);
+});
+
+test('two-finger pinch distance maps to proportional Sketchfab camera zoom', () => {
+  const camera = { position: [3, 0, 1], target: [1, 0, 1] };
+  const zoomedIn = zoomSketchfabCamera(camera, getSketchfabPinchZoomDelta(100, 150));
+  const zoomedOut = zoomSketchfabCamera(camera, getSketchfabPinchZoomDelta(150, 100));
+  const distance = ({ position, target }) => Math.hypot(...position.map((value, index) => value - target[index]));
+
+  assert.ok(Math.abs(distance(zoomedIn) - 4 / 3) < 1e-9);
+  assert.ok(Math.abs(distance(zoomedOut) - 3) < 1e-9);
+  assert.equal(getSketchfabPinchZoomDelta(0, 100), 0);
 });
 
 test('right-drag pans a Sketchfab camera and target together in the screen plane', () => {

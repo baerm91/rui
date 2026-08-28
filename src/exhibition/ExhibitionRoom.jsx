@@ -10,7 +10,7 @@ import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePoin
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
-import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
+import { getSketchfabPinchZoomDelta, loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../utils/spatialStory.js';
 import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import './exhibitionRoom.css';
@@ -938,73 +938,119 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     const interactionLayer = interactionLayerRef.current;
     let disposed = false;
     let api = null;
-    let activePointerId = null;
+    const activePointers = new Map();
+    let primaryPointerId = null;
     let activePointerButton = 0;
     let pointerX = 0;
     let pointerY = 0;
+    let pinchDistance = null;
     let interactionCamera = null;
     let pendingDeltaX = 0;
     let pendingDeltaY = 0;
+    let pendingZoomDelta = 0;
+    let pendingDragTransform = null;
     let interactionFrame = null;
+    let cameraRequestId = 0;
+
+    const getPinchDistance = () => {
+      const [first, second] = Array.from(activePointers.values());
+      return first && second ? Math.hypot(second.x - first.x, second.y - first.y) : null;
+    };
+    const requestInteractionCamera = () => {
+      if (!api) return;
+      const requestId = ++cameraRequestId;
+      api.getCameraLookAt((error, camera) => {
+        if (error || disposed || requestId !== cameraRequestId) return;
+        interactionCamera = camera;
+        if ((pendingDragTransform || pendingZoomDelta) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
+      });
+    };
 
     const applyPointerTransform = () => {
       interactionFrame = null;
-      if (!api || !interactionCamera || activePointerId === null) return;
-      interactionCamera = activePointerButton === 2
-        ? panSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY)
-        : orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
+      if (!api || !interactionCamera || (!pendingDragTransform && !pendingZoomDelta)) return;
+      if (pendingZoomDelta) interactionCamera = zoomSketchfabCamera(interactionCamera, pendingZoomDelta);
+      if (pendingDragTransform) {
+        interactionCamera = pendingDragTransform === 'pan'
+          ? panSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY)
+          : orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
+      }
       pendingDeltaX = 0;
       pendingDeltaY = 0;
+      pendingZoomDelta = 0;
+      pendingDragTransform = null;
       api.setCameraLookAt(interactionCamera.position, interactionCamera.target, 0);
     };
     const handlePointerDown = (event) => {
-      if (!api || (event.button !== 0 && event.button !== 2)) return;
+      if (!api || activePointers.size >= 2 || (event.button !== 0 && event.button !== 2)) return;
       event.preventDefault();
-      activePointerId = event.pointerId;
-      activePointerButton = event.button;
-      pointerX = event.clientX;
-      pointerY = event.clientY;
-      interactionCamera = null;
+      if (interactionFrame) cancelAnimationFrame(interactionFrame);
+      interactionFrame = null;
+      if (interactionCamera && (pendingDragTransform || pendingZoomDelta)) applyPointerTransform();
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       pendingDeltaX = 0;
       pendingDeltaY = 0;
+      pendingZoomDelta = 0;
+      pendingDragTransform = null;
       interactionLayer.setPointerCapture(event.pointerId);
       interactionRef.current?.(true);
-      api.getCameraLookAt((error, camera) => {
-        if (error || disposed || activePointerId !== event.pointerId) return;
-        interactionCamera = camera;
-        if ((pendingDeltaX || pendingDeltaY) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
-      });
+      if (activePointers.size === 1) {
+        primaryPointerId = event.pointerId;
+        activePointerButton = event.button;
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+      } else {
+        pinchDistance = getPinchDistance();
+      }
+      interactionCamera = null;
+      requestInteractionCamera();
     };
     const handlePointerMove = (event) => {
-      if (event.pointerId !== activePointerId) return;
+      if (!activePointers.has(event.pointerId)) return;
       event.preventDefault();
-      pendingDeltaX += event.clientX - pointerX;
-      pendingDeltaY += event.clientY - pointerY;
-      pointerX = event.clientX;
-      pointerY = event.clientY;
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (activePointers.size >= 2) {
+        const nextPinchDistance = getPinchDistance();
+        pendingZoomDelta += getSketchfabPinchZoomDelta(pinchDistance, nextPinchDistance);
+        pinchDistance = nextPinchDistance;
+      } else if (event.pointerId === primaryPointerId) {
+        pendingDeltaX += event.clientX - pointerX;
+        pendingDeltaY += event.clientY - pointerY;
+        pendingDragTransform = activePointerButton === 2 ? 'pan' : 'orbit';
+        pointerX = event.clientX;
+        pointerY = event.clientY;
+      }
       if (!interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
     };
     const handlePointerEnd = (event) => {
-      if (event.pointerId !== activePointerId) return;
+      if (!activePointers.has(event.pointerId)) return;
       if (interactionLayer.hasPointerCapture(event.pointerId)) interactionLayer.releasePointerCapture(event.pointerId);
-      activePointerId = null;
-      activePointerButton = 0;
-      interactionCamera = null;
-      pendingDeltaX = 0;
-      pendingDeltaY = 0;
       if (interactionFrame) cancelAnimationFrame(interactionFrame);
       interactionFrame = null;
-      interactionRef.current?.(false);
+      if (interactionCamera && (pendingDragTransform || pendingZoomDelta)) applyPointerTransform();
+      activePointers.delete(event.pointerId);
+      interactionCamera = null;
+      if (activePointers.size === 1) {
+        const [remainingPointerId, remainingPointer] = activePointers.entries().next().value;
+        primaryPointerId = remainingPointerId;
+        activePointerButton = 0;
+        pointerX = remainingPointer.x;
+        pointerY = remainingPointer.y;
+        pinchDistance = null;
+        requestInteractionCamera();
+      } else if (activePointers.size === 0) {
+        primaryPointerId = null;
+        activePointerButton = 0;
+        pinchDistance = null;
+        interactionRef.current?.(false);
+      }
     };
     const handleContextMenu = (event) => event.preventDefault();
     const handleWheel = (event) => {
       if (!api) return;
       event.preventDefault();
-      api.getCameraLookAt((error, camera) => {
-        if (error || disposed || !camera) return;
-        const nextCamera = zoomSketchfabCamera(camera, event.deltaY);
-        api.setCameraLookAt(nextCamera.position, nextCamera.target, 0);
-      });
+      pendingZoomDelta += event.deltaY;
+      requestInteractionCamera();
     };
 
     loadSketchfabViewerApi().then((Sketchfab) => {
@@ -1029,6 +1075,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
 
     return () => {
       disposed = true;
+      cameraRequestId += 1;
       if (interactionFrame) cancelAnimationFrame(interactionFrame);
       interactionLayer.removeEventListener('pointerdown', handlePointerDown);
       interactionLayer.removeEventListener('pointermove', handlePointerMove);

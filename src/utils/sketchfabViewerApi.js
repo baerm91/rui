@@ -101,6 +101,13 @@ export function zoomSketchfabCamera(camera, deltaY) {
   };
 }
 
+export function getSketchfabPinchZoomDelta(previousDistance, nextDistance) {
+  const previous = Number(previousDistance);
+  const next = Number(nextDistance);
+  if (!Number.isFinite(previous) || !Number.isFinite(next) || previous <= 0 || next <= 0) return 0;
+  return Math.log(previous / next) * 1000;
+}
+
 export function isSketchfabModelHit(event) {
   return Number.isInteger(event?.instanceID) || (Array.isArray(event?.position3D) && event.position3D.length >= 3);
 }
