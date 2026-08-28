@@ -50,7 +50,7 @@ export function useScrollMode(appState) {
 
         const liveState = window.appState;
         const activeStation = liveState?.stations?.[liveState.currentStationIndex];
-        const freeNavigationIsActive = activeStation?.freeNavigation
+        const freeNavigationIsActive = !!activeStation?.id
           && liveState.freeNavigationActive
           && liveState.freeNavigationStationId === activeStation.id;
         if (freeNavigationIsActive) {

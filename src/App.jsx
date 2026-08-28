@@ -252,7 +252,7 @@ export function ExperienceApp({
   const isEditorInteractionMode = editorWorkspace.isEditing;
   const usesSketchfabViewer = isSketchfabModelUrl(storyModelUrl);
   const freeNavigationIsActive = appState.stationMode === 'scroll'
-    && !!activeStation?.freeNavigation
+    && !!activeStation?.id
     && appState.freeNavigationActive
     && appState.freeNavigationStationId === activeStation.id;
   const projectNeedsLocalModel = !!projectWorkspace.activeProject
@@ -314,7 +314,7 @@ export function ExperienceApp({
         editorNames={storyEditors.map((editor) => editor.name || `@${editor.username}`)}
         isMuted={isMuted}
         onToggleMute={toggleMute}
-        canEnterFreeView={!!activeStation?.freeNavigation}
+        canEnterFreeView={!!activeStation?.id}
         onEnterFreeView={enterStationFreeView}
         hasAnnotations={hasVisitorAnnotations}
         annotationsVisible={annotationsVisible}
@@ -379,7 +379,7 @@ export function ExperienceApp({
 
           <div
             className={`scroll-prompt-capsule fixed left-1/2 bottom-8 -translate-x-1/2 z-40 bg-[#0a0b10]/60 border border-amber-500/20 backdrop-blur-md rounded-full px-5 py-2.5 text-[9px] uppercase font-bold tracking-[0.2em] text-[#c9a96e] animate-bounce shadow-[0_4px_20px_rgba(201,169,110,0.15)] flex items-center gap-2 transition-all duration-700 ease-out hover:border-amber-500/40 hover:shadow-[0_4px_25px_rgba(201,169,110,0.25)] ${
-              (appState.scrollProgress ?? 0) < 0.08 && !activeStation?.freeNavigation
+              (appState.scrollProgress ?? 0) < 0.08 && !freeNavigationIsActive
                 ? 'opacity-100 translate-y-0 pointer-events-auto'
                 : 'opacity-0 translate-y-3 pointer-events-none'
             }`}

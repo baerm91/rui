@@ -46,7 +46,7 @@ test('activation selects the project pivot without mutating the camera view', ()
 });
 
 test('free-navigation state is recognized so OrbitControls cannot reorient it per frame', () => {
-  const station = { id: 'free-station', freeNavigation: true };
+  const station = { id: 'free-station', freeNavigation: false };
   assert.equal(isFreeNavigationActiveState({
     stationMode: 'scroll',
     stations: [station],
@@ -64,7 +64,7 @@ test('free-navigation state is recognized so OrbitControls cannot reorient it pe
 });
 
 test('WASD stays enabled in active free navigation but not on the scroll timeline', () => {
-  const station = { id: 'free-station', freeNavigation: true };
+  const station = { id: 'free-station', freeNavigation: false };
   const scrollState = {
     stationMode: 'scroll',
     stations: [station],

@@ -61,7 +61,7 @@ export function SketchfabViewer({
             replace('snapToStation', (station) => station?.cameraExplicitlySet ? setSketchfabCamera(api, station, 0) : Promise.resolve());
             replace('resetFreeView', () => {
               const station = bridge.stations?.[bridge.currentStationIndex];
-              return station?.freeNavigation && station?.cameraExplicitlySet
+              return station?.cameraExplicitlySet
                 ? setSketchfabCamera(api, station, 0.85)
                 : Promise.resolve();
             });

@@ -174,9 +174,10 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
   const activeAnnotationIndex = annotations.findIndex((annotation) => annotation.id === activeAnnotationId);
   const showAnnotationNavigation = !isEditorMode
     && appState.stationMode === 'scroll'
-    && activeStation?.freeNavigation
+    && activeStation?.id
     && activeStation.showAnnotationNavigation !== false
     && appState.freeNavigationActive
+    && appState.freeNavigationStationId === activeStation.id
     && annotations.length > 0;
 
   const focusAnnotationCamera = (annotation = activeAnnotation) => {
@@ -187,7 +188,7 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
     ).matches;
     const freeNavigationNeedsActivation = !isEditorMode
       && liveState?.stationMode === 'scroll'
-      && activeStation?.freeNavigation
+      && activeStation?.id
       && (!liveState.freeNavigationActive
         || liveState.freeNavigationStationId !== activeStation.id);
 
@@ -396,7 +397,7 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
             <p id={`annotation-text-${activeAnnotation.id}`} className="annotation-text">{activeAnnotation.text}</p>
           )}
 
-          {!isEditorMode && activeStation?.freeNavigation && (
+          {!isEditorMode && activeStation?.id && (
             <button type="button" className="annotation-focus-button" onClick={returnToStationView}>
               <RotateCcw size={14} />
               Zur Stationsansicht

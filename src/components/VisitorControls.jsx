@@ -24,6 +24,10 @@ export function VisitorControls({
   const revealExploreButtonRef = useRef(null);
   const revealDoneButtonRef = useRef(null);
   const wasRevealExploringRef = useRef(false);
+  const isActiveStationFreeView = canEnterFreeView
+    && !!activeStation?.id
+    && !!appState.freeNavigationActive
+    && appState.freeNavigationStationId === activeStation.id;
 
   useEffect(() => {
     if (!infoOpen) return undefined;
@@ -40,9 +44,7 @@ export function VisitorControls({
 
   useEffect(() => {
     if (!isCompactExperienceViewport()) return undefined;
-    const isRevealExploring = !!activeStation?.freeNavigation
-      && !!appState.freeNavigationActive
-      && appState.viewMode === 'reveal';
+    const isRevealExploring = isActiveStationFreeView && appState.viewMode === 'reveal';
     if (isRevealExploring === wasRevealExploringRef.current) return undefined;
     wasRevealExploringRef.current = isRevealExploring;
     const frame = window.requestAnimationFrame(() => {
@@ -50,7 +52,7 @@ export function VisitorControls({
       else revealExploreButtonRef.current?.focus();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeStation?.freeNavigation, appState.freeNavigationActive, appState.viewMode]);
+  }, [appState.viewMode, isActiveStationFreeView]);
 
   if (appState.stationMode !== 'scroll') return null;
 
@@ -149,12 +151,12 @@ export function VisitorControls({
               <span>{annotationsVisible ? 'Annotationen an' : 'Annotationen aus'}</span>
             </button>
           )}
-          {canEnterFreeView && !appState.freeNavigationActive && (
+          {canEnterFreeView && !isActiveStationFreeView && (
             <button type="button" className="visitor-view-control" onClick={onEnterFreeView} aria-label="Freie Ansicht öffnen">
               <MousePointer2 size={15} /> <span>Freie Ansicht</span>
             </button>
           )}
-          {canEnterFreeView && appState.freeNavigationActive && (
+          {isActiveStationFreeView && (
             <>
               <button type="button" className="visitor-view-control" onClick={() => window.appState?.resetFreeView?.()} aria-label="Freie Ansicht zurücksetzen" title="Freie Ansicht zurücksetzen">
                 <RotateCcw size={15} /> <span>Zurücksetzen</span>
@@ -167,7 +169,7 @@ export function VisitorControls({
         </div>
       )}
 
-      {activeStation?.freeNavigation && appState.freeNavigationActive && appState.viewMode === 'reveal' && (
+      {isActiveStationFreeView && appState.viewMode === 'reveal' && (
         <div className="mobile-reveal-explore-guide" role="region" aria-label="Freie Reveal-Erkundung">
           <ScanSearch size={18} aria-hidden="true" />
           <span><strong>Reveal fixiert</strong> Ein Finger dreht, zwei Finger zoomen.</span>
@@ -183,12 +185,12 @@ export function VisitorControls({
         </div>
       )}
 
-      {activeStation?.interpretationComparison && !appState.freeNavigationActive && (
+      {activeStation?.interpretationComparison && !isActiveStationFreeView && (
         <InterpretationComparison
           comparison={activeStation.interpretationComparison}
           exploreButtonRef={revealExploreButtonRef}
           viewMode={appState.viewMode}
-          onExplore={activeStation.freeNavigation ? () => window.appState?.activateFreeNavigation?.() : null}
+          onExplore={onEnterFreeView}
           onViewModeChange={selectInterpretationView}
         />
       )}

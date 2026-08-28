@@ -28,7 +28,7 @@ function updateSmoothFreeNavigationZoom(deltaSeconds) {
 
   const station = window.appState?.stations?.[window.appState.currentStationIndex];
   const isActive = window.appState?.stationMode === 'scroll'
-    && station?.freeNavigation
+    && !!station?.id
     && window.appState.freeNavigationActive
     && window.appState.freeNavigationStationId === station.id;
   if (!isActive) {
@@ -213,7 +213,7 @@ export function animate() {
       }
 
       const activeStation = window.appState.stations?.[window.appState.currentStationIndex];
-      const freeNavigationIsActive = activeStation?.freeNavigation
+      const freeNavigationIsActive = !!activeStation?.id
         && window.appState.freeNavigationActive
         && window.appState.freeNavigationStationId === activeStation.id;
       const shouldFollowScrollCamera = !freeNavigationIsActive;

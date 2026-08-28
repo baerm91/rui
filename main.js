@@ -535,8 +535,7 @@ initStationImages();
 function syncScrollControlsForStation(station) {
   if (window.appState.stationMode !== 'scroll') return;
 
-  const canNavigateFreely = !!station?.freeNavigation;
-  const freeNavigationIsActive = canNavigateFreely
+  const freeNavigationIsActive = !!station?.id
     && window.appState.freeNavigationActive
     && window.appState.freeNavigationStationId === station.id;
   const orbitControlState = resolveFreeNavigationOrbitControls(freeNavigationIsActive);
@@ -545,8 +544,8 @@ function syncScrollControlsForStation(station) {
   controls.mouseButtons.LEFT = orbitControlState.leftMouseButton;
   controls.mouseButtons.RIGHT = null;
   controls.panSpeed = 1;
-  // Timeline stations use the wheel for scrolling. A station explicitly
-  // configured for free navigation owns the wheel only after explicit activation.
+  // Timeline stations use the wheel for scrolling. The active station owns the
+  // wheel only after the visitor explicitly enters its free view.
   controls.enableZoom = freeNavigationIsActive;
   controls.enablePan = false;
   controls.enableRotate = orbitControlState.enableRotate;
@@ -565,7 +564,7 @@ function activateFreeNavigation() {
   if (window.appState.stationMode !== 'scroll') return;
   const stationIndex = window.appState.currentStationIndex;
   const station = window.appState.stations?.[stationIndex];
-  if (!station?.freeNavigation) return;
+  if (!station?.id) return;
 
   // Activation only releases the scroll camera and selects the independent
   // orbit pivot. Camera position and look direction remain untouched.

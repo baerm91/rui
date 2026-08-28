@@ -478,7 +478,9 @@ export function setupStateBridge() {
   window.appState.resetFreeView = () => {
     const stationIndex = window.appState.currentStationIndex;
     const station = window.appState.stations?.[stationIndex];
-    if (!station?.freeNavigation) return Promise.resolve();
+    if (!station?.id
+      || !window.appState.freeNavigationActive
+      || window.appState.freeNavigationStationId !== station.id) return Promise.resolve();
 
     const stationCamera = resolveStationCamera(window.appState.stations, stationIndex, station);
     const cameraPosition = new THREE.Vector3(
@@ -568,7 +570,7 @@ export function setupStateBridge() {
   window.appState.smoothFreeNavigationZoom = (deltaY, deltaMode = 0) => {
     const station = window.appState.stations?.[window.appState.currentStationIndex];
     const isActive = window.appState.stationMode === 'scroll'
-      && station?.freeNavigation
+      && !!station?.id
       && window.appState.freeNavigationActive
       && window.appState.freeNavigationStationId === station.id;
     if (!isActive || !Number.isFinite(deltaY) || deltaY === 0) return;

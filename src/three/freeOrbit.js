@@ -28,7 +28,7 @@ export function createFreeNavigationActivationState(station, projectOrbitTarget)
 export function isFreeNavigationActiveState(appState) {
   const station = appState?.stations?.[appState.currentStationIndex];
   return appState?.stationMode === 'scroll'
-    && station?.freeNavigation
+    && !!station?.id
     && appState.freeNavigationActive
     && appState.freeNavigationStationId === station.id;
 }
