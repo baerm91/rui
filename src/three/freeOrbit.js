@@ -41,6 +41,17 @@ export function resolveCanvasTouchAction(stationMode, freeNavigationIsActive = f
   return stationMode === 'scroll' && !freeNavigationIsActive ? 'pan-y' : 'none';
 }
 
+export function shouldUseCustomFreeOrbitPointer(pointerType = 'mouse') {
+  return pointerType !== 'touch';
+}
+
+export function resolveFreeNavigationOrbitControls(freeNavigationIsActive = false) {
+  return {
+    enableRotate: freeNavigationIsActive,
+    leftMouseButton: freeNavigationIsActive ? null : THREE.MOUSE.ROTATE
+  };
+}
+
 export function resolveFreeNavigationMaxDistance(configuredDistance, minDistance, currentDistance) {
   const configured = Number.isFinite(configuredDistance) ? configuredDistance : 40;
   return Math.max(

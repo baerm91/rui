@@ -8,8 +8,10 @@ import {
   isFreeNavigationActiveState,
   isKeyboardNavigationAllowedState,
   resolveCanvasTouchAction,
+  resolveFreeNavigationOrbitControls,
   resolveFreeMovementSpeed,
-  resolveFreeNavigationMaxDistance
+  resolveFreeNavigationMaxDistance,
+  shouldUseCustomFreeOrbitPointer
 } from '../src/three/freeOrbit.js';
 
 const closeTo = (actual, expected, tolerance = 1e-9) => {
@@ -87,6 +89,16 @@ test('guided mobile stations allow page scrolling until free exploration starts'
   assert.equal(resolveCanvasTouchAction('scroll', false), 'pan-y');
   assert.equal(resolveCanvasTouchAction('scroll', true), 'none');
   assert.equal(resolveCanvasTouchAction('editor', false), 'none');
+});
+
+test('touch gestures stay owned by OrbitControls instead of being handled twice', () => {
+  assert.equal(shouldUseCustomFreeOrbitPointer('touch'), false);
+  assert.equal(shouldUseCustomFreeOrbitPointer('mouse'), true);
+  assert.equal(shouldUseCustomFreeOrbitPointer('pen'), true);
+  assert.deepEqual(resolveFreeNavigationOrbitControls(true), {
+    enableRotate: true,
+    leftMouseButton: null
+  });
 });
 
 test('free rotation is a rigid orbit around the independent project pivot', () => {

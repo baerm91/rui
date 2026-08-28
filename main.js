@@ -28,12 +28,20 @@ import {
   applyFreeViewPan,
   createFreeNavigationActivationState,
   isFreeNavigationActiveState,
-  resolveCanvasTouchAction
+  resolveCanvasTouchAction,
+  resolveFreeNavigationOrbitControls,
+  shouldUseCustomFreeOrbitPointer
 } from './src/three/freeOrbit.js';
 import { normalizeProjectCameraFov, normalizeProjectOrbitTarget } from './src/projects/projectSettings.js';
 import { isSketchfabModelUrl } from './src/utils/modelSource.js';
 import { interpolateCameraView } from './src/utils/cameraInterpolation.js';
 import { showLoadingFailure } from './src/utils/loadingFailure.js';
+import {
+  isCompactExperienceViewport,
+  isMobileRevealTap,
+  shouldRequireExplicitRevealExploration,
+  shouldTrackRevealPointer
+} from './src/utils/revealInteraction.js';
 import { resolveInterpretationStation } from './src/utils/interpretationComparison.js';
 
 // ─── DOM & CANVAS ─────────────────────────────────────
@@ -105,8 +113,7 @@ controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
 controls.mouseButtons.RIGHT = null;
 controls.touches.ONE = THREE.TOUCH.ROTATE;
 controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
-controls.autoRotate = true;
-controls.autoRotateSpeed = 0.35;
+controls.autoRotate = false;
 controls.minDistance = 0.5;
 controls.maxDistance = 75;
 controls.target.set(0, 3.5, 0);
@@ -199,8 +206,16 @@ document.addEventListener('mouseup', (event) => {
   if (event.button === 2) ctx.firstPerson.verticalMove = false;
 });
 
-let autoRotateTimer = null;
 const freeOrbitDrag = { active: false, mode: null, x: 0, y: 0 };
+const revealTouchGesture = {
+  activePointers: new Set(),
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  startedAt: 0,
+  maximumMovement: 0,
+  involvedMultipleTouches: false
+};
 
 function isFreeNavigationActive() {
   return isFreeNavigationActiveState(window.appState);
@@ -208,17 +223,16 @@ function isFreeNavigationActive() {
 
 function pauseAutoRotate() {
   controls.autoRotate = false;
-  clearTimeout(autoRotateTimer);
-  autoRotateTimer = setTimeout(() => {
-    if (
-      ctx.isRevealMode
-      && window.appState?.stationMode !== 'editor'
-      && controls.enabled
-      && !isFreeNavigationActive()
-    ) {
-      controls.autoRotate = true;
-    }
-  }, 5000);
+}
+
+function centerCompactReveal() {
+  if (!isCompactExperienceViewport() || window.appState?.viewMode !== 'reveal') return;
+  ctx.mouseTarget.set(0, 0);
+  ctx.portalMouseTarget.set(0, 0);
+  ctx.blendedRevealTarget.set(0, 0);
+  ctx.revealUniforms.uMouseNDC.value.set(0, 0);
+  ctx.hasMouseMoved = true;
+  ctx.isMouseOutside = false;
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -228,7 +242,11 @@ canvas.addEventListener('pointerdown', (event) => {
     && activeStation?.freeNavigation
     && (!window.appState.freeNavigationActive
       || window.appState.freeNavigationStationId !== activeStation.id);
-  if (event.button === 0 && freeNavigationNeedsActivation) {
+  const explicitRevealExploration = shouldRequireExplicitRevealExploration({
+    compactViewport: isCompactExperienceViewport(),
+    viewMode: window.appState?.viewMode
+  });
+  if (event.button === 0 && freeNavigationNeedsActivation && !explicitRevealExploration) {
     activateFreeNavigation();
     event.preventDefault();
     return;
@@ -247,7 +265,11 @@ canvas.addEventListener('pointerdown', (event) => {
 });
 
 canvas.addEventListener('pointerdown', (event) => {
-  if (![0, 2].includes(event.button) || !isFreeNavigationActive()) return;
+  if (
+    !shouldUseCustomFreeOrbitPointer(event.pointerType)
+    || ![0, 2].includes(event.button)
+    || !isFreeNavigationActive()
+  ) return;
   freeOrbitDrag.active = true;
   freeOrbitDrag.mode = event.button === 2 ? 'pan' : 'rotate';
   freeOrbitDrag.x = event.clientX;
@@ -506,6 +528,7 @@ ctx.actions.playInitialIntro = playInitialIntro;
 // Bind editor/runtime actions before large model assets finish loading.
 setupStateBridge();
 window.appState.activateFreeNavigation = activateFreeNavigation;
+window.appState.exitFreeNavigation = exitFreeNavigation;
 
 initStationImages();
 
@@ -516,15 +539,17 @@ function syncScrollControlsForStation(station) {
   const freeNavigationIsActive = canNavigateFreely
     && window.appState.freeNavigationActive
     && window.appState.freeNavigationStationId === station.id;
+  const orbitControlState = resolveFreeNavigationOrbitControls(freeNavigationIsActive);
   canvas.style.touchAction = resolveCanvasTouchAction('scroll', freeNavigationIsActive);
   controls.enabled = freeNavigationIsActive;
+  controls.mouseButtons.LEFT = orbitControlState.leftMouseButton;
   controls.mouseButtons.RIGHT = null;
   controls.panSpeed = 1;
   // Timeline stations use the wheel for scrolling. A station explicitly
   // configured for free navigation owns the wheel only after explicit activation.
   controls.enableZoom = freeNavigationIsActive;
   controls.enablePan = false;
-  controls.enableRotate = !freeNavigationIsActive;
+  controls.enableRotate = orbitControlState.enableRotate;
   controls.autoRotate = false;
 
   if (freeNavigationIsActive) {
@@ -551,6 +576,25 @@ function activateFreeNavigation() {
   if (!activationState) return;
   window.appState.update(activationState);
   syncScrollControlsForStation(station);
+}
+
+function exitFreeNavigation() {
+  if (!isFreeNavigationActive() || window.appState.freeNavigationExitPending) return;
+  const station = window.appState.stations?.[window.appState.currentStationIndex];
+  window.appState.update({ freeNavigationExitPending: true });
+  controls.enabled = false;
+  canvas.style.touchAction = 'none';
+  const finishExit = () => {
+    window.appState.update({
+      freeNavigationActive: false,
+      freeNavigationStationId: null,
+      freeNavigationExitPending: false,
+      hasUserManipulatedCamera: false
+    });
+    centerCompactReveal();
+    syncScrollControlsForStation(station);
+  };
+  Promise.resolve(window.appState.resetFreeView?.()).then(finishExit, finishExit);
 }
 
 function resolveScrollCamera(stations, stationIndex, station) {
@@ -1355,7 +1399,11 @@ canvas.addEventListener('pointerup', (e) => {
   }
 });
 
-function handleMove(clientX, clientY) {
+function handleMove(clientX, clientY, pointerType = 'mouse', force = false) {
+  if (!force && !shouldTrackRevealPointer({
+    compactViewport: isCompactExperienceViewport(),
+    pointerType
+  })) return;
   ctx.hasMouseMoved = true;
   if (window.appState?.mode !== 'reveal') return;
   const vm = window.appState?.viewMode;
@@ -1368,12 +1416,70 @@ function handleMove(clientX, clientY) {
   ctx.isMouseOutside = false;
 }
 
-window.addEventListener('pointermove', (e) => handleMove(e.clientX, e.clientY));
-
-document.addEventListener('pointerleave', () => {
-  ctx.isMouseOutside = true;
+window.addEventListener('pointermove', (event) => {
+  if (event.pointerType === 'touch' && revealTouchGesture.activePointers.has(event.pointerId)) {
+    revealTouchGesture.maximumMovement = Math.max(
+      revealTouchGesture.maximumMovement,
+      Math.hypot(event.clientX - revealTouchGesture.startX, event.clientY - revealTouchGesture.startY)
+    );
+  }
+  handleMove(event.clientX, event.clientY, event.pointerType);
 });
-document.addEventListener('mouseleave', () => {
+
+canvas.addEventListener('pointerdown', (event) => {
+  if (
+    event.pointerType !== 'touch'
+    || !isCompactExperienceViewport()
+    || window.appState?.stationMode !== 'scroll'
+    || window.appState?.viewMode !== 'reveal'
+  ) return;
+  revealTouchGesture.activePointers.add(event.pointerId);
+  if (revealTouchGesture.activePointers.size > 1) revealTouchGesture.involvedMultipleTouches = true;
+  if (revealTouchGesture.pointerId !== null) return;
+  revealTouchGesture.pointerId = event.pointerId;
+  revealTouchGesture.startX = event.clientX;
+  revealTouchGesture.startY = event.clientY;
+  revealTouchGesture.startedAt = performance.now();
+  revealTouchGesture.maximumMovement = 0;
+  revealTouchGesture.involvedMultipleTouches = false;
+});
+
+const finishRevealTouch = (event, cancelled = false) => {
+  if (event.pointerType !== 'touch' || !revealTouchGesture.activePointers.has(event.pointerId)) return;
+  revealTouchGesture.activePointers.delete(event.pointerId);
+  if (event.pointerId !== revealTouchGesture.pointerId) return;
+  const shouldPlace = !cancelled && isMobileRevealTap({
+    compactViewport: isCompactExperienceViewport(),
+    pointerType: event.pointerType,
+    stationMode: window.appState?.stationMode,
+    viewMode: window.appState?.viewMode,
+    freeNavigationActive: isFreeNavigationActive(),
+    maximumMovement: revealTouchGesture.maximumMovement,
+    durationMs: performance.now() - revealTouchGesture.startedAt,
+    involvedMultipleTouches: revealTouchGesture.involvedMultipleTouches
+  });
+  if (shouldPlace) handleMove(event.clientX, event.clientY, event.pointerType, true);
+  revealTouchGesture.pointerId = null;
+  revealTouchGesture.maximumMovement = 0;
+  revealTouchGesture.involvedMultipleTouches = revealTouchGesture.activePointers.size > 0;
+};
+
+canvas.addEventListener('pointerup', (event) => finishRevealTouch(event));
+canvas.addEventListener('pointercancel', (event) => finishRevealTouch(event, true));
+
+const resetRevealTouchGesture = () => {
+  revealTouchGesture.activePointers.clear();
+  revealTouchGesture.pointerId = null;
+  revealTouchGesture.maximumMovement = 0;
+  revealTouchGesture.involvedMultipleTouches = false;
+};
+window.addEventListener('blur', resetRevealTouchGesture);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) resetRevealTouchGesture();
+});
+
+document.addEventListener('pointerleave', (event) => {
+  if (event.pointerType === 'touch') return;
   ctx.isMouseOutside = true;
 });
 

@@ -321,7 +321,7 @@
     {
       "id": "station_3",
       "title": "Der sichtbare Wandel",
-      "description": "Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.",
+      "description": "Untersuchen Sie die Ruine mit dem Reveal, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.",
       "viewMode": "reveal",
       "interpretationComparison": {
         "title": "Befund und Rekonstruktion",

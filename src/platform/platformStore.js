@@ -188,6 +188,23 @@ const persistStories = () => {
   persistStoriesNow().catch(reportDatabaseError);
 };
 
+const LEGACY_HEIDENTOR_REVEAL_DESCRIPTION = 'Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.';
+
+export function migrateHeidentorRevealStation(savedStations, bundledStations = heidentorConfig.stations) {
+  if (!Array.isArray(savedStations)) return clone(bundledStations || []);
+  const bundledReveal = (bundledStations || []).find((station) => station?.id === 'station_3');
+  if (!bundledReveal) return clone(savedStations);
+  return savedStations.map((station) => station?.id === bundledReveal.id ? {
+    ...station,
+    ...(station.description === LEGACY_HEIDENTOR_REVEAL_DESCRIPTION
+      ? { description: bundledReveal.description }
+      : {}),
+    interpretationComparison: station.interpretationComparison
+      ? clone(station.interpretationComparison)
+      : clone(bundledReveal.interpretationComparison)
+  } : clone(station));
+}
+
 function seededStories(current = storiesCache) {
   const userStories = Array.isArray(current)
     ? current.filter((story) => !demoStories.some((demo) => demo.id === story?.id)).map((story) => {
@@ -229,6 +246,9 @@ function seededStories(current = storiesCache) {
             ...storyData.settings,
             lighting: clone(demo.settings.lighting)
           }
+        } : {}),
+        ...(demo.id === 'demo-heidentor' ? {
+          stations: migrateHeidentorRevealStation(storyData.stations, demo.stations)
         } : {}),
         ...(hasCrossStoryData ? {
           models: clone(demo.models),

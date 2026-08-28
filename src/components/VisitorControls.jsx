@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Home, Info, MousePointer2, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { Check, Home, Info, MousePointer2, RotateCcw, ScanSearch, Volume2, VolumeX } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
+import { isCompactExperienceViewport } from '../utils/revealInteraction.js';
 
 export function VisitorControls({
   activeStation,
@@ -15,6 +16,9 @@ export function VisitorControls({
 }) {
   const [infoOpen, setInfoOpen] = useState(false);
   const infoRef = useRef(null);
+  const revealExploreButtonRef = useRef(null);
+  const revealDoneButtonRef = useRef(null);
+  const wasRevealExploringRef = useRef(false);
 
   useEffect(() => {
     if (!infoOpen) return undefined;
@@ -28,6 +32,20 @@ export function VisitorControls({
       document.removeEventListener('keydown', closeInfo);
     };
   }, [infoOpen]);
+
+  useEffect(() => {
+    if (!isCompactExperienceViewport()) return undefined;
+    const isRevealExploring = !!activeStation?.freeNavigation
+      && !!appState.freeNavigationActive
+      && appState.viewMode === 'reveal';
+    if (isRevealExploring === wasRevealExploringRef.current) return undefined;
+    wasRevealExploringRef.current = isRevealExploring;
+    const frame = window.requestAnimationFrame(() => {
+      if (isRevealExploring) revealDoneButtonRef.current?.focus();
+      else revealExploreButtonRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStation?.freeNavigation, appState.freeNavigationActive, appState.viewMode]);
 
   if (appState.stationMode !== 'scroll') return null;
 
@@ -115,12 +133,28 @@ export function VisitorControls({
         <button
           type="button"
           onClick={() => window.appState?.resetFreeView?.()}
-          className="fixed top-5 right-5 z-40 rounded-full border border-white/10 bg-zinc-950/45 p-2.5 text-zinc-400 backdrop-blur-xl pointer-events-auto transition-all duration-300 hover:border-[#c9a96e]/40 hover:bg-zinc-900/60 hover:text-[#c9a96e] hover:shadow-[0_0_15px_rgba(201,169,110,0.2)] active:scale-95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer"
+          className={`free-view-reset fixed top-5 right-5 z-40 rounded-full border border-white/10 bg-zinc-950/45 p-2.5 text-zinc-400 backdrop-blur-xl pointer-events-auto transition-all duration-300 hover:border-[#c9a96e]/40 hover:bg-zinc-900/60 hover:text-[#c9a96e] hover:shadow-[0_0_15px_rgba(201,169,110,0.2)] active:scale-95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer ${appState.viewMode === 'reveal' ? 'has-mobile-reveal-guide' : ''}`}
           title="Ansicht zurücksetzen"
           aria-label="Ansicht zurücksetzen"
         >
           <RotateCcw size={15} />
         </button>
+      )}
+
+      {activeStation?.freeNavigation && appState.freeNavigationActive && appState.viewMode === 'reveal' && (
+        <div className="mobile-reveal-explore-guide" role="region" aria-label="Freie Reveal-Erkundung">
+          <ScanSearch size={18} aria-hidden="true" />
+          <span><strong>Reveal fixiert</strong> Ein Finger dreht, zwei Finger zoomen.</span>
+          <button
+            ref={revealDoneButtonRef}
+            type="button"
+            disabled={!!appState.freeNavigationExitPending}
+            aria-label="Freie Ansicht beenden und zur Vergleichsansicht zurückkehren"
+            onClick={() => window.appState?.exitFreeNavigation?.()}
+          >
+            <Check size={15} aria-hidden="true" /> {appState.freeNavigationExitPending ? 'Zurück …' : 'Fertig'}
+          </button>
+        </div>
       )}
 
       {activeStation?.freeNavigation && !appState.freeNavigationActive && !activeStation?.interpretationComparison && (
@@ -138,6 +172,7 @@ export function VisitorControls({
       {activeStation?.interpretationComparison && !appState.freeNavigationActive && (
         <InterpretationComparison
           comparison={activeStation.interpretationComparison}
+          exploreButtonRef={revealExploreButtonRef}
           viewMode={appState.viewMode}
           onExplore={activeStation.freeNavigation ? () => window.appState?.activateFreeNavigation?.() : null}
           onViewModeChange={selectInterpretationView}

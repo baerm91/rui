@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { HelpCircle, MousePointer2, ScanSearch } from 'lucide-react';
+import { BookOpen, HelpCircle, MousePointer2, ScanSearch } from 'lucide-react';
 import { getInterpretationState, normalizeInterpretationComparison } from '../utils/interpretationComparison.js';
 
-export function InterpretationComparison({ comparison, viewMode, onExplore, onViewModeChange }) {
+export function InterpretationComparison({ comparison, exploreButtonRef, viewMode, onExplore, onViewModeChange }) {
   const [explanationOpen, setExplanationOpen] = useState(false);
+  const [mobileCollapsed, setMobileCollapsed] = useState(false);
   const explanationButtonRef = useRef(null);
   const closeButtonRef = useRef(null);
   const normalized = normalizeInterpretationComparison(comparison);
@@ -23,6 +24,7 @@ export function InterpretationComparison({ comparison, viewMode, onExplore, onVi
 
   useEffect(() => {
     setExplanationOpen(false);
+    setMobileCollapsed(false);
   }, [comparison]);
 
   if (!normalized) return null;
@@ -34,12 +36,24 @@ export function InterpretationComparison({ comparison, viewMode, onExplore, onVi
 
   return (
     <section
-      className="interpretation-comparison pointer-events-auto fixed bottom-6 left-5 z-40 w-[min(31rem,calc(100vw-2.5rem))] rounded-2xl border border-white/15 bg-zinc-950/85 p-3.5 text-zinc-100 shadow-2xl backdrop-blur-xl motion-reduce:transition-none"
+      className={`interpretation-comparison pointer-events-auto fixed bottom-6 left-5 z-40 w-[min(31rem,calc(100vw-2.5rem))] rounded-2xl border border-white/15 bg-zinc-950/85 p-3.5 text-zinc-100 shadow-2xl backdrop-blur-xl motion-reduce:transition-none ${mobileCollapsed ? 'is-mobile-collapsed' : ''}`}
       aria-labelledby="interpretation-comparison-title"
     >
       <span id="interpretation-comparison-title" className="block text-[9px] font-semibold uppercase tracking-[0.17em] text-amber-300/75">
         {normalized.title}
       </span>
+      <button
+        type="button"
+        className="mobile-comparison-panel-toggle"
+        aria-expanded={!mobileCollapsed}
+        aria-controls="interpretation-comparison-content"
+        onClick={() => setMobileCollapsed((collapsed) => !collapsed)}
+      >
+        {mobileCollapsed
+          ? <><ScanSearch size={14} aria-hidden="true" /> Vergleich öffnen</>
+          : <><BookOpen size={14} aria-hidden="true" /> Stationstext lesen</>}
+      </button>
+      <div id="interpretation-comparison-content" className="interpretation-comparison-content">
       <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Darstellungszustand wählen">
         {normalized.states.map((state) => (
           <button
@@ -73,6 +87,13 @@ export function InterpretationComparison({ comparison, viewMode, onExplore, onVi
         </p>
       )}
 
+      {viewMode === 'reveal' && (
+        <p className="mobile-reveal-instruction" aria-live="polite">
+          <ScanSearch size={16} aria-hidden="true" />
+          <span><strong>Punktuell vergleichen:</strong> Tippen Sie auf das Bauwerk. Wischen scrollt nur durch die Story.</span>
+        </p>
+      )}
+
       {normalized.experimentalMode && (
         <button
           type="button"
@@ -87,12 +108,14 @@ export function InterpretationComparison({ comparison, viewMode, onExplore, onVi
 
       {onExplore && (
         <button
+          ref={exploreButtonRef}
           type="button"
           className="mt-2 ml-4 inline-flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 underline decoration-white/25 underline-offset-4 transition-colors hover:text-amber-200 motion-reduce:transition-none"
           onClick={onExplore}
         >
           <MousePointer2 size={13} aria-hidden="true" />
-          Freie Ansicht
+          <span className="desktop-explore-label">Freie Ansicht</span>
+          <span className="mobile-explore-label">3D unter der Lupe erkunden</span>
         </button>
       )}
 
@@ -122,6 +145,7 @@ export function InterpretationComparison({ comparison, viewMode, onExplore, onVi
           </div>
         </div>
       )}
+      </div>
     </section>
   );
 }

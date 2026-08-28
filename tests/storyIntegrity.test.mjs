@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { demoStories, findCrossStoryStationSource } from '../src/platform/platformStore.js';
+import {
+  demoStories,
+  findCrossStoryStationSource,
+  migrateHeidentorRevealStation
+} from '../src/platform/platformStore.js';
 
 test('cross-story station contamination is detected by station ids', () => {
   const starhemberg = demoStories.find((story) => story.id === 'demo-starhemberg');
@@ -17,4 +21,20 @@ test('Heidentor seed data does not reuse the retired blueprint as its cover', ()
   const heidentor = demoStories.find((story) => story.id === 'demo-heidentor');
 
   assert.equal(heidentor.coverImage, '');
+});
+
+test('Heidentor reveal migration repairs only the legacy interaction copy and missing comparison', () => {
+  const saved = demoStories.find((story) => story.id === 'demo-heidentor').stations.map((station) => ({ ...station }));
+  saved[3] = {
+    ...saved[3],
+    description: 'Bewegen Sie die Maus über die Ruine, um verborgene Bauteile des ursprünglichen Heidentors sichtbar zu machen. Die Ansicht zeigt, was vom Bau des 4. Jahrhunderts n. Chr. einst vorhanden war — und was davon bis heute erhalten blieb.',
+    interpretationComparison: null,
+    title: 'Redaktioneller Titel'
+  };
+  const migrated = migrateHeidentorRevealStation(saved);
+
+  assert.match(migrated[3].description, /^Untersuchen Sie die Ruine mit dem Reveal/);
+  assert.ok(migrated[3].interpretationComparison);
+  assert.equal(migrated[3].title, 'Redaktioneller Titel');
+  assert.deepEqual(migrated.slice(0, 3), saved.slice(0, 3));
 });

@@ -17,6 +17,10 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
 
   useEffect(() => setIsMobileMenuOpen(false), [currentStationIndex]);
   useEffect(() => {
+    document.body.classList.toggle('station-mobile-menu-open', isMobileMenuOpen);
+    return () => document.body.classList.remove('station-mobile-menu-open');
+  }, [isMobileMenuOpen]);
+  useEffect(() => {
     if (!isMobileMenuOpen) return undefined;
     const closeOnOutsidePointer = (event) => {
       if (!mobileNavRef.current?.contains(event.target)) setIsMobileMenuOpen(false);
@@ -42,7 +46,6 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
         }}
       >
         <button
-          ref={mobileToggleRef}
           type="button"
           className="station-mobile-step"
           disabled={currentStationIndex <= 0}
@@ -52,6 +55,7 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
           <ChevronLeft size={20} aria-hidden="true" />
         </button>
         <button
+          ref={mobileToggleRef}
           type="button"
           className="station-mobile-current"
           aria-expanded={isMobileMenuOpen}

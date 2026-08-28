@@ -478,7 +478,7 @@ export function setupStateBridge() {
   window.appState.resetFreeView = () => {
     const stationIndex = window.appState.currentStationIndex;
     const station = window.appState.stations?.[stationIndex];
-    if (!station?.freeNavigation) return;
+    if (!station?.freeNavigation) return Promise.resolve();
 
     const stationCamera = resolveStationCamera(window.appState.stations, stationIndex, station);
     const cameraPosition = new THREE.Vector3(
@@ -518,33 +518,40 @@ export function setupStateBridge() {
       hasUserManipulatedCamera: false,
       freeNavigationOrbitPivot: { ...window.appState.projectOrbitTarget }
     });
-    const timeline = gsap.timeline({
-      defaults: { duration: resetDuration, ease: 'sine.inOut' },
-      onUpdate: () => ctx.controls.update(),
-      onComplete: () => {
-        ctx.camera.position.copy(cameraPosition);
-        ctx.controls.target.copy(cameraTarget);
-        // The scan contains a surface exactly at the captured station pose.
-        // A microscopic final movement keeps the camera on the visible side
-        // and forces OrbitControls to publish the completed view.
-        ctx.camera.position.z += 0.0001;
-        ctx.targetCameraPos.copy(ctx.camera.position);
-        ctx.targetCameraTarget.copy(cameraTarget);
-        ctx.controls.update();
-        if (ctx.flyToTransitionTween === timeline) ctx.flyToTransitionTween = null;
-      }
+    return new Promise((resolve) => {
+      const timeline = gsap.timeline({
+        defaults: { duration: resetDuration, ease: 'sine.inOut' },
+        onUpdate: () => ctx.controls.update(),
+        onInterrupt: () => {
+          if (ctx.flyToTransitionTween === timeline) ctx.flyToTransitionTween = null;
+          resolve();
+        },
+        onComplete: () => {
+          ctx.camera.position.copy(cameraPosition);
+          ctx.controls.target.copy(cameraTarget);
+          // The scan contains a surface exactly at the captured station pose.
+          // A microscopic final movement keeps the camera on the visible side
+          // and forces OrbitControls to publish the completed view.
+          ctx.camera.position.z += 0.0001;
+          ctx.targetCameraPos.copy(ctx.camera.position);
+          ctx.targetCameraTarget.copy(cameraTarget);
+          ctx.controls.update();
+          if (ctx.flyToTransitionTween === timeline) ctx.flyToTransitionTween = null;
+          resolve();
+        }
+      });
+      ctx.flyToTransitionTween = timeline;
+      timeline.to(ctx.camera.position, {
+        x: cameraPosition.x,
+        y: cameraPosition.y,
+        z: cameraPosition.z
+      }, 0);
+      timeline.to(ctx.controls.target, {
+        x: cameraTarget.x,
+        y: cameraTarget.y,
+        z: cameraTarget.z
+      }, 0);
     });
-    ctx.flyToTransitionTween = timeline;
-    timeline.to(ctx.camera.position, {
-      x: cameraPosition.x,
-      y: cameraPosition.y,
-      z: cameraPosition.z
-    }, 0);
-    timeline.to(ctx.controls.target, {
-      x: cameraTarget.x,
-      y: cameraTarget.y,
-      z: cameraTarget.z
-    }, 0);
   };
 
   window.appState.setFreeNavigationMaxDistance = (value, requiredDistance = 0) => {

@@ -1537,7 +1537,7 @@ body.annotation-placement-mode #scene-canvas {
   white-space: nowrap;
 }
 
-@media (max-width: 768px), (orientation: landscape) and (max-height: 520px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 520px), (hover: none) and (pointer: coarse) {
   .visitor-story-title {
     display: none;
   }
@@ -1942,6 +1942,13 @@ body.annotation-placement-mode #scene-canvas {
   display: none;
 }
 
+.mobile-reveal-instruction,
+.mobile-reveal-explore-guide,
+.mobile-explore-label,
+.mobile-comparison-panel-toggle {
+  display: none;
+}
+
 @media (min-width: 769px) {
   .station-dots-nav {
     width: 48px;
@@ -2106,7 +2113,151 @@ body.annotation-placement-mode #scene-canvas {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (orientation: landscape) and (max-height: 520px), (hover: none) and (pointer: coarse) {
+  .interpretation-comparison {
+    right: 16px !important;
+    bottom: calc(16px + env(safe-area-inset-bottom)) !important;
+    left: 16px !important;
+    width: auto !important;
+    max-height: min(46dvh, 390px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 12px !important;
+    overscroll-behavior: contain;
+  }
+
+  .interpretation-comparison button {
+    min-height: 44px;
+  }
+
+  .mobile-comparison-panel-toggle {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    display: inline-flex;
+    min-height: 34px !important;
+    align-items: center;
+    gap: 5px;
+    padding: 0 8px;
+    border: 1px solid rgba(224, 194, 132, 0.24);
+    border-radius: 9px;
+    color: #ead59e;
+    background: rgba(216, 182, 111, 0.08);
+    font-size: 9px;
+    font-weight: 700;
+    touch-action: manipulation;
+  }
+
+  .interpretation-comparison > #interpretation-comparison-title {
+    min-height: 34px;
+    padding-right: 132px;
+  }
+
+  .interpretation-comparison.is-mobile-collapsed {
+    top: calc(120px + env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .interpretation-comparison.is-mobile-collapsed .interpretation-comparison-content {
+    display: none;
+  }
+
+  body.station-mobile-menu-open .interpretation-comparison,
+  body.station-mobile-menu-open .mobile-reveal-explore-guide {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .mobile-reveal-instruction {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid rgba(216, 182, 111, 0.24);
+    border-radius: 11px;
+    background: rgba(216, 182, 111, 0.09);
+    color: #e9dfcc;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .mobile-reveal-instruction svg {
+    flex: 0 0 auto;
+    color: #e0bd74;
+  }
+
+  .mobile-reveal-instruction strong {
+    color: #f2d99f;
+  }
+
+  .desktop-explore-label {
+    display: none;
+  }
+
+  .mobile-explore-label {
+    display: inline;
+  }
+
+  .free-view-reset.has-mobile-reveal-guide {
+    display: none !important;
+  }
+
+  .mobile-reveal-explore-guide {
+    position: fixed;
+    z-index: 45;
+    top: calc(120px + env(safe-area-inset-top));
+    right: 16px;
+    left: 16px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 7px 8px 7px 12px;
+    border: 1px solid rgba(224, 194, 132, 0.3);
+    border-radius: 15px;
+    background: rgba(5, 6, 8, 0.9);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+    color: #ddd5c5;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+  }
+
+  .mobile-reveal-explore-guide > svg {
+    color: #e0bd74;
+  }
+
+  .mobile-reveal-explore-guide > span {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .mobile-reveal-explore-guide > span strong {
+    display: block;
+    color: #f2d99f;
+    font-size: 11px;
+  }
+
+  .mobile-reveal-explore-guide button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 5px;
+    padding: 0 10px;
+    border: 1px solid rgba(224, 194, 132, 0.34);
+    border-radius: 10px;
+    background: rgba(216, 182, 111, 0.12);
+    color: #f2d99f;
+    font-size: 10px;
+    font-weight: 700;
+    touch-action: manipulation;
+  }
+
   .station-dots-nav.station-line-nav {
     display: none !important;
   }
@@ -2603,6 +2754,15 @@ body.annotation-placement-mode #scene-canvas {
 
 /* Phones in landscape can be wider than the regular mobile breakpoint. */
 @media (orientation: landscape) and (max-height: 520px) {
+  .interpretation-comparison {
+    top: calc(120px + env(safe-area-inset-top)) !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    left: auto !important;
+    width: min(48vw, 420px) !important;
+    max-height: none;
+  }
+
   .station-text-panel-visitor {
     top: auto !important;
     right: auto !important;
