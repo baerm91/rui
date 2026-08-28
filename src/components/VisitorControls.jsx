@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Home, Info, MousePointer2, RotateCcw, ScanSearch, Volume2, VolumeX } from 'lucide-react';
+import { Check, Eye, EyeOff, Home, Info, MousePointer2, RotateCcw, ScanSearch, Volume2, VolumeX } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
 import { isCompactExperienceViewport } from '../utils/revealInteraction.js';
 
@@ -9,7 +9,12 @@ export function VisitorControls({
   authorId,
   authorName,
   editorNames = [],
+  annotationsVisible = true,
+  canEnterFreeView = false,
+  hasAnnotations = false,
   isMuted,
+  onEnterFreeView,
+  onToggleAnnotations,
   onToggleMute,
   storyTitle,
   showStoryTitle = false
@@ -129,16 +134,37 @@ export function VisitorControls({
         )}
       </div>
 
-      {activeStation?.freeNavigation && appState.freeNavigationActive && (
-        <button
-          type="button"
-          onClick={() => window.appState?.resetFreeView?.()}
-          className={`free-view-reset fixed top-5 right-5 z-40 rounded-full border border-white/10 bg-zinc-950/45 p-2.5 text-zinc-400 backdrop-blur-xl pointer-events-auto transition-all duration-300 hover:border-[#c9a96e]/40 hover:bg-zinc-900/60 hover:text-[#c9a96e] hover:shadow-[0_0_15px_rgba(201,169,110,0.2)] active:scale-95 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer ${appState.viewMode === 'reveal' ? 'has-mobile-reveal-guide' : ''}`}
-          title="Ansicht zurücksetzen"
-          aria-label="Ansicht zurücksetzen"
-        >
-          <RotateCcw size={15} />
-        </button>
+      {(canEnterFreeView || hasAnnotations) && (
+        <div className="visitor-view-controls fixed top-5 right-5 z-40 flex items-center gap-2 pointer-events-auto" role="group" aria-label="Ansicht steuern">
+          {hasAnnotations && (
+            <button
+              type="button"
+              className={`visitor-view-control ${annotationsVisible ? 'is-active' : ''}`}
+              aria-pressed={annotationsVisible}
+              aria-label={annotationsVisible ? 'Annotationen ausblenden' : 'Annotationen einblenden'}
+              title={annotationsVisible ? 'Annotationen ausblenden' : 'Annotationen einblenden'}
+              onClick={onToggleAnnotations}
+            >
+              {annotationsVisible ? <Eye size={15} /> : <EyeOff size={15} />}
+              <span>{annotationsVisible ? 'Annotationen an' : 'Annotationen aus'}</span>
+            </button>
+          )}
+          {canEnterFreeView && !appState.freeNavigationActive && (
+            <button type="button" className="visitor-view-control" onClick={onEnterFreeView} aria-label="Freie Ansicht öffnen">
+              <MousePointer2 size={15} /> <span>Freie Ansicht</span>
+            </button>
+          )}
+          {canEnterFreeView && appState.freeNavigationActive && (
+            <>
+              <button type="button" className="visitor-view-control" onClick={() => window.appState?.resetFreeView?.()} aria-label="Freie Ansicht zurücksetzen" title="Freie Ansicht zurücksetzen">
+                <RotateCcw size={15} /> <span>Zurücksetzen</span>
+              </button>
+              <button type="button" className="visitor-view-control is-active" onClick={() => window.appState?.exitFreeNavigation?.()} aria-label="Zur geführten Ansicht zurückkehren">
+                <Check size={15} /> <span>Geführte Ansicht</span>
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       {activeStation?.freeNavigation && appState.freeNavigationActive && appState.viewMode === 'reveal' && (
@@ -155,18 +181,6 @@ export function VisitorControls({
             <Check size={15} aria-hidden="true" /> {appState.freeNavigationExitPending ? 'Zurück …' : 'Fertig'}
           </button>
         </div>
-      )}
-
-      {activeStation?.freeNavigation && !appState.freeNavigationActive && !activeStation?.interpretationComparison && (
-        <button
-          type="button"
-          onClick={() => window.appState?.activateFreeNavigation?.()}
-          className="fixed bottom-8 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full border border-amber-500/30 bg-zinc-950/80 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200 shadow-[0_5px_24px_rgba(0,0,0,0.55)] backdrop-blur-xl transition-all hover:border-amber-400/60 hover:bg-zinc-900/90 active:scale-95"
-          aria-label="Freie Ansicht aktivieren"
-        >
-          <MousePointer2 size={14} />
-          Freie Ansicht per Klick aktivieren
-        </button>
       )}
 
       {activeStation?.interpretationComparison && !appState.freeNavigationActive && (
