@@ -51,23 +51,6 @@ export function setSketchfabCamera(api, camera, duration = 0) {
   ));
 }
 
-export function rotateSketchfabCamera(camera, angle) {
-  const position = Array.isArray(camera?.position) ? camera.position : [0, 0, 0];
-  const target = Array.isArray(camera?.target) ? camera.target : [0, 0, 0];
-  const cosine = Math.cos(Number(angle) || 0);
-  const sine = Math.sin(Number(angle) || 0);
-  const offsetX = (Number(position[0]) || 0) - (Number(target[0]) || 0);
-  const offsetY = (Number(position[1]) || 0) - (Number(target[1]) || 0);
-  return {
-    position: [
-      (Number(target[0]) || 0) + offsetX * cosine - offsetY * sine,
-      (Number(target[1]) || 0) + offsetX * sine + offsetY * cosine,
-      Number(position[2]) || 0
-    ],
-    target: target.map((value) => Number(value) || 0)
-  };
-}
-
 export function orbitSketchfabCamera(camera, deltaX, deltaY, sensitivity = .006) {
   const position = Array.isArray(camera?.position) ? camera.position.map((value) => Number(value) || 0) : [0, 0, 0];
   const target = Array.isArray(camera?.target) ? camera.target.map((value) => Number(value) || 0) : [0, 0, 0];

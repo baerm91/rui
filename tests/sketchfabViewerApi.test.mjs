@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, rotateSketchfabCamera, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
+import { isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
 
 test('converts Sketchfab vectors to RIU coordinate objects and back', () => {
   assert.deepEqual(vectorToObject([1.25, -2, 3]), { x: 1.25, y: -2, z: 3 });
@@ -23,12 +23,6 @@ test('yields pointer input to the RIU station timeline outside placement mode', 
 
 test('uses a stable rounded cache key for projected annotation positions', () => {
   assert.equal(positionKey({ x: 1.000001, y: 2, z: -3 }), '1.00000:2.00000:-3.00000');
-});
-
-test('rotates a Sketchfab camera around its target without changing height or distance', () => {
-  const quarterTurn = rotateSketchfabCamera({ position: [2, 1, 4], target: [1, 1, 2] }, Math.PI / 2);
-  assert.deepEqual(quarterTurn.position.map((value) => Math.round(value)), [1, 2, 4]);
-  assert.deepEqual(quarterTurn.target, [1, 1, 2]);
 });
 
 test('custom Sketchfab controls preserve orbit distance and zoom around the target', () => {

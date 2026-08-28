@@ -182,10 +182,6 @@ export function resolveSpatialVisitorItemId(station = {}, items = station.items,
   return availableItems[Math.floor(safeRandomValue * availableItems.length)].id;
 }
 
-export function shouldAutoRotateSpatialModel(lastInteractionAt, now, delay = 10000) {
-  return Number.isFinite(lastInteractionAt) && Number.isFinite(now) && now - lastInteractionAt >= delay;
-}
-
 export function resolveSpatialOverviewCamera(stations = []) {
   const positions = (Array.isArray(stations) ? stations : [])
     .map((station) => vector(station?.spatial?.position ?? station?.position, [0, 0, 0]));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -58,12 +58,6 @@ test('station start model is explicit and visitors get a random fallback', () =>
   assert.equal(resolveSpatialVisitorItemId({}, items, 0), 'one');
   assert.equal(resolveSpatialVisitorItemId({}, items, .999), 'two');
   assert.equal(resolveSpatialVisitorItemId({}, [], .5), null);
-});
-
-test('spatial model auto rotation starts only after ten seconds of inactivity', () => {
-  assert.equal(shouldAutoRotateSpatialModel(1000, 10999), false);
-  assert.equal(shouldAutoRotateSpatialModel(1000, 11000), true);
-  assert.equal(shouldAutoRotateSpatialModel(8000, 12000), false);
 });
 
 test('carousel items can be reordered without changing their data', () => {

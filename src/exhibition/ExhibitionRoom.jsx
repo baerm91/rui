@@ -10,8 +10,8 @@ import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePoin
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
-import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
-import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
+import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
+import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../utils/spatialStory.js';
 import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import './exhibitionRoom.css';
 
@@ -516,14 +516,10 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     observer.observe(canvas);
     const pointerStart = { x: 0, y: 0 };
     let activeModelPointerId = null;
-    let lastModelInteractionAt = performance.now();
-    let lastFrameAt = performance.now();
-    const markModelActivity = () => { lastModelInteractionAt = performance.now(); };
     const finishModelInteraction = (event) => {
       const eventPointerId = event?.pointerId ?? (event?.type?.startsWith('mouse') ? 'mouse' : null);
       if (activeModelPointerId === null || (eventPointerId !== null && eventPointerId !== activeModelPointerId)) return;
       activeModelPointerId = null;
-      markModelActivity();
       modelInteractionRef.current?.(false);
     };
     const raycaster = new THREE.Raycaster();
@@ -575,7 +571,6 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const handlePointerDown = (event) => {
       pointerStart.x = event.clientX;
       pointerStart.y = event.clientY;
-      markModelActivity();
       if (!overviewModeRef.current && !editorModeRef.current && selectedItemRef.current?.sourceType === 'gltf' && resolveModelHit(event)) {
         activeModelPointerId = event.pointerId ?? 'pointer';
         modelInteractionRef.current?.(true);
@@ -583,7 +578,6 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     };
     const handleMouseDown = (event) => {
       if (activeModelPointerId !== null || overviewModeRef.current || editorModeRef.current || selectedItemRef.current?.sourceType !== 'gltf') return;
-      markModelActivity();
       if (!resolveModelHit(event)) return;
       activeModelPointerId = 'mouse';
       modelInteractionRef.current?.(true);
@@ -605,14 +599,13 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     canvas.addEventListener('pointerup', handlePointerUp);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', finishModelInteraction);
-    canvas.addEventListener('wheel', markModelActivity, { passive: true });
     addEventListener('pointerup', finishModelInteraction);
     addEventListener('pointercancel', finishModelInteraction);
     addEventListener('mouseup', finishModelInteraction);
     resize();
     const initialOverviewLayout = overviewMode || (largePresentation && !editorMode);
     rebuildStations(stations, stationIndex, initialOverviewLayout);
-    runtimeRef.current = { camera, controls, renderer, environmentTexture: environmentTarget.texture, hemi, key, rebuildStations, setOverviewContentOpacity, getOverviewContentOpacity: () => overviewContentOpacity, markModelActivity, renderedOverviewMode: initialOverviewLayout, lastViewWasOverview: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
+    runtimeRef.current = { camera, controls, renderer, environmentTexture: environmentTarget.texture, hemi, key, rebuildStations, setOverviewContentOpacity, getOverviewContentOpacity: () => overviewContentOpacity, renderedOverviewMode: initialOverviewLayout, lastViewWasOverview: overviewMode, cameraTransitionFrame: null, hasCameraView: false };
     onCameraReady?.(() => ({ position: camera.position.toArray(), target: controls.target.toArray(), fov: camera.fov }));
     const projectPoint = (point, rect) => {
       const projected = point.project(camera);
@@ -670,16 +663,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       });
     };
     let frame;
-    const animate = (now = performance.now()) => {
-      const elapsedSeconds = Math.min(.05, Math.max(0, now - lastFrameAt) / 1000);
-      lastFrameAt = now;
-      if (!overviewModeRef.current && !editorModeRef.current && selectedItemRef.current && shouldAutoRotateSpatialModel(lastModelInteractionAt, now)) {
-        const modelPivot = modelRoot.children[0];
-        if (modelPivot) {
-          const rampProgress = Math.min(1, (now - lastModelInteractionAt - 10000) / 1600);
-          modelPivot.rotation.y += elapsedSeconds * .16 * rampProgress * (2 - rampProgress);
-        }
-      }
+    const animate = () => {
       controls.update();
       canvas.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(4)).join(',');
       canvas.dataset.cameraTarget = controls.target.toArray().map((value) => value.toFixed(4)).join(',');
@@ -698,7 +682,6 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       canvas.removeEventListener('pointerup', handlePointerUp);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', finishModelInteraction);
-      canvas.removeEventListener('wheel', markModelActivity);
       removeEventListener('pointerup', finishModelInteraction);
       removeEventListener('pointercancel', finishModelInteraction);
       removeEventListener('mouseup', finishModelInteraction);
@@ -727,7 +710,6 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     if (overviewMode && !overviewContentVisible) runtimeRef.current?.setOverviewContentOpacity(0);
   }, [overviewContentVisible, overviewMode]);
   useEffect(() => {
-    runtimeRef.current?.markModelActivity();
     modelInteractionRef.current?.(false);
   }, [overviewMode, selectedItem?.id, stationIndex]);
   useEffect(() => {
@@ -956,12 +938,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     const interactionLayer = interactionLayerRef.current;
     let disposed = false;
     let api = null;
-    let idleTimer = null;
-    let spinCamera = null;
-    let autoRotating = false;
-    let spinFrame = null;
-    let spinLastAt = 0;
-    let spinRampStartAt = 0;
     let activePointerId = null;
     let activePointerButton = 0;
     let pointerX = 0;
@@ -971,46 +947,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
     let pendingDeltaY = 0;
     let interactionFrame = null;
 
-    const stopAutoRotation = () => {
-      autoRotating = false;
-      spinCamera = null;
-      if (spinFrame) cancelAnimationFrame(spinFrame);
-      spinFrame = null;
-    };
-    const spin = (now) => {
-      spinFrame = null;
-      if (disposed || !autoRotating || !api || !spinCamera) return;
-      const elapsedSeconds = Math.min(.05, Math.max(0, now - spinLastAt) / 1000);
-      spinLastAt = now;
-      const rampProgress = Math.min(1, (now - spinRampStartAt) / 1600);
-      const easedSpeed = .16 * rampProgress * (2 - rampProgress);
-      spinCamera = rotateSketchfabCamera(spinCamera, elapsedSeconds * easedSpeed);
-      api.setCameraLookAt(spinCamera.position, spinCamera.target, 0);
-      spinFrame = requestAnimationFrame(spin);
-    };
-    const startAutoRotation = () => {
-      if (!api || disposed) return;
-      api.getCameraLookAt((error, camera) => {
-        if (error || disposed || !camera || activePointerId !== null || autoRotating) return;
-        spinCamera = camera;
-        autoRotating = true;
-        spinLastAt = performance.now();
-        spinRampStartAt = spinLastAt;
-        spinFrame = requestAnimationFrame(spin);
-      });
-    };
-    const pauseAutoRotation = () => {
-      clearTimeout(idleTimer);
-      idleTimer = null;
-      stopAutoRotation();
-    };
-    const scheduleAutoRotation = () => {
-      pauseAutoRotation();
-      idleTimer = setTimeout(() => {
-        idleTimer = null;
-        startAutoRotation();
-      }, 10000);
-    };
     const applyPointerTransform = () => {
       interactionFrame = null;
       if (!api || !interactionCamera || activePointerId === null) return;
@@ -1032,7 +968,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       pendingDeltaX = 0;
       pendingDeltaY = 0;
       interactionLayer.setPointerCapture(event.pointerId);
-      pauseAutoRotation();
       interactionRef.current?.(true);
       api.getCameraLookAt((error, camera) => {
         if (error || disposed || activePointerId !== event.pointerId) return;
@@ -1059,15 +994,12 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       pendingDeltaY = 0;
       if (interactionFrame) cancelAnimationFrame(interactionFrame);
       interactionFrame = null;
-      scheduleAutoRotation();
       interactionRef.current?.(false);
     };
     const handleContextMenu = (event) => event.preventDefault();
     const handleWheel = (event) => {
       if (!api) return;
       event.preventDefault();
-      if (activePointerId === null) scheduleAutoRotation();
-      else pauseAutoRotation();
       api.getCameraLookAt((error, camera) => {
         if (error || disposed || !camera) return;
         const nextCamera = zoomSketchfabCamera(camera, event.deltaY);
@@ -1084,7 +1016,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
           if (disposed) return;
           api = nextApi;
           api.start();
-          api.addEventListener('viewerready', scheduleAutoRotation);
         },
         error() {}
       });
@@ -1098,8 +1029,6 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
 
     return () => {
       disposed = true;
-      clearTimeout(idleTimer);
-      stopAutoRotation();
       if (interactionFrame) cancelAnimationFrame(interactionFrame);
       interactionLayer.removeEventListener('pointerdown', handlePointerDown);
       interactionLayer.removeEventListener('pointermove', handlePointerMove);
