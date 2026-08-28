@@ -10,7 +10,7 @@ export const MODEL_SOURCE_ADAPTERS = {
       const response = await fetch(`https://sketchfab.com/oembed?url=${encodeURIComponent(url)}`);
       if (!response.ok) throw new Error('Sketchfab-Metadaten konnten nicht geladen werden.');
       const data = await response.json();
-      return { title: data.title || '', thumbnailUrl: data.thumbnail_url || '', attribution: data.author_name || '' };
+      return { title: data.title || '', providerThumbnailUrl: data.thumbnail_url || '', attribution: data.author_name || '' };
     }
   },
   gltf: {
@@ -21,8 +21,24 @@ export const MODEL_SOURCE_ADAPTERS = {
   }
 };
 
+const metadataRequests = new Map();
+
 export function getModelSourceAdapter(urlOrType) {
   const type = MODEL_SOURCE_ADAPTERS[urlOrType] ? urlOrType : getSpatialSourceType(urlOrType);
   return MODEL_SOURCE_ADAPTERS[type] || null;
 }
 
+export function resolveModelSourceMetadata(url) {
+  const adapter = getModelSourceAdapter(url);
+  if (!adapter) return Promise.resolve({});
+  const key = `${adapter.type}:${url}`;
+  if (!metadataRequests.has(key)) {
+    const request = Promise.resolve(adapter.resolveMetadata(url))
+      .catch((error) => {
+        metadataRequests.delete(key);
+        throw error;
+      });
+    metadataRequests.set(key, request);
+  }
+  return metadataRequests.get(key);
+}

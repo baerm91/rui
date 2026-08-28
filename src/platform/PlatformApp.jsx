@@ -24,6 +24,7 @@ import { getPublishedDiscoverStories, getRandomFeaturedDiscoverStoryId } from '.
 import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
 import { isRoomStory } from '../utils/storyExperience.js';
 import { getStoryCounts } from './storyCounts.js';
+import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 
 const go = (path) => { window.location.href = path; };
 const getPreferredTheme = () => {
@@ -172,8 +173,9 @@ const drawPreviewText = (context, text, x, y, maximumWidth, lineHeight, maximumL
 };
 
 const createExhibitionPreviewImage = async (story, station, item) => {
-  if (!item?.thumbnailUrl) throw new Error('Dieses Objekt besitzt noch kein Thumbnail.');
-  const image = await loadPreviewImage(item.thumbnailUrl);
+  const thumbnailUrl = resolveSpatialThumbnailUrl(item);
+  if (!thumbnailUrl) throw new Error('Dieses Objekt besitzt noch kein Thumbnail.');
+  const image = await loadPreviewImage(thumbnailUrl);
   const canvas = document.createElement('canvas');
   canvas.width = 960;
   canvas.height = 540;
@@ -534,7 +536,7 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
   const [previewBuilderOpen, setPreviewBuilderOpen] = useState(false);
   const firstStation = story.stations?.[0] || null;
   const previewItems = isRoomStory(story) ? (firstStation?.items || []).filter((item) => item?.modelUrl) : [];
-  const [previewItemId, setPreviewItemId] = useState(() => previewItems.find((item) => item.thumbnailUrl)?.id || previewItems[0]?.id || '');
+  const [previewItemId, setPreviewItemId] = useState(() => previewItems.find((item) => resolveSpatialThumbnailUrl(item))?.id || previewItems[0]?.id || '');
 
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
@@ -578,8 +580,9 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
       setCoverImage(await createExhibitionPreviewImage(story, firstStation, item));
       setPreviewBuilderOpen(false);
     } catch (cause) {
-      if (/^https?:\/\//i.test(item.thumbnailUrl)) {
-        setCoverImage(item.thumbnailUrl);
+      const thumbnailUrl = resolveSpatialThumbnailUrl(item);
+      if (/^https?:\/\//i.test(thumbnailUrl)) {
+        setCoverImage(thumbnailUrl);
         setPreviewBuilderOpen(false);
       } else {
         setError(cause.message);
@@ -615,7 +618,7 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
       <section className="metadata-dialog" role="dialog" aria-modal="true" aria-labelledby="metadata-dialog-title">
         <div className="metadata-dialog-header"><div><span className="riu-overline">Story bearbeiten</span><h2 id="metadata-dialog-title">Metadaten</h2></div><div className="metadata-dialog-header-actions"><button type="button" className="metadata-create-preview" onClick={createPreview} disabled={busy}><Camera size={15} />{coverImage ? 'Preview neu erstellen' : 'Preview erstellen'}</button><button type="button" onClick={onClose} aria-label="Dialog schließen"><X size={19} /></button></div></div>
         <form onSubmit={submit}>
-          {previewBuilderOpen && <section className="metadata-preview-builder"><div><span>Ausstellung · Station 1</span><strong>Objekt für das Preview wählen</strong><small>Das gewählte Objekt wird zusammen mit Titel und Einführung der ersten Station als 16:9-Vorschau gestaltet.</small></div><div className="metadata-preview-object-list">{previewItems.map((item) => <button key={item.id} type="button" className={item.id === previewItemId ? 'is-selected' : ''} onClick={() => setPreviewItemId(item.id)} disabled={!item.thumbnailUrl}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={22} />}</span><b>{item.title || 'Unbenanntes Objekt'}</b>{!item.thumbnailUrl && <small>Kein Thumbnail</small>}</button>)}</div><div className="metadata-preview-builder-actions"><button type="button" onClick={() => setPreviewBuilderOpen(false)}>Abbrechen</button><button type="button" className="riu-button" onClick={createPreview} disabled={busy || !previewItemId}>{busy ? 'Preview wird erstellt …' : 'Aus Auswahl erstellen'}</button></div></section>}
+          {previewBuilderOpen && <section className="metadata-preview-builder"><div><span>Ausstellung · Station 1</span><strong>Objekt für das Preview wählen</strong><small>Das gewählte Objekt wird zusammen mit Titel und Einführung der ersten Station als 16:9-Vorschau gestaltet.</small></div><div className="metadata-preview-object-list">{previewItems.map((item) => { const thumbnailUrl = resolveSpatialThumbnailUrl(item); return <button key={item.id} type="button" className={item.id === previewItemId ? 'is-selected' : ''} onClick={() => setPreviewItemId(item.id)} disabled={!thumbnailUrl}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" /> : <Box size={22} />}</span><b>{item.title || 'Unbenanntes Objekt'}</b>{!thumbnailUrl && <small>Kein Thumbnail</small>}</button>; })}</div><div className="metadata-preview-builder-actions"><button type="button" onClick={() => setPreviewBuilderOpen(false)}>Abbrechen</button><button type="button" className="riu-button" onClick={createPreview} disabled={busy || !previewItemId}>{busy ? 'Preview wird erstellt …' : 'Aus Auswahl erstellen'}</button></div></section>}
           <div className="metadata-cover" style={{ backgroundImage: `url("${coverImage || '/roman_blueprint_bg.png'}")` }}><span>Vorschau · 16:9</span></div>
           <div className="metadata-cover-actions">
             <label><Upload size={15} /> Eigenes Bild hochladen<input type="file" accept="image/*" onChange={uploadCover} /></label>

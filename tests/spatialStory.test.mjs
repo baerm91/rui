@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -35,6 +35,17 @@ test('Sketchfab and direct glTF sources use separate adapter types', () => {
   assert.equal(getSpatialSourceType('https://sketchfab.com/3d-models/object-0123456789abcdef0123456789abcdef'), 'sketchfab');
   assert.equal(getSpatialSourceType('https://example.org/model.gltf'), 'gltf');
   assert.equal(getSpatialSourceType('https://example.org/model.obj'), 'unknown');
+});
+
+test('custom thumbnails override the persistent Sketchfab provider fallback', () => {
+  const item = createSpatialItem({
+    modelUrl: 'https://sketchfab.com/models/0123456789abcdef0123456789abcdef',
+    thumbnailUrl: 'https://example.org/custom.jpg',
+    providerThumbnailUrl: 'https://media.sketchfab.com/default.jpg'
+  });
+  assert.equal(resolveSpatialThumbnailUrl(item), 'https://example.org/custom.jpg');
+  assert.equal(resolveSpatialThumbnailUrl({ ...item, thumbnailUrl: '' }), 'https://media.sketchfab.com/default.jpg');
+  assert.equal(item.providerThumbnailUrl, 'https://media.sketchfab.com/default.jpg');
 });
 
 test('station start model is explicit and visitors get a random fallback', () => {

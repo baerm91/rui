@@ -40,6 +40,7 @@ export function createSpatialItem(input = {}, index = 0) {
     title: String(input.title || `Objekt ${index + 1}`).trim(),
     description: String(input.description || '').trim(),
     thumbnailUrl: String(input.thumbnailUrl || '').trim(),
+    providerThumbnailUrl: String(input.providerThumbnailUrl || '').trim(),
     thumbnailTransform: {
       position: visibleThumbnailPosition(input.thumbnailTransform?.position, index),
       rotation: vector(input.thumbnailTransform?.rotation, [0, 0, 0]),
@@ -53,6 +54,10 @@ export function createSpatialItem(input = {}, index = 0) {
     attribution: String(input.attribution || '').trim(),
     license: String(input.license || '').trim()
   };
+}
+
+export function resolveSpatialThumbnailUrl(item = {}) {
+  return String(item.thumbnailUrl || item.providerThumbnailUrl || '').trim();
 }
 
 export function normalizeSpatialStation(station = {}, index = 0, options = {}) {

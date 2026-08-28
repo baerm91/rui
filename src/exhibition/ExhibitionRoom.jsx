@@ -9,8 +9,9 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePointer2, Rotate3D, Volume2, VolumeX } from 'lucide-react';
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
+import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
 import { loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, rotateSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
-import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
+import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId, shouldAutoRotateSpatialModel } from '../utils/spatialStory.js';
 import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import './exhibitionRoom.css';
 
@@ -422,7 +423,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           group.add(wash);
         }
 
-        const previewItems = station.items.filter((item) => item.thumbnailUrl).slice(0, 6);
+        const previewItems = station.items.filter((item) => resolveSpatialThumbnailUrl(item)).slice(0, 6);
         const stationPreviewEntries = [];
         const layoutStationPreviews = () => {
           if (!stationPreviewEntries.length) return;
@@ -472,7 +473,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
               image.style.width = `${entry.sourceWidth}px`;
               layoutStationPreviews();
             }, { once: true });
-            image.src = item.thumbnailUrl;
+            image.src = resolveSpatialThumbnailUrl(item);
             overviewOverlay.append(image);
             stationPreviewEntries.push(entry);
             overlayEntries.push(entry);
@@ -1189,7 +1190,8 @@ function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect,
   const left = Math.max(5, Math.min(95, 50 + position[0] * 13));
   const top = Math.max(10, Math.min(90, 52 - position[1] * 20));
   const width = 118 * item.thumbnailTransform.scale;
-  return <button ref={buttonRef} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
+  const thumbnailUrl = resolveSpatialThumbnailUrl(item);
+  return <button ref={buttonRef} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
 }
 
 export default function ExhibitionRoom({ story, initialMode = 'visitor', backHref = '/', onSaveStory }) {
@@ -1217,7 +1219,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     ...story,
     models: {
       ...story.models,
-      additional: stations.flatMap((entry) => entry.items.map((item) => ({ id: item.id, name: item.title, url: item.modelUrl, thumbnailUrl: item.thumbnailUrl })))
+      additional: stations.flatMap((entry) => entry.items.map((item) => ({ id: item.id, name: item.title, url: item.modelUrl, thumbnailUrl: resolveSpatialThumbnailUrl(item) })))
     }
   };
   const updateStation = (index, patch) => setStations((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
@@ -1379,6 +1381,41 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     const itemId = active?.selectedItemId || active?.items[0]?.id;
     setSelectedThumbnailIds(itemId ? [itemId] : []);
   }, [mode, stationIndex]);
+  useEffect(() => {
+    const missing = stations.flatMap((entry, entryIndex) => entry.items
+      .filter((item) => item.sourceType === 'sketchfab' && !resolveSpatialThumbnailUrl(item))
+      .map((item) => ({ entryIndex, itemId: item.id, modelUrl: item.modelUrl })));
+    if (!missing.length) return undefined;
+    let cancelled = false;
+    Promise.all(missing.map(async (item) => {
+      try {
+        const metadata = await resolveModelSourceMetadata(item.modelUrl);
+        return { ...item, providerThumbnailUrl: String(metadata.providerThumbnailUrl || '').trim() };
+      } catch {
+        return { ...item, providerThumbnailUrl: '' };
+      }
+    })).then((resolved) => {
+      if (cancelled) return;
+      const available = resolved.filter((item) => item.providerThumbnailUrl);
+      if (!available.length) return;
+      setStations((current) => {
+        let changed = false;
+        const next = current.map((entry, entryIndex) => {
+          const replacements = available.filter((item) => item.entryIndex === entryIndex);
+          if (!replacements.length) return entry;
+          const items = entry.items.map((item) => {
+            const replacement = replacements.find((candidate) => candidate.itemId === item.id && candidate.modelUrl === item.modelUrl);
+            if (!replacement || resolveSpatialThumbnailUrl(item)) return item;
+            changed = true;
+            return { ...item, providerThumbnailUrl: replacement.providerThumbnailUrl };
+          });
+          return items === entry.items ? entry : { ...entry, items };
+        });
+        return changed ? next : current;
+      });
+    });
+    return () => { cancelled = true; };
+  }, [stations]);
   useEffect(() => {
     const audio = station?.spatial.audio;
     if (!audio?.url || (!audio.autoplay && !audioPlaying) || mode === 'editor') return undefined;

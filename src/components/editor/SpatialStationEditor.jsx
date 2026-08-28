@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Box, Camera, Check, ImagePlus, Lightbulb, Link2, Music2, Play, Plus, Trash2 } from 'lucide-react';
-import { createSpatialItem, isValidSpatialModelUrl } from '../../utils/spatialStory.js';
-import { getModelSourceAdapter } from '../../utils/modelSourceAdapters.js';
+import { createSpatialItem, isValidSpatialModelUrl, resolveSpatialThumbnailUrl } from '../../utils/spatialStory.js';
+import { resolveModelSourceMetadata } from '../../utils/modelSourceAdapters.js';
 import { alignThumbnailSelection, createThumbnailLayout } from '../../utils/spatialThumbnailLayout.js';
 
 const VectorFields = ({ label, value = [0, 0, 0], onChange, step = .1 }) => <label className="spatial-vector-field"><span>{label}</span><span>{['X', 'Y', 'Z'].map((axis, index) => <input key={axis} type="number" step={step} value={value[index] ?? 0} aria-label={`${label} ${axis}`} onChange={(event) => { const next = [...value]; next[index] = Number(event.target.value); onChange(next); }} />)}</span></label>;
@@ -21,9 +21,8 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
     const trimmed = url.trim();
     if (!isValidSpatialModelUrl(trimmed)) { setUrlError('Bitte eine Sketchfab-, GLB- oder glTF-URL eingeben.'); return; }
     setResolving(true); setUrlError('');
-    const adapter = getModelSourceAdapter(trimmed);
     let metadata = {};
-    try { metadata = await adapter?.resolveMetadata(trimmed) || {}; } catch { /* URL remains usable without metadata. */ }
+    try { metadata = await resolveModelSourceMetadata(trimmed); } catch { /* URL remains usable without metadata. */ }
     const item = createSpatialItem({ modelUrl: trimmed, ...metadata }, station.items?.length || 0);
     onAddItem(index, item);
     setUrl(''); setResolving(false);
@@ -57,7 +56,7 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
       <label>Stationstitel<input value={station.title || ''} onChange={(event) => onUpdateStation(index, { title: event.target.value })} /></label>
       <label>Einführungstext<textarea rows="4" value={station.introduction ?? station.description ?? ''} onChange={(event) => onUpdateStation(index, { introduction: event.target.value, description: event.target.value })} /></label>
       <div className="spatial-add-model"><span><Link2 size={14} /> Modell über URL hinzufügen</span><input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="Sketchfab, .glb oder .gltf" /><button onClick={addModel} disabled={resolving}><Plus size={13} />{resolving ? 'Prüfen …' : 'Hinzufügen'}</button>{urlError && <small>{urlError}</small>}</div>
-      <div className="spatial-item-list">{(station.items || []).map((item) => <button key={item.id} className={`${item.id === selectedItem?.id ? 'is-active' : ''} ${selectedItemIds.includes(item.id) ? 'is-multi-selected' : ''}`} onClick={(event) => onSelectItem(item.id, event)}><span>{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>)}</div>
+      <div className="spatial-item-list">{(station.items || []).map((item) => { const thumbnailUrl = resolveSpatialThumbnailUrl(item); return <button key={item.id} className={`${item.id === selectedItem?.id ? 'is-active' : ''} ${selectedItemIds.includes(item.id) ? 'is-multi-selected' : ''}`} onClick={(event) => onSelectItem(item.id, event)}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" /> : <Box size={18} />}</span><b>{item.title}</b><small>{item.id === station.initialItemId ? `Startmodell · ${item.sourceType}` : item.sourceType}</small></button>; })}</div>
       {(station.items || []).length > 1 && <div className="spatial-layout-tools">
         <div className="spatial-layout-heading"><strong>Thumbnail-Layout</strong><span>{selectedItemIds.length} ausgewählt</span></div>
         <div className="spatial-thumbnail-layout-switch" aria-label="Thumbnail-Darstellung">
@@ -99,7 +98,7 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
         <button className={`spatial-start-model ${station.initialItemId === selectedItem.id ? 'is-active' : ''}`} type="button" onClick={() => onUpdateStation(index, { initialItemId: station.initialItemId === selectedItem.id ? null : selectedItem.id })}>{station.initialItemId === selectedItem.id ? <Check size={13} /> : <Play size={13} />}{station.initialItemId === selectedItem.id ? 'Startmodell entfernen · zufällig wählen' : 'Als Startmodell festlegen'}</button>
         <label>Titel<input value={selectedItem.title} onChange={(event) => onUpdateItem(index, selectedItem.id, { title: event.target.value })} /></label>
         <label>Beschreibung<textarea rows="2" value={selectedItem.description} onChange={(event) => onUpdateItem(index, selectedItem.id, { description: event.target.value })} /></label>
-        <label>Thumbnail-URL<input value={selectedItem.thumbnailUrl} onChange={(event) => onUpdateItem(index, selectedItem.id, { thumbnailUrl: event.target.value })} /></label>
+        <label>Eigenes Thumbnail <span>(optional)</span><input value={selectedItem.thumbnailUrl} onChange={(event) => onUpdateItem(index, selectedItem.id, { thumbnailUrl: event.target.value })} placeholder={selectedItem.providerThumbnailUrl ? 'Sketchfab-Vorschaubild wird verwendet' : 'https://…/thumbnail.jpg'} /></label>
         <button className="spatial-upload" onClick={() => fileRef.current?.click()}><ImagePlus size={13} /> Eigenes Thumbnail hochladen</button><input ref={fileRef} hidden type="file" accept="image/*" onChange={(event) => uploadThumbnail(event.target.files?.[0])} />
         <VectorFields label="Thumbnail-Position" value={selectedItem.thumbnailTransform.position} onChange={(position) => onUpdateItem(index, selectedItem.id, { thumbnailTransform: { ...selectedItem.thumbnailTransform, position } })} />
         <RangeField label="Thumbnail-Größe" value={selectedItem.thumbnailTransform.scale} min={.35} max={2.5} step={.05} onChange={(scale) => onUpdateItem(index, selectedItem.id, { thumbnailTransform: { ...selectedItem.thumbnailTransform, scale } })} />
