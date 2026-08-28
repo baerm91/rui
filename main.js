@@ -27,7 +27,8 @@ import {
   applyFreeOrbitRotation,
   applyFreeViewPan,
   createFreeNavigationActivationState,
-  isFreeNavigationActiveState
+  isFreeNavigationActiveState,
+  resolveCanvasTouchAction
 } from './src/three/freeOrbit.js';
 import { normalizeProjectCameraFov, normalizeProjectOrbitTarget } from './src/projects/projectSettings.js';
 import { isSketchfabModelUrl } from './src/utils/modelSource.js';
@@ -515,6 +516,7 @@ function syncScrollControlsForStation(station) {
   const freeNavigationIsActive = canNavigateFreely
     && window.appState.freeNavigationActive
     && window.appState.freeNavigationStationId === station.id;
+  canvas.style.touchAction = resolveCanvasTouchAction('scroll', freeNavigationIsActive);
   controls.enabled = freeNavigationIsActive;
   controls.mouseButtons.RIGHT = null;
   controls.panSpeed = 1;

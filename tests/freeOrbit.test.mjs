@@ -7,6 +7,7 @@ import {
   createFreeNavigationActivationState,
   isFreeNavigationActiveState,
   isKeyboardNavigationAllowedState,
+  resolveCanvasTouchAction,
   resolveFreeMovementSpeed,
   resolveFreeNavigationMaxDistance
 } from '../src/three/freeOrbit.js';
@@ -80,6 +81,12 @@ test('WASD stays enabled in active free navigation but not on the scroll timelin
     ...scrollState,
     stationMode: 'editor'
   }), true);
+});
+
+test('guided mobile stations allow page scrolling until free exploration starts', () => {
+  assert.equal(resolveCanvasTouchAction('scroll', false), 'pan-y');
+  assert.equal(resolveCanvasTouchAction('scroll', true), 'none');
+  assert.equal(resolveCanvasTouchAction('editor', false), 'none');
 });
 
 test('free rotation is a rigid orbit around the independent project pivot', () => {

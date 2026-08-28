@@ -37,6 +37,10 @@ export function isKeyboardNavigationAllowedState(appState) {
   return appState?.stationMode !== 'scroll' || isFreeNavigationActiveState(appState);
 }
 
+export function resolveCanvasTouchAction(stationMode, freeNavigationIsActive = false) {
+  return stationMode === 'scroll' && !freeNavigationIsActive ? 'pan-y' : 'none';
+}
+
 export function resolveFreeNavigationMaxDistance(configuredDistance, minDistance, currentDistance) {
   const configured = Number.isFinite(configuredDistance) ? configuredDistance : 40;
   return Math.max(

@@ -9,7 +9,7 @@ import { siteConfig } from '../site.config.js';
 import { DEFAULT_PROJECT_LIGHTING } from '../constants.js';
 import { deleteProjectModelFiles, saveProjectModelFiles } from '../projects/projectModelStore.js';
 import { resolveStationCamera } from './stationCamera.js';
-import { resolveFreeNavigationMaxDistance } from './freeOrbit.js';
+import { resolveCanvasTouchAction, resolveFreeNavigationMaxDistance } from './freeOrbit.js';
 import { resolveAnnotationFocusView } from './annotationCamera.js';
 import { horizontalFovToVertical, normalizeProjectCameraFov } from '../projects/projectSettings.js';
 import { resolveCameraTransitionDuration } from '../utils/cameraTransition.js';
@@ -456,6 +456,7 @@ export function setupStateBridge() {
           }
         : {})
     });
+    ctx.canvas.style.touchAction = resolveCanvasTouchAction(mode);
     if (ctx.localModel) {
       const usesLocalProjectModel = window.appState.activeProjectId !== siteConfig.id;
       ctx.localModel.visible = mode === 'editor' || (mode === 'scroll' && usesLocalProjectModel);
