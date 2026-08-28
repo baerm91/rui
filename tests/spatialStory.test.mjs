@@ -108,6 +108,25 @@ test('legacy stations receive complete spatial camera, light, and audio defaults
   assert.deepEqual(spatial.wallBackground, { url: '', opacity: 0.72 });
 });
 
+test('legacy first room camera migrates to the same framing as later room stations', () => {
+  const first = normalizeSpatialStation({
+    spatial: {
+      position: [0, 0, 0],
+      camera: { position: [0, 5, 14], target: [0, 2.5, 0] }
+    }
+  }, 0, { migrateLegacyRoomCamera: true });
+  assert.deepEqual(first.camera.position, [0, 1.7, 5]);
+  assert.deepEqual(first.camera.target, [0, 1.5, 0]);
+
+  const authored = normalizeSpatialStation({
+    spatial: {
+      position: [0, 0, 0],
+      camera: { position: [0, 4.9, 14], target: [0, 2.5, 0] }
+    }
+  }, 0, { migrateLegacyRoomCamera: true });
+  assert.deepEqual(authored.camera.position, [0, 4.9, 14]);
+});
+
 test('wall background images normalize legacy URLs and safe opacity', () => {
   const legacy = normalizeSpatialStation({ spatial: { wallBackgroundImage: ' https://example.org/mural.jpg ' } }, 0);
   const configured = normalizeSpatialStation({ spatial: { wallBackground: { url: 'data:image/png;base64,abc', opacity: 1.7 } } }, 0);

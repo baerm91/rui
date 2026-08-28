@@ -55,11 +55,21 @@ export function createSpatialItem(input = {}, index = 0) {
   };
 }
 
-export function normalizeSpatialStation(station = {}, index = 0) {
+export function normalizeSpatialStation(station = {}, index = 0, options = {}) {
   const stationPosition = vector(station.spatial?.position ?? station.position, [index * 9, 0, 0]);
   const stationRotation = vector(station.spatial?.rotation ?? station.rotation, [0, index % 2 ? Math.PI : 0, 0]);
-  const cameraPosition = vector(station.spatial?.camera?.position ?? station.cameraPos, [stationPosition[0], 1.7, stationPosition[2] + 5]);
-  const cameraTarget = vector(station.spatial?.camera?.target ?? station.cameraTarget, [stationPosition[0], 1.5, stationPosition[2]]);
+  const rawCameraPosition = station.spatial?.camera?.position ?? station.cameraPos;
+  const rawCameraTarget = station.spatial?.camera?.target ?? station.cameraTarget;
+  const cameraPosition = vector(rawCameraPosition, [stationPosition[0], 1.7, stationPosition[2] + 5]);
+  const cameraTarget = vector(rawCameraTarget, [stationPosition[0], 1.5, stationPosition[2]]);
+  const legacyRoomCamera = options.migrateLegacyRoomCamera === true
+    && index === 0
+    && cameraPosition.every((value, axis) => value === [0, 5, 14][axis])
+    && cameraTarget.every((value, axis) => value === [0, 2.5, 0][axis]);
+  if (legacyRoomCamera) {
+    cameraPosition.splice(0, 3, stationPosition[0], 1.7, stationPosition[2] + 5);
+    cameraTarget.splice(0, 3, stationPosition[0], 1.5, stationPosition[2]);
+  }
   return {
     position: stationPosition,
     rotation: stationRotation,

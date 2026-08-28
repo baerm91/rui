@@ -79,7 +79,7 @@ const normalizeStoryStations = (story) => (story?.stations || []).map((station, 
   return {
     ...station,
     introduction: station.introduction ?? station.description ?? '',
-    spatial: normalizeSpatialStation(station, index),
+    spatial: normalizeSpatialStation(station, index, { migrateLegacyRoomCamera: story?.settings?.experienceType === 'room' }),
     items,
     thumbnailLayout: normalizeThumbnailLayout(station.thumbnailLayout),
     thumbnailGridSpacing: normalizeThumbnailGridSpacing(station.thumbnailGridSpacing),
