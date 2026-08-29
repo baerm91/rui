@@ -184,6 +184,23 @@ export function resolveSpatialVisitorItemId(station = {}, items = station.items,
   return availableItems[Math.floor(safeRandomValue * availableItems.length)].id;
 }
 
+export function resolveExhibitionScrollState(scrollTop, viewportHeight, stationCount) {
+  const count = Math.max(1, Math.floor(Number(stationCount) || 1));
+  const step = Math.max(1, Number(viewportHeight) || 1);
+  const maximum = (count - 1) * step;
+  const top = Math.max(0, Math.min(maximum, Number(scrollTop) || 0));
+  return {
+    progress: maximum ? top / maximum : 0,
+    stationIndex: Math.max(0, Math.min(count - 1, Math.round(top / step)))
+  };
+}
+
+export function resolveExhibitionStationScrollTop(index, viewportHeight, stationCount) {
+  const count = Math.max(1, Math.floor(Number(stationCount) || 1));
+  const stationIndex = Math.max(0, Math.min(count - 1, Math.round(Number(index) || 0)));
+  return stationIndex * Math.max(1, Number(viewportHeight) || 1);
+}
+
 export function resolveSpatialOverviewCamera(stations = []) {
   const positions = (Array.isArray(stations) ? stations : [])
     .map((station) => vector(station?.spatial?.position ?? station?.position, [0, 0, 0]));
