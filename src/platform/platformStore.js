@@ -4,7 +4,9 @@ import {
   deleteRecord, putRecord, readAllRecords, readMeta, readRecord, replaceAllRecords, STORES, writeMeta
 } from './platformDatabase.js';
 import { HEIDENTOR_STABLE_LIGHTING } from '../projects/projectLightingPresets.js';
-import { isSupabaseConfigured, readOAuthCallbackError, signInWithOAuth, signOutFromSupabase } from './supabaseClient.js';
+import {
+  isSupabaseConfigured, readOAuthCallbackError, retryFutureJwtError, signInWithOAuth, signOutFromSupabase
+} from './supabaseClient.js';
 import {
   deleteStoryFromSupabase, deleteStoryPreviewFromSupabase, fetchRemoteStories, importLegacyStories,
   loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
@@ -337,7 +339,7 @@ export async function initializePlatformStore() {
   }
 
   if (isSupabaseConfigured) {
-    const remoteState = await loadSupabaseState();
+    const remoteState = await retryFutureJwtError(loadSupabaseState);
     if (remoteState.authUser && remoteState.user) {
       if (remoteState.user.isBlocked) {
         await signOutFromSupabase();

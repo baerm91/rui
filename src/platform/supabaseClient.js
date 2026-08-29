@@ -85,12 +85,27 @@ export function readOAuthCallbackError(location = window.location) {
   const code = search.get('error_code') || hash.get('error_code') || error;
   const description = search.get('error_description') || hash.get('error_description') || '';
   if (code === 'access_denied') return 'Die Google-Anmeldung wurde abgebrochen. Bitte versuchen Sie es erneut.';
+  if (/issued at future/i.test(description)) {
+    return 'Die Anmeldung wurde durch eine vorübergehende Zeitabweichung bei Supabase verhindert. Bitte versuchen Sie es erneut.';
+  }
   if (/registrier|registration|signup|saving new user/i.test(description)) {
     return 'Das Konto konnte nicht freigeschaltet werden. Bitte wenden Sie sich an die RIU-Administration.';
   }
   return description
     ? `Die Google-Anmeldung ist fehlgeschlagen: ${description}`
     : 'Die Google-Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut.';
+}
+
+export async function retryFutureJwtError(operation, delays = [500, 1500]) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      const message = `${error?.message || ''} ${error?.details || ''}`;
+      if (!/JWT issued at future/i.test(message) || attempt >= delays.length) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
 }
 
 export async function signInWithOAuth(provider = 'google', { mode = 'login', rememberLogin = true } = {}) {
