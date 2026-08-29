@@ -25,6 +25,7 @@ import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
 import { isRoomStory } from '../utils/storyExperience.js';
 import { getStoryCounts } from './storyCounts.js';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
+import { registerRiuWebMcpTools } from './webMcp.js';
 
 const go = (path) => { window.location.href = path; };
 const getPreferredTheme = () => {
@@ -1179,6 +1180,14 @@ function NotFound({ session }) {
 
 export default function PlatformApp() {
   const [session, setSession] = useState(() => readSession());
+  useEffect(() => {
+    if (!session || !document.modelContext?.registerTool) return undefined;
+    const controller = new AbortController();
+    registerRiuWebMcpTools(document.modelContext, controller.signal).catch((error) => {
+      if (!controller.signal.aborted) console.warn('RIU WebMCP tools could not be registered.', error);
+    });
+    return () => controller.abort();
+  }, [session?.id, session?.role, session?.isBlocked]);
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return <Gallery session={session} />;
   if (path === '/discover') return <Discover session={session} />;
