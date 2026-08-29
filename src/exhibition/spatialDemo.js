@@ -1,4 +1,5 @@
 import { createSpatialItem, normalizeSpatialStation } from '../utils/spatialStory.js';
+import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
 
 const models = [
   {
@@ -28,7 +29,7 @@ const makeStation = (index, title, introduction, itemOffset = 0) => ({
   description: introduction,
   introduction,
   spatial: {
-    ...normalizeSpatialStation({}, index),
+    ...normalizeSpatialStation({ spatial: { surfaceMaterials: createCuratedSpatialSurfaceMaterials() } }, index),
     position: [index * 9, 0, index % 2 ? -1.5 : 0],
     camera: { position: [index * 9, 1.8, 7], target: [index * 9, 1.5, 0], fov: 45 }
   },

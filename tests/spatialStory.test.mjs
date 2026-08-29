@@ -111,6 +111,29 @@ test('legacy stations receive complete spatial camera, light, and audio defaults
   assert.equal(spatial.lighting.keyLightColor, '#f2dfc3');
   assert.equal(spatial.audio.autoplay, false);
   assert.deepEqual(spatial.wallBackground, { url: '', opacity: 0.72 });
+  assert.equal(spatial.surfaceMaterials.wall.materialId, 'warm-white');
+  assert.equal(spatial.surfaceMaterials.floor.materialId, 'neutral-floor');
+  assert.equal(spatial.surfaceMaterials.plinth.materialId, 'limestone');
+});
+
+test('surface materials preserve PBR controls and migrate the legacy wall choice', () => {
+  const spatial = normalizeSpatialStation({
+    spatial: {
+      wallMaterial: 'limestone',
+      surfaceMaterials: {
+        floor: { materialId: 'travertine-001', tileSize: 1.8, rotation: 45, roughness: .73, normalStrength: 1.2 },
+        plinth: { materialId: 'marble-01', tileSize: 0.1, rotation: 220, roughness: 0, normalStrength: 4 }
+      }
+    }
+  }, 0);
+
+  assert.equal(spatial.surfaceMaterials.wall.materialId, 'limestone');
+  assert.deepEqual(spatial.surfaceMaterials.floor, {
+    materialId: 'travertine-001', tileSize: 1.8, rotation: 45, roughness: .73, normalStrength: 1.2
+  });
+  assert.deepEqual(spatial.surfaceMaterials.plinth, {
+    materialId: 'marble-01', tileSize: .25, rotation: 180, roughness: .15, normalStrength: 2
+  });
 });
 
 test('legacy first room camera migrates to the same framing as later room stations', () => {
@@ -167,4 +190,5 @@ test('spatial station fields survive the existing RIU storage pipeline', () => {
   assert.deepEqual(stored.spatial.lighting, source.spatial.lighting);
   assert.deepEqual(stored.spatial.audio, source.spatial.audio);
   assert.deepEqual(stored.spatial.wallBackground, source.spatial.wallBackground);
+  assert.deepEqual(stored.spatial.surfaceMaterials, source.spatial.surfaceMaterials);
 });

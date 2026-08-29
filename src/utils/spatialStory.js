@@ -1,4 +1,5 @@
 import { getSketchfabModelUid, isSketchfabModelUrl, isSupportedModelUrl, normalizeModelUrl } from './modelSource.js';
+import { normalizeSpatialSurfaceMaterials } from './spatialMaterials.js';
 
 const number = (value, fallback, min = -Infinity, max = Infinity) => {
   const parsed = Number(value);
@@ -80,6 +81,7 @@ export function normalizeSpatialStation(station = {}, index = 0, options = {}) {
     rotation: stationRotation,
     movementRadius: number(station.spatial?.movementRadius, 5, 1, 30),
     wallMaterial: station.spatial?.wallMaterial || 'warm-white',
+    surfaceMaterials: normalizeSpatialSurfaceMaterials(station.spatial),
     wallBackground: {
       url: String(station.spatial?.wallBackground?.url || station.spatial?.wallBackgroundImage || '').trim(),
       opacity: number(station.spatial?.wallBackground?.opacity, 0.72, 0.05, 1)

@@ -62,7 +62,9 @@ export function EditorSidebar({
   spatialMode = false,
   projectControlsAvailable = true,
   selectedSpatialItemIds,
+  selectedSpatialSurface,
   onSelectSpatialItem,
+  onSelectSpatialSurface,
   onUpdateSpatialStation,
   onUpdateSpatialItem,
   onUpdateSpatialItemPositions,
@@ -514,7 +516,9 @@ export function EditorSidebar({
             station={activeStation}
             index={safeEditingIndex}
             selectedItemIds={selectedSpatialItemIds}
+            selectedSurface={selectedSpatialSurface}
             onSelectItem={onSelectSpatialItem}
+            onSelectSurface={onSelectSpatialSurface}
             onUpdateStation={onUpdateSpatialStation}
             onUpdateItem={onUpdateSpatialItem}
             onUpdateItemPositions={onUpdateSpatialItemPositions}

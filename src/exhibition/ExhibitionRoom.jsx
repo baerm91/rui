@@ -10,17 +10,17 @@ import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePoin
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
-import { getSketchfabPinchZoomDelta, loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
+import { loadSketchfabViewerApi, SKETCHFAB_VIEWER_VERSION } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../utils/spatialStory.js';
 import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
+import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
+import { createSpatialMeshMaterial, disposeSpatialMaterial } from './spatialMaterialRenderer.js';
 import './exhibitionRoom.css';
 
-const materialColors = { 'warm-white': '#ded9cd', limestone: '#c9c0ae', 'soft-grey': '#c9cbc7' };
 const disposeObject = (root) => root?.traverse((object) => {
   object.geometry?.dispose?.();
   (Array.isArray(object.material) ? object.material : [object.material]).filter(Boolean).forEach((material) => {
-    material.map?.dispose?.();
-    material.dispose?.();
+    disposeSpatialMaterial(material);
   });
 });
 const smootherStep = (value) => value * value * value * (value * (value * 6 - 15) + 10);
@@ -90,7 +90,7 @@ const normalizeStoryStations = (story) => (story?.stations || []).map((station, 
   };
 });
 
-function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, overviewMode, overviewContentVisible, largePresentation, explorationMode, onCameraReady, onSelectStation, onSelectItem, onModelInteractionChange, onModelStatusChange }) {
+function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, overviewMode, overviewContentVisible, largePresentation, explorationMode, onCameraReady, onSelectStation, onSelectItem, onSelectSurface, onModelInteractionChange, onModelStatusChange }) {
   const canvasRef = useRef(null);
   const overviewOverlayRef = useRef(null);
   const modelRootRef = useRef(null);
@@ -98,15 +98,19 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   const overviewModeRef = useRef(overviewMode);
   const editorModeRef = useRef(editorMode);
   const selectedItemRef = useRef(selectedItem);
+  const stationIndexRef = useRef(stationIndex);
   const selectStationRef = useRef(onSelectStation);
   const selectItemRef = useRef(onSelectItem);
+  const selectSurfaceRef = useRef(onSelectSurface);
   const modelInteractionRef = useRef(onModelInteractionChange);
   const modelStatusRef = useRef(onModelStatusChange);
   overviewModeRef.current = overviewMode;
   editorModeRef.current = editorMode;
   selectedItemRef.current = selectedItem;
+  stationIndexRef.current = stationIndex;
   selectStationRef.current = onSelectStation;
   selectItemRef.current = onSelectItem;
+  selectSurfaceRef.current = onSelectSurface;
   modelInteractionRef.current = onModelInteractionChange;
   modelStatusRef.current = onModelStatusChange;
   const activeSpatial = stations[stationIndex]?.spatial;
@@ -315,20 +319,27 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           group.position.fromArray(spatial.position);
           group.rotation.fromArray(spatial.rotation);
         }
-        const wallMat = new THREE.MeshStandardMaterial({
-          color: materialColors[spatial.wallMaterial] || materialColors['warm-white'],
-          roughness: .9,
+        const wallWidth = showOverview ? 6.72 : 7.4;
+        const wallHeight = showOverview ? 4.8 : 4.5;
+        const wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight, showOverview ? .14 : .18);
+        const wallMat = createSpatialMeshMaterial({
+          surface: spatial.surfaceMaterials.wall,
+          fallbackId: spatial.wallMaterial || 'warm-white',
+          textureLoader,
+          renderer,
+          geometry: wallGeometry,
+          width: wallWidth,
+          height: wallHeight,
           emissive: showOverview ? '#30261d' : index === activeIndex ? '#24130b' : '#000000',
           emissiveIntensity: showOverview ? .08 : index === activeIndex ? .08 : 0,
           side: showOverview ? THREE.DoubleSide : THREE.FrontSide
         });
-        const wallWidth = showOverview ? 6.72 : 7.4;
-        const wallHeight = showOverview ? 4.8 : 4.5;
-        const wall = new THREE.Mesh(new THREE.BoxGeometry(wallWidth, wallHeight, showOverview ? .14 : .18), wallMat);
+        const wall = new THREE.Mesh(wallGeometry, wallMat);
         wall.position.set(0, showOverview ? 2.4 : 2.25, 0);
         wall.receiveShadow = true;
         wall.castShadow = true;
         wall.userData.stationIndex = index;
+        wall.userData.surfaceType = 'wall';
         group.add(wall);
         const wallBackgroundUrl = spatial.wallBackground?.url;
         if (wallBackgroundUrl) {
@@ -375,13 +386,23 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             background.visible = true;
           });
         }
-        const step = new THREE.Mesh(
-          new THREE.BoxGeometry(showOverview ? 6.5 : 7.18, .15, .7),
-          new THREE.MeshStandardMaterial({ color: showOverview ? '#b8ae9d' : '#c7c0b2', roughness: .92 })
-        );
+        const stepWidth = showOverview ? 6.5 : 7.18;
+        const stepDepth = .7;
+        const stepGeometry = new THREE.BoxGeometry(stepWidth, .15, stepDepth);
+        const step = new THREE.Mesh(stepGeometry, createSpatialMeshMaterial({
+          surface: spatial.surfaceMaterials.plinth,
+          fallbackId: 'limestone',
+          textureLoader,
+          renderer,
+          geometry: stepGeometry,
+          width: stepWidth,
+          height: stepDepth
+        }));
         step.position.set(0, .075, .38);
         step.castShadow = true;
         step.receiveShadow = true;
+        step.userData.stationIndex = index;
+        step.userData.surfaceType = 'plinth';
         group.add(step);
 
         let baseGlow = null;
@@ -413,10 +434,21 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           wash.position.set(0, .38, 1.08);
           group.add(wash);
         } else {
-          const pad = new THREE.Mesh(new THREE.PlaneGeometry(8.1, 5.2), new THREE.MeshStandardMaterial({ color: '#bcb5a6', roughness: 1 }));
+          const padGeometry = new THREE.PlaneGeometry(8.1, 5.2);
+          const pad = new THREE.Mesh(padGeometry, createSpatialMeshMaterial({
+            surface: spatial.surfaceMaterials.floor,
+            fallbackId: 'neutral-floor',
+            textureLoader,
+            renderer,
+            geometry: padGeometry,
+            width: 8.1,
+            height: 5.2
+          }));
           pad.rotation.x = -Math.PI / 2;
           pad.position.set(0, .018, 1.65);
           pad.receiveShadow = true;
+          pad.userData.stationIndex = index;
+          pad.userData.surfaceType = 'floor';
           group.add(pad);
           wash = new THREE.PointLight(0xffdfb1, index === activeIndex ? 2.4 : 1.8, 7.5, 2);
           wash.position.set(0, .42, 1.18);
@@ -543,6 +575,14 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       setPointerFromEvent(event);
       return raycaster.intersectObjects(modelRoot.children, true).find((hit) => hit.object.isMesh) || null;
     };
+    const resolveEditorSurfaceHit = (event) => {
+      if (overviewModeRef.current || !editorModeRef.current) return null;
+      setPointerFromEvent(event);
+      return raycaster.intersectObjects(world.children, true).find((hit) => (
+        hit.object.userData.stationIndex === stationIndexRef.current
+        && hit.object.userData.surfaceType
+      )) || null;
+    };
     const applyOverviewHover = (hit) => {
       const hoveredStationIndex = hit?.object.userData.stationIndex;
       const hoveredItemId = hit?.object.userData.itemId || null;
@@ -586,6 +626,11 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     const handlePointerLeave = () => applyOverviewHover(null);
     const handlePointerUp = (event) => {
       finishModelInteraction(event);
+      if (editorModeRef.current && !overviewModeRef.current && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) <= 8) {
+        const surfaceHit = resolveEditorSurfaceHit(event);
+        if (surfaceHit) selectSurfaceRef.current?.(surfaceHit.object.userData.surfaceType);
+        return;
+      }
       if (!overviewModeRef.current || Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8) return;
       const stationHit = resolveOverviewHit(event);
       if (!stationHit) return;
@@ -928,168 +973,41 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
 
 function SpatialSketchfabViewer({ item, onInteractionChange }) {
   const iframeRef = useRef(null);
-  const interactionLayerRef = useRef(null);
   const interactionRef = useRef(onInteractionChange);
   interactionRef.current = onInteractionChange;
   const uid = getSketchfabModelUid(item?.modelUrl);
 
   useEffect(() => {
-    if (!uid || !iframeRef.current || !interactionLayerRef.current) return undefined;
-    const interactionLayer = interactionLayerRef.current;
+    if (!uid || !iframeRef.current) return undefined;
     let disposed = false;
-    let api = null;
-    const activePointers = new Map();
-    let primaryPointerId = null;
-    let activePointerButton = 0;
-    let pointerX = 0;
-    let pointerY = 0;
-    let pinchDistance = null;
-    let interactionCamera = null;
-    let pendingDeltaX = 0;
-    let pendingDeltaY = 0;
-    let pendingZoomDelta = 0;
-    let pendingDragTransform = null;
-    let interactionFrame = null;
-    let cameraRequestId = 0;
-
-    const getPinchDistance = () => {
-      const [first, second] = Array.from(activePointers.values());
-      return first && second ? Math.hypot(second.x - first.x, second.y - first.y) : null;
-    };
-    const requestInteractionCamera = () => {
-      if (!api) return;
-      const requestId = ++cameraRequestId;
-      api.getCameraLookAt((error, camera) => {
-        if (error || disposed || requestId !== cameraRequestId) return;
-        interactionCamera = camera;
-        if ((pendingDragTransform || pendingZoomDelta) && !interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
-      });
-    };
-
-    const applyPointerTransform = () => {
-      interactionFrame = null;
-      if (!api || !interactionCamera || (!pendingDragTransform && !pendingZoomDelta)) return;
-      if (pendingZoomDelta) interactionCamera = zoomSketchfabCamera(interactionCamera, pendingZoomDelta);
-      if (pendingDragTransform) {
-        interactionCamera = pendingDragTransform === 'pan'
-          ? panSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY)
-          : orbitSketchfabCamera(interactionCamera, pendingDeltaX, pendingDeltaY);
-      }
-      pendingDeltaX = 0;
-      pendingDeltaY = 0;
-      pendingZoomDelta = 0;
-      pendingDragTransform = null;
-      api.setCameraLookAt(interactionCamera.position, interactionCamera.target, 0);
-    };
-    const handlePointerDown = (event) => {
-      if (!api || activePointers.size >= 2 || (event.button !== 0 && event.button !== 2)) return;
-      event.preventDefault();
-      if (interactionFrame) cancelAnimationFrame(interactionFrame);
-      interactionFrame = null;
-      if (interactionCamera && (pendingDragTransform || pendingZoomDelta)) applyPointerTransform();
-      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      pendingDeltaX = 0;
-      pendingDeltaY = 0;
-      pendingZoomDelta = 0;
-      pendingDragTransform = null;
-      interactionLayer.setPointerCapture(event.pointerId);
-      interactionRef.current?.(true);
-      if (activePointers.size === 1) {
-        primaryPointerId = event.pointerId;
-        activePointerButton = event.button;
-        pointerX = event.clientX;
-        pointerY = event.clientY;
-      } else {
-        pinchDistance = getPinchDistance();
-      }
-      interactionCamera = null;
-      requestInteractionCamera();
-    };
-    const handlePointerMove = (event) => {
-      if (!activePointers.has(event.pointerId)) return;
-      event.preventDefault();
-      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (activePointers.size >= 2) {
-        const nextPinchDistance = getPinchDistance();
-        pendingZoomDelta += getSketchfabPinchZoomDelta(pinchDistance, nextPinchDistance);
-        pinchDistance = nextPinchDistance;
-      } else if (event.pointerId === primaryPointerId) {
-        pendingDeltaX += event.clientX - pointerX;
-        pendingDeltaY += event.clientY - pointerY;
-        pendingDragTransform = activePointerButton === 2 ? 'pan' : 'orbit';
-        pointerX = event.clientX;
-        pointerY = event.clientY;
-      }
-      if (!interactionFrame) interactionFrame = requestAnimationFrame(applyPointerTransform);
-    };
-    const handlePointerEnd = (event) => {
-      if (!activePointers.has(event.pointerId)) return;
-      if (interactionLayer.hasPointerCapture(event.pointerId)) interactionLayer.releasePointerCapture(event.pointerId);
-      if (interactionFrame) cancelAnimationFrame(interactionFrame);
-      interactionFrame = null;
-      if (interactionCamera && (pendingDragTransform || pendingZoomDelta)) applyPointerTransform();
-      activePointers.delete(event.pointerId);
-      interactionCamera = null;
-      if (activePointers.size === 1) {
-        const [remainingPointerId, remainingPointer] = activePointers.entries().next().value;
-        primaryPointerId = remainingPointerId;
-        activePointerButton = 0;
-        pointerX = remainingPointer.x;
-        pointerY = remainingPointer.y;
-        pinchDistance = null;
-        requestInteractionCamera();
-      } else if (activePointers.size === 0) {
-        primaryPointerId = null;
-        activePointerButton = 0;
-        pinchDistance = null;
-        interactionRef.current?.(false);
-      }
-    };
-    const handleContextMenu = (event) => event.preventDefault();
-    const handleWheel = (event) => {
-      if (!api) return;
-      event.preventDefault();
-      pendingZoomDelta += event.deltaY;
-      requestInteractionCamera();
-    };
 
     loadSketchfabViewerApi().then((Sketchfab) => {
       if (disposed) return;
       const client = new Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
       client.init(uid, {
         autostart: 1, camera: 0, dnt: 1, transparent: 1, ui_hint: 0, ui_infos: 0, ui_controls: 0, ui_stop: 0, ui_watermark: 0,
-        success(nextApi) {
+        success(api) {
           if (disposed) return;
-          api = nextApi;
           api.start();
+          api.addEventListener('viewerready', () => {
+            if (disposed) return;
+            api.addEventListener('camerastart', () => { if (!disposed) interactionRef.current?.(true); });
+            api.addEventListener('camerastop', () => { if (!disposed) interactionRef.current?.(false); });
+          });
         },
         error() {}
       });
     }).catch(() => {});
-    interactionLayer.addEventListener('pointerdown', handlePointerDown);
-    interactionLayer.addEventListener('pointermove', handlePointerMove);
-    interactionLayer.addEventListener('pointerup', handlePointerEnd);
-    interactionLayer.addEventListener('pointercancel', handlePointerEnd);
-    interactionLayer.addEventListener('contextmenu', handleContextMenu);
-    interactionLayer.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => {
       disposed = true;
-      cameraRequestId += 1;
-      if (interactionFrame) cancelAnimationFrame(interactionFrame);
-      interactionLayer.removeEventListener('pointerdown', handlePointerDown);
-      interactionLayer.removeEventListener('pointermove', handlePointerMove);
-      interactionLayer.removeEventListener('pointerup', handlePointerEnd);
-      interactionLayer.removeEventListener('pointercancel', handlePointerEnd);
-      interactionLayer.removeEventListener('contextmenu', handleContextMenu);
-      interactionLayer.removeEventListener('wheel', handleWheel);
       if (iframeRef.current) iframeRef.current.src = 'about:blank';
       interactionRef.current?.(false);
     };
   }, [uid]);
 
   if (!uid) return null;
-  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} /><div ref={interactionLayerRef} className="spatial-sketchfab-interaction" aria-label={`${item.title} drehen, verschieben und zoomen`} /></div>;
+  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} aria-label={`${item.title} drehen, verschieben und zoomen`} /></div>;
 }
 
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {
@@ -1206,6 +1124,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [saved, setSaved] = useState(false);
   const [selectedThumbnailIds, setSelectedThumbnailIds] = useState([]);
+  const [selectedSurface, setSelectedSurface] = useState('wall');
   const captureCameraRef = useRef(null);
   const viewTransitionRef = useRef({ active: false, changeTimer: null, midTimer: null, endTimer: null });
   const modelReleaseTimerRef = useRef(null);
@@ -1249,7 +1168,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   };
   const addStation = () => {
     const index = stations.length;
-    const next = { id: `station_${Date.now()}`, title: `Station ${index + 1}`, description: '', introduction: '', items: [], thumbnailLayout: 'tiles', thumbnailGridSpacing: 100, selectedItemId: null, initialItemId: null, spatial: normalizeSpatialStation({}, index) };
+    const next = { id: `station_${Date.now()}`, title: `Station ${index + 1}`, description: '', introduction: '', items: [], thumbnailLayout: 'tiles', thumbnailGridSpacing: 100, selectedItemId: null, initialItemId: null, spatial: normalizeSpatialStation({ spatial: { surfaceMaterials: createCuratedSpatialSurfaceMaterials() } }, index) };
     setStations((current) => [...current, next]);
     setStationIndex(index);
   };
@@ -1432,7 +1351,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   }, [audioPlaying, stationIndex, mode, station?.spatial]);
   if (!station) return null;
   return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''} ${explorationMode ? 'is-exploring' : 'is-curated'} ${modelInteracting ? 'is-model-interacting' : ''} ${viewTransitioning ? 'is-view-transitioning' : ''} ${viewTransitionDirection ? `transition-${viewTransitionDirection}` : ''}`}>
-    <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />
+    <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onSelectSurface={setSelectedSurface} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />
     <div className="spatial-view-wash" aria-hidden="true" />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
     {overviewMode && <><div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>{mode === 'visitor' && <MobileOverviewNavigator stations={stations} stationIndex={stationIndex} onPreviewStation={(index) => { setStationIndex(index); setAudioPlaying(false); }} onOpenStation={enterStation} onOpenItem={enterItem} />}</>}
@@ -1443,7 +1362,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       {selectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>}
     <footer className="exhibition-footer"><a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a><div className="station-stepper"><button disabled={stationIndex === 0} onClick={() => enterStation(stationIndex - 1)}><ChevronLeft /></button><span><b>{String(stationIndex + 1).padStart(2, '0')}</b> / {String(stations.length).padStart(2, '0')}</span><button disabled={stationIndex === stations.length - 1} onClick={() => enterStation(stationIndex + 1)}><ChevronRight /></button></div><div className="exhibition-footer-actions">{mode === 'visitor' && station.spatial.audio.url && !station.spatial.audio.autoplay && <button className="walk-hint" type="button" onClick={() => setAudioPlaying((value) => !value)}>{audioPlaying ? <VolumeX size={15} /> : <Volume2 size={15} />} {audioPlaying ? 'Ton stoppen' : 'Ton starten'}</button>}<button className={`walk-hint ${overviewMode ? 'is-active' : ''}`} type="button" onClick={toggleOverview}><Footprints size={15} /> {overviewMode ? 'Zur Station' : 'Raumübersicht'}</button></div></footer>
-    {mode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => setStationIndex(index)} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? resolveSpatialVisitorItemId(station, station.items) : null); setOverviewMode(false); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} projectControlsAvailable={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} onSelectSpatialItem={selectThumbnailItem} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
+    {mode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => { setStationIndex(index); setSelectedSurface('wall'); }} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? resolveSpatialVisitorItemId(station, station.items) : null); setOverviewMode(false); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} projectControlsAvailable={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} selectedSpatialSurface={selectedSurface} onSelectSpatialItem={selectThumbnailItem} onSelectSpatialSurface={setSelectedSurface} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
     {saved && <div className="spatial-save-toast"><Check size={14} /> Story gespeichert</div>}
   </main>;
 }

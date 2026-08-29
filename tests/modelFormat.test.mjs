@@ -79,6 +79,9 @@ test('creates a room story when no model URL is supplied', () => {
   assert.equal(story.settings.experienceType, 'room');
   assert.deepEqual(story.stations[0].cameraPos, { x: 0, y: 1.7, z: 5 });
   assert.deepEqual(story.stations[0].cameraTarget, { x: 0, y: 1.5, z: 0 });
+  assert.equal(story.stations[0].spatial.surfaceMaterials.wall.materialId, 'beige-wall-002');
+  assert.equal(story.stations[0].spatial.surfaceMaterials.floor.materialId, 'travertine-001');
+  assert.equal(story.stations[0].spatial.surfaceMaterials.plinth.materialId, 'warm-white');
 });
 
 test('keeps model stories on the existing viewer workflow', () => {

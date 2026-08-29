@@ -3,11 +3,12 @@ import { ArrowLeft, ArrowRight, Box, Camera, Check, ImagePlus, Lightbulb, Link2,
 import { createSpatialItem, isValidSpatialModelUrl, resolveSpatialThumbnailUrl } from '../../utils/spatialStory.js';
 import { resolveModelSourceMetadata } from '../../utils/modelSourceAdapters.js';
 import { alignThumbnailSelection, createThumbnailLayout } from '../../utils/spatialThumbnailLayout.js';
+import { SpatialMaterialPicker } from './SpatialMaterialPicker.jsx';
 
 const VectorFields = ({ label, value = [0, 0, 0], onChange, step = .1 }) => <label className="spatial-vector-field"><span>{label}</span><span>{['X', 'Y', 'Z'].map((axis, index) => <input key={axis} type="number" step={step} value={value[index] ?? 0} aria-label={`${label} ${axis}`} onChange={(event) => { const next = [...value]; next[index] = Number(event.target.value); onChange(next); }} />)}</span></label>;
 const RangeField = ({ label, value, min, max, step, onChange, suffix = '' }) => <label className="spatial-range-field"><span>{label}<b>{value}{suffix}</b></span><input type="range" value={value} min={min} max={max} step={step} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 
-export function SpatialStationEditor({ station, index, selectedItemIds = [], onSelectItem, onUpdateStation, onUpdateItem, onUpdateItemPositions, onMoveItem, onAddItem, onRemoveItem, onCaptureCamera }) {
+export function SpatialStationEditor({ station, index, selectedItemIds = [], selectedSurface = 'wall', onSelectItem, onSelectSurface, onUpdateStation, onUpdateItem, onUpdateItemPositions, onMoveItem, onAddItem, onRemoveItem, onCaptureCamera }) {
   const [tab, setTab] = useState('content');
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState('');
@@ -35,6 +36,12 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
   };
   const updateWallBackground = (patch) => onUpdateStation(index, {
     spatial: { ...station.spatial, wallBackground: { ...station.spatial.wallBackground, ...patch } }
+  });
+  const updateSurfaceMaterial = (surface, value) => onUpdateStation(index, {
+    spatial: {
+      ...station.spatial,
+      surfaceMaterials: { ...station.spatial.surfaceMaterials, [surface]: value }
+    }
   });
   const uploadWallBackground = (file) => {
     if (!file?.type?.startsWith('image/')) return;
@@ -123,7 +130,12 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], onS
       <RangeField label="Umgebungslicht" value={station.spatial.lighting.ambientIntensity} min={0} max={3} step={.05} onChange={(ambientIntensity) => updateSpatial('lighting', { ambientIntensity })} />
       <VectorFields label="Lichtposition" value={station.spatial.lighting.keyLightPosition} onChange={(keyLightPosition) => updateSpatial('lighting', { keyLightPosition })} />
       <VectorFields label="Lichtrichtung / Ziel" value={station.spatial.lighting.keyLightTarget} onChange={(keyLightTarget) => updateSpatial('lighting', { keyLightTarget })} />
-      <label>Stationsmaterial<select value={station.spatial.wallMaterial} onChange={(event) => onUpdateStation(index, { spatial: { ...station.spatial, wallMaterial: event.target.value } })}><option value="warm-white">Warmweiß</option><option value="limestone">Kalkstein</option><option value="soft-grey">Hellgrau</option></select></label>
+      <SpatialMaterialPicker
+        surfaceMaterials={station.spatial.surfaceMaterials}
+        selectedSurface={selectedSurface}
+        onSelectSurface={onSelectSurface}
+        onChange={updateSurfaceMaterial}
+      />
       <div className="spatial-wall-background">
         <div className="spatial-wall-background-heading"><span><ImagePlus size={14} /> Wandhintergrund</span>{station.spatial.wallBackground.url && <button type="button" onClick={() => updateWallBackground({ url: '' })}><Trash2 size={12} /> Entfernen</button>}</div>
         {station.spatial.wallBackground.url ? <img src={station.spatial.wallBackground.url} alt="Vorschau des Wandhintergrunds" /> : <div className="spatial-wall-background-empty"><ImagePlus size={20} /><span>Noch kein Hintergrundbild</span></div>}

@@ -12,6 +12,7 @@ import {
 } from './supabaseStore.js';
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
 import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
+import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
 import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
 import { ensurePublishedStoryPreviewImage, ensurePublishedStoryPreviewImages } from './storyPreviewImage.js';
 
@@ -465,7 +466,8 @@ export function createStory({
       cameraExplicitlySet: false,
       freeNavigation: false,
       showAnnotations: true,
-      images: []
+      images: [],
+      ...(roomExperience ? { spatial: { surfaceMaterials: createCuratedSpatialSurfaceMaterials() } } : {})
     }]
   };
 }
