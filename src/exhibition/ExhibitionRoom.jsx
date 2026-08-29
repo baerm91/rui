@@ -10,7 +10,7 @@ import { ArrowLeft, Box, Check, ChevronLeft, ChevronRight, Footprints, MousePoin
 import { EditorSidebar } from '../components/editor/EditorSidebar.jsx';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
 import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
-import { loadSketchfabViewerApi, SKETCHFAB_VIEWER_VERSION } from '../utils/sketchfabViewerApi.js';
+import { getSketchfabPinchZoomDelta, loadSketchfabViewerApi, orbitSketchfabCamera, panSketchfabCamera, SKETCHFAB_VIEWER_VERSION, zoomSketchfabCamera } from '../utils/sketchfabViewerApi.js';
 import { moveSpatialItem, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../utils/spatialStory.js';
 import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
@@ -978,9 +978,58 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
 
 function SpatialSketchfabViewer({ item, onInteractionChange }) {
   const iframeRef = useRef(null);
+  const apiRef = useRef(null);
+  const cameraRef = useRef(null);
+  const pointersRef = useRef(new Map());
   const interactionRef = useRef(onInteractionChange);
   interactionRef.current = onInteractionChange;
   const uid = getSketchfabModelUid(item?.modelUrl);
+  const updateCamera = (transform) => {
+    const api = apiRef.current;
+    const camera = cameraRef.current;
+    if (!api || !camera) return;
+    const next = transform(camera);
+    cameraRef.current = next;
+    api.setCameraLookAt(next.position, next.target, 0);
+  };
+  const startInteraction = (event) => {
+    if (event.button !== 0 && event.button !== 2) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY, button: event.button });
+    interactionRef.current?.(true);
+  };
+  const moveInteraction = (event) => {
+    const pointers = pointersRef.current;
+    const previous = pointers.get(event.pointerId);
+    if (!previous) return;
+    const nextPointer = { ...previous, x: event.clientX, y: event.clientY };
+    if (pointers.size > 1) {
+      const other = [...pointers.entries()].find(([pointerId]) => pointerId !== event.pointerId)?.[1];
+      if (other) {
+        const previousDistance = Math.hypot(previous.x - other.x, previous.y - other.y);
+        const nextDistance = Math.hypot(nextPointer.x - other.x, nextPointer.y - other.y);
+        updateCamera((camera) => zoomSketchfabCamera(camera, getSketchfabPinchZoomDelta(previousDistance, nextDistance)));
+      }
+    } else {
+      const deltaX = nextPointer.x - previous.x;
+      const deltaY = nextPointer.y - previous.y;
+      if (deltaX || deltaY) updateCamera((camera) => previous.button === 2 ? panSketchfabCamera(camera, deltaX, deltaY) : orbitSketchfabCamera(camera, deltaX, deltaY));
+    }
+    pointers.set(event.pointerId, nextPointer);
+  };
+  const endInteraction = (event) => {
+    const pointers = pointersRef.current;
+    if (!pointers.delete(event.pointerId)) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (!pointers.size) interactionRef.current?.(false);
+  };
+  const zoomInteraction = (event) => {
+    event.preventDefault();
+    interactionRef.current?.(true);
+    updateCamera((camera) => zoomSketchfabCamera(camera, event.deltaY));
+    interactionRef.current?.(false);
+  };
 
   useEffect(() => {
     if (!uid || !iframeRef.current) return undefined;
@@ -993,11 +1042,12 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
         autostart: 1, camera: 0, dnt: 1, transparent: 1, ui_hint: 0, ui_infos: 0, ui_controls: 0, ui_stop: 0, ui_watermark: 0,
         success(api) {
           if (disposed) return;
+          apiRef.current = api;
           api.start();
           api.addEventListener('viewerready', () => {
             if (disposed) return;
-            api.addEventListener('camerastart', () => { if (!disposed) interactionRef.current?.(true); });
-            api.addEventListener('click', () => { if (!disposed) interactionRef.current?.(false); });
+            api.setUserInteraction(false);
+            api.getCameraLookAt((error, camera) => { if (!disposed && !error) cameraRef.current = camera; });
           });
         },
         error() {}
@@ -1006,13 +1056,16 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
 
     return () => {
       disposed = true;
+      pointersRef.current.clear();
+      apiRef.current = null;
+      cameraRef.current = null;
       if (iframeRef.current) iframeRef.current.src = 'about:blank';
       interactionRef.current?.(false);
     };
   }, [uid]);
 
   if (!uid) return null;
-  return <div className="spatial-sketchfab" onPointerLeave={() => interactionRef.current?.(false)}><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} aria-label={`${item.title} drehen, verschieben und zoomen`} onBlur={() => interactionRef.current?.(false)} /></div>;
+  return <div className="spatial-sketchfab"><iframe ref={iframeRef} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen title={item.title} aria-label={`${item.title} drehen, verschieben und zoomen`} /><div className="spatial-sketchfab-controls" aria-label={`${item.title} drehen, verschieben und zoomen`} onPointerDown={startInteraction} onPointerMove={moveInteraction} onPointerUp={endInteraction} onPointerCancel={endInteraction} onLostPointerCapture={endInteraction} onWheel={zoomInteraction} onContextMenu={(event) => event.preventDefault()} /></div>;
 }
 
 function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect, onMove }) {

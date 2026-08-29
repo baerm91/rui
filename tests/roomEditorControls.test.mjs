@@ -33,10 +33,13 @@ test('room demo keeps the editor return control mounted', async () => {
   assert.match(roomSource, /previewStationIndex=\{stationIndex\}/);
 });
 
-test('Sketchfab camera pauses do not end an interaction while the pointer may still be held', async () => {
+test('Sketchfab interaction follows pointer press and release instead of camera motion', async () => {
   const roomSource = await readSource('../src/exhibition/ExhibitionRoom.jsx');
 
   assert.doesNotMatch(roomSource, /addEventListener\('camerastop',[^\n]+interactionRef\.current\?\.\(false\)/);
-  assert.match(roomSource, /addEventListener\('click',[^\n]+interactionRef\.current\?\.\(false\)/);
-  assert.match(roomSource, /className="spatial-sketchfab" onPointerLeave=\{\(\) => interactionRef\.current\?\.\(false\)\}/);
+  assert.match(roomSource, /className="spatial-sketchfab-controls"/);
+  assert.match(roomSource, /onPointerDown=\{startInteraction\}/);
+  assert.match(roomSource, /onPointerUp=\{endInteraction\}/);
+  assert.match(roomSource, /onPointerCancel=\{endInteraction\}/);
+  assert.match(roomSource, /if \(!pointers\.size\) interactionRef\.current\?\.\(false\)/);
 });
