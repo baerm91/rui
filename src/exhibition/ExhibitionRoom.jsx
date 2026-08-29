@@ -97,6 +97,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   const runtimeRef = useRef(null);
   const overviewModeRef = useRef(overviewMode);
   const editorModeRef = useRef(editorMode);
+  const largePresentationRef = useRef(largePresentation);
   const selectedItemRef = useRef(selectedItem);
   const stationIndexRef = useRef(stationIndex);
   const selectStationRef = useRef(onSelectStation);
@@ -106,6 +107,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   const modelStatusRef = useRef(onModelStatusChange);
   overviewModeRef.current = overviewMode;
   editorModeRef.current = editorMode;
+  largePresentationRef.current = largePresentation;
   selectedItemRef.current = selectedItem;
   stationIndexRef.current = stationIndex;
   selectStationRef.current = onSelectStation;
@@ -709,11 +711,14 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     };
     let frame;
     const animate = () => {
-      controls.update();
-      canvas.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(4)).join(',');
-      canvas.dataset.cameraTarget = controls.target.toArray().map((value) => value.toFixed(4)).join(',');
-      renderer.render(scene, camera);
-      updateOverviewOverlay();
+      const sketchfabOverlayActive = largePresentationRef.current && !overviewModeRef.current && selectedItemRef.current?.sourceType === 'sketchfab';
+      if (!sketchfabOverlayActive || runtimeRef.current?.cameraTransitionFrame) {
+        controls.update();
+        canvas.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(4)).join(',');
+        canvas.dataset.cameraTarget = controls.target.toArray().map((value) => value.toFixed(4)).join(',');
+        renderer.render(scene, camera);
+        updateOverviewOverlay();
+      }
       frame = requestAnimationFrame(animate);
     };
     animate();

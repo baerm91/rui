@@ -17,3 +17,10 @@ test('room editor explicitly disables shared model-story controls', async () => 
   assert.match(projectBarSource, /Globale Modellrollen gelten nur für Modellstories/);
   assert.match(projectBarSource, /projectControlsAvailable && modelsAreOpen && activeProject/);
 });
+
+test('visitor room renderer yields the GPU while Sketchfab renders the active model', async () => {
+  const roomSource = await readSource('../src/exhibition/ExhibitionRoom.jsx');
+
+  assert.match(roomSource, /largePresentationRef\.current && !overviewModeRef\.current && selectedItemRef\.current\?\.sourceType === 'sketchfab'/);
+  assert.match(roomSource, /if \(!sketchfabOverlayActive \|\| runtimeRef\.current\?\.cameraTransitionFrame\)/);
+});
