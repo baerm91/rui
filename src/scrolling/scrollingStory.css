@@ -76,7 +76,7 @@ body.scroll-dialog-open { overflow:hidden; }
 .station-stage-shell.is-stage-nearby.stage-scroll-zoom .stage-object,.station-stage-shell.is-stage-nearby.stage-scroll-camera-motion .stage-object{will-change:transform,opacity}
 .station-stage-shell.is-stage-nearby.motion-parallax .stage-light,.station-stage-shell.is-stage-nearby.motion-parallax .stage-particles,.station-stage-shell.is-stage-nearby.motion-parallax .stage-kicker,.station-stage-shell.is-stage-nearby.motion-parallax .stage-relation-copy{will-change:transform}
 .station-stage-shell:not(.is-stage-nearby) .stage-grain,.station-stage-shell:not(.is-stage-nearby) .stage-particles i,.station-stage-shell:not(.is-stage-nearby) .stage-object-art{animation-play-state:paused!important}
-.stage-grain{animation:none}
+.stage-grain{display:none;animation:none}
 
 /* Readability, collision zones and a deliberate ending. */
 .stage-narrative{width:min(340px,30vw);gap:8px}

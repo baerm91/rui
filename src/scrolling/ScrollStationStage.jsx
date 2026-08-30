@@ -36,6 +36,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
   const renderer = getStationRendererDescriptor(behavior);
   const items = safeItems(station);
   const narrativeSteps = normalizeNarrativeSteps(station?.narrativeSteps, items);
+  const narrativeLinkSignature = narrativeSteps.map((step) => step.itemId || '').join('|');
   const points = POINTS[behavior.layout] || POINTS.cluster;
   const hubId = station?.initialItemId || items[0]?.id || '';
   const relations = useMemo(() => {
@@ -79,6 +80,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           const labels = Array.from(scene.querySelectorAll('.stage-object-label'));
           const lines = Array.from(scene.querySelectorAll('.stage-relation-line'));
           const narrative = narrativeRef.current ? Array.from(narrativeRef.current.querySelectorAll('.stage-narrative-step')) : [];
+          const objectMoments = [];
           if (!objects.length) return undefined;
           const entranceState = behavior.entrance === 'fade'
             ? { scale: .96, opacity: .78 }
@@ -122,7 +124,8 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           } else if (behavior.layout === 'timeline') {
             objects.forEach((object, index) => gsap.set(object, { left: '68%', top: `${42 + (index % 2) * 13}%`, xPercent: -50, yPercent: -50, scale: .68, opacity: .12 }));
             objects.forEach((object, index) => {
-              const moment = index / Math.max(1, objects.length) * .76;
+              const moment = .08 + index / Math.max(1, objects.length - 1) * .68;
+              objectMoments[index] = moment;
               if (index) timeline.to(objects[index - 1], { left: '25%', scale: .62, opacity: .2, duration: .16 }, moment);
               timeline.to(object, { left: '50%', top: '48%', scale: 1.12, opacity: 1, duration: .2, ease: 'power2.out' }, moment);
             });
@@ -157,7 +160,12 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           if (behavior.interactions.connections && lines.length) timeline.to(lines, { opacity: .72, scaleX: 1, duration: .2, stagger: .025 }, .64);
           if (relationCopyRef.current) timeline.to(relationCopyRef.current, { opacity: 1, duration: .14 }, .72);
           if (narrative.length && behavior.motion.progressiveText) narrative.forEach((step, index) => {
-            const moment = .48 + index * .12;
+            const linkedObjectIndex = narrativeSteps[index]?.itemId
+              ? objects.findIndex((object) => object.dataset.itemId === narrativeSteps[index].itemId)
+              : index;
+            const moment = behavior.layout === 'timeline'
+              ? (objectMoments[Math.max(0, linkedObjectIndex)] ?? objectMoments[index] ?? .48)
+              : .48 + index * .12;
             if (index) timeline.to(narrative[index - 1], { opacity: .42, y: -6, duration: .06 }, moment);
             timeline.to(step, { opacity: 1, y: 0, duration: .1 }, moment);
           });
@@ -168,7 +176,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
       }, root);
     });
     return () => { cancelAnimationFrame(setupFrame); if (refreshFrame) cancelAnimationFrame(refreshFrame); media?.revert(); context?.revert(); };
-  }, [behavior.entrance, behavior.interactions.connections, behavior.layout, behavior.motion.parallax, behavior.motion.progressiveText, behavior.scroll, hubId, items.length, narrativeSteps.length, renderer.distance, renderer.pin, station?.id]);
+  }, [behavior.entrance, behavior.interactions.connections, behavior.layout, behavior.motion.parallax, behavior.motion.progressiveText, behavior.scroll, hubId, items.length, narrativeLinkSignature, narrativeSteps.length, renderer.distance, renderer.pin, station?.id]);
 
   const discover = (itemId) => {
     setActiveItemId(itemId);
