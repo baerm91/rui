@@ -66,3 +66,16 @@ export function normalizeStationBehavior(value) {
     stationTransition: enumValue(source.stationTransition, STATION_BEHAVIOR_OPTIONS.stationTransition, DEFAULT_STATION_BEHAVIOR.stationTransition)
   };
 }
+
+export function getStationRendererDescriptor(value) {
+  const behavior = normalizeStationBehavior(value);
+  const pin = ['pinned', 'horizontal', 'zoom', 'camera-motion'].includes(behavior.scroll);
+  const distance = behavior.scroll === 'horizontal' ? 2.2 : behavior.scroll === 'zoom' ? 2 : behavior.scroll === 'camera-motion' ? 1.9 : behavior.scroll === 'pinned' ? 1.65 : 1.15;
+  return {
+    layoutClass: `stage-scene-${behavior.layout}`,
+    scrollClass: `stage-scroll-${behavior.scroll}`,
+    motionClass: behavior.motion.parallax ? 'motion-parallax' : 'motion-static',
+    pin,
+    distance
+  };
+}

@@ -27,26 +27,26 @@ if (rootElement) {
       import('./scrolling/ScrollingStory.jsx'),
       import('./exhibition/spatialDemo.js')
     ]);
-    const effectStations = SPATIAL_DEMO_STORY.stations.map((station, index) => ({
-      ...station,
-      items: station.items.map((item, itemIndex) => index === 0 && itemIndex === 0 ? {
+    const rendererPresets = [
+      ['cluster', 'pinned', 'Räumlicher Cluster'], ['orbit', 'normal', 'Umlaufbahn'], ['timeline', 'normal', 'Objekte in Folge'],
+      ['freeform', 'horizontal', 'Horizontaler Rundgang'], ['grid', 'zoom', 'Zoom durch das Objekt'], ['cluster', 'camera-motion', 'Perspektivwechsel']
+    ];
+    const sourceItems = SPATIAL_DEMO_STORY.stations[0].items;
+    const effectStations = rendererPresets.map(([layout, scroll, title], index) => {
+      const items = sourceItems.map((item, itemIndex) => ({
         ...item,
-        modelUrl: 'https://sketchfab.com/models/8524a2cbf60944f6ab768655d91c5229',
-        sourceType: 'sketchfab',
-        thumbnailUrl: '',
-        providerThumbnailUrl: ''
-      } : item),
-      behavior: { layout: index === 0 ? 'cluster' : 'orbit', entrance: 'from-darkness', scroll: index === 0 ? 'pinned' : 'normal', interactions: { hoverTilt: true, objectFocus: true, connections: true, spotlight: index === 0, discoveryMode: false }, atmosphere: { theme: index === 0 ? 'ritual' : index === 1 ? 'daylight' : 'nocturne', particles: true, grain: index !== 1, accent: index === 2 ? '#7f9fd1' : '#c99762' }, viewerTransition: 'morph' },
-      narrativeSteps: index === 0 ? [
-        { id: 'surface', eyebrow: 'Lesart 01', title: 'Oberfläche als Spur', text: 'Gebrauch und Zeit schreiben sich in Material ein.', itemId: station.items[0]?.id },
-        { id: 'translation', eyebrow: 'Lesart 02', title: 'Digital übersetzt', text: 'Licht und Textur machen diese Spuren neu lesbar.', itemId: station.items[1]?.id },
-        { id: 'memory', eyebrow: 'Lesart 03', title: 'Erinnerung wird Beziehung', text: 'Erst im Vergleich entsteht eine gemeinsame Geschichte.', itemId: station.items[2]?.id }
-      ] : [],
-      relations: index === 0 ? [
-        { id: 'material', fromItemId: station.items[0]?.id, toItemId: station.items[1]?.id, label: 'Materialwirkung', description: 'Oberflächen lassen Gebrauch, Alterung und digitale Rekonstruktion unterschiedlich lesbar werden.' },
-        { id: 'form', fromItemId: station.items[0]?.id, toItemId: station.items[2]?.id, label: 'Form und Erinnerung', description: 'Die Silhouette verbindet sehr verschiedene Objekte zu einer gemeinsamen Erzählung über Bewahrung.' }
-      ] : []
-    }));
+        id: `renderer-${index}-${itemIndex}`,
+        ...(index === 0 && itemIndex === 0 ? { modelUrl: 'https://sketchfab.com/models/8524a2cbf60944f6ab768655d91c5229', sourceType: 'sketchfab', thumbnailUrl: '', providerThumbnailUrl: '' } : {})
+      }));
+      return {
+        ...SPATIAL_DEMO_STORY.stations[index % SPATIAL_DEMO_STORY.stations.length], id: `renderer-station-${index}`, title,
+        introduction: `Diese Station demonstriert ${layout} mit dem Scrollmodus ${scroll}.`, description: `Diese Station demonstriert ${layout} mit dem Scrollmodus ${scroll}.`, items,
+        behavior: { layout, entrance: index % 2 ? 'assemble' : 'from-darkness', scroll, interactions: { hoverTilt: true, objectFocus: true, connections: true, spotlight: index === 0, discoveryMode: false }, motion: { parallax: true, floating: layout !== 'timeline', magneticCursor: true, depthOfField: layout === 'cluster', clusterExplode: true, progressiveText: true }, atmosphere: { theme: index % 2 ? 'daylight' : 'ritual', particles: true, grain: index % 2 === 0, accent: index === 4 ? '#7f9fd1' : '#c99762' }, viewerTransition: 'morph' },
+        initialItemId: items[0]?.id,
+        narrativeSteps: items.map((item, itemIndex) => ({ id: `step-${index}-${itemIndex}`, eyebrow: `Moment 0${itemIndex + 1}`, title: item.title, text: item.description, itemId: item.id })),
+        relations: items.slice(1).map((item, itemIndex) => ({ id: `relation-${index}-${itemIndex}`, fromItemId: items[0].id, toItemId: item.id, label: itemIndex ? 'Form und Erinnerung' : 'Materialwirkung' }))
+      };
+    });
     app = <ScrollingStory story={{ ...SPATIAL_DEMO_STORY, stations: effectStations }} />;
   } else if (import.meta.env.DEV && window.location.pathname === '/__scroll-preview') {
     const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');

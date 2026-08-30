@@ -3,7 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowUpRight, Eye } from 'lucide-react';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
-import { normalizeStationBehavior } from '../utils/stationBehavior.js';
+import { getStationRendererDescriptor, normalizeStationBehavior } from '../utils/stationBehavior.js';
 import { normalizeStationRelations } from '../utils/stationRelations.js';
 import { normalizeNarrativeSteps } from '../utils/stationNarrative.js';
 
@@ -22,9 +22,16 @@ const safeItems = (station) => Array.isArray(station?.items) ? station.items.fil
 export default function ScrollStationStage({ station, stationIndex, onOpen, openItemId }) {
   const rootRef = useRef(null);
   const stageRef = useRef(null);
+  const sceneRef = useRef(null);
+  const lightRef = useRef(null);
+  const kickerRef = useRef(null);
+  const particlesRef = useRef(null);
+  const relationCopyRef = useRef(null);
+  const narrativeRef = useRef(null);
   const [activeItemId, setActiveItemId] = useState('');
   const [discovered, setDiscovered] = useState(() => new Set());
   const behavior = normalizeStationBehavior(station?.behavior);
+  const renderer = getStationRendererDescriptor(behavior);
   const items = safeItems(station);
   const narrativeSteps = normalizeNarrativeSteps(station?.narrativeSteps, items);
   const points = POINTS[behavior.layout] || POINTS.cluster;
@@ -43,60 +50,106 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
   useLayoutEffect(() => {
     const root = rootRef.current;
     const stage = stageRef.current;
-    if (!root || !stage || items.length < 2) return undefined;
+    const scene = sceneRef.current;
+    if (!root || !stage || !scene || items.length < 2) return undefined;
     let media;
-    const context = gsap.context(() => {
-      media = gsap.matchMedia();
-      media.add('(min-width: 761px) and (prefers-reduced-motion: no-preference)', () => {
-        const objects = gsap.utils.toArray('.stage-object');
-        const labels = gsap.utils.toArray('.stage-object-label');
-        const lines = gsap.utils.toArray('.stage-relation-line');
-        const narrative = gsap.utils.toArray('.stage-narrative-step');
-        const entranceState = behavior.entrance === 'fade'
-          ? { scale: .96, opacity: .78, filter: 'none' }
-          : behavior.entrance === 'rise'
-            ? { scale: .9, opacity: .76, filter: 'none', y: 34 }
-            : { scale: .78, opacity: .72, filter: behavior.entrance === 'from-darkness' ? 'brightness(.84)' : 'brightness(.92)' };
-        objects.forEach((object, index) => gsap.set(object, { left: `${50 + (points[index][0] - 50) * .32}%`, top: `${50 + (points[index][1] - 50) * .32}%`, xPercent: -50, yPercent: -50, ...entranceState }));
-        gsap.set(labels, { opacity: .68, y: 7 });
-        gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
-        gsap.set(narrative, { opacity: (index) => index === 0 ? .82 : .16, y: (index) => index === 0 ? 0 : 10 });
-        const timeline = gsap.timeline({ scrollTrigger: {
-          trigger: root,
-          start: 'top 68px',
-          end: () => `+=${Math.max(window.innerHeight * 1.65, 1200)}`,
-          pin: behavior.scroll === 'pinned' ? stage : false,
-          scrub: .65,
-          anticipatePin: 1,
-          invalidateOnRefresh: true
-        } });
-        timeline.to(objects, { opacity: 1, scale: .82, filter: 'brightness(.94)', duration: .18, stagger: .02 }, 0);
-        objects.forEach((object, index) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, scale: 1, duration: .48, ease: 'power2.inOut' }, .2 + index * .015));
-        timeline.to('.stage-light', { opacity: 1, scale: 1.18, duration: .35 }, .05);
-        if (behavior.motion.parallax) {
-          timeline.to('.stage-light', { yPercent: -12, duration: .75 }, .15);
-          objects.forEach((object, index) => timeline.to(object, { y: index % 2 ? -18 : 18, duration: .25 }, .72));
-        }
-        timeline.to(labels, { opacity: 1, y: 0, duration: .16, stagger: .025 }, .62);
-        if (behavior.interactions.connections) timeline.to(lines, { opacity: .55, scaleX: 1, duration: .16, stagger: .02 }, .73);
-        timeline.to('.stage-relation-copy', { opacity: 1, y: 0, duration: .16 }, .78);
-        if (narrative.length && behavior.motion.progressiveText) narrative.forEach((step, index) => {
-          const moment = .56 + index * .105;
-          if (index) timeline.to(narrative[index - 1], { opacity: .2, duration: .06 }, moment);
-          timeline.to(step, { opacity: 1, y: 0, duration: .09 }, moment);
-          const focusId = narrativeSteps[index]?.itemId;
-          const focusObject = focusId ? objects.find((object) => object.dataset.itemId === focusId) : null;
-          if (focusObject) timeline.to(focusObject, { filter: 'brightness(1.18)', duration: .07 }, moment);
+    let context;
+    let refreshFrame;
+    const setupFrame = requestAnimationFrame(() => {
+      context = gsap.context(() => {
+        media = gsap.matchMedia();
+        media.add('(min-width: 761px) and (prefers-reduced-motion: no-preference)', () => {
+          const objects = Array.from(scene.querySelectorAll('.stage-object'));
+          const labels = Array.from(scene.querySelectorAll('.stage-object-label'));
+          const lines = Array.from(scene.querySelectorAll('.stage-relation-line'));
+          const narrative = narrativeRef.current ? Array.from(narrativeRef.current.querySelectorAll('.stage-narrative-step')) : [];
+          if (!objects.length) return undefined;
+          const entranceState = behavior.entrance === 'fade'
+            ? { scale: .96, opacity: .78, filter: 'none' }
+            : behavior.entrance === 'rise'
+              ? { scale: .9, opacity: .76, filter: 'none', y: 34 }
+              : { scale: .78, opacity: .72, filter: behavior.entrance === 'from-darkness' ? 'brightness(.84)' : 'brightness(.92)' };
+          gsap.set(labels, { opacity: .72, y: 6 });
+          if (lines.length) gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
+          if (narrative.length) gsap.set(narrative, { opacity: (index) => index === 0 ? .82 : .16, y: (index) => index === 0 ? 0 : 10 });
+
+          const timeline = gsap.timeline({ scrollTrigger: {
+            trigger: root,
+            start: 'top 68px',
+            end: () => `+=${Math.max(window.innerHeight * renderer.distance, 1050)}`,
+            pin: renderer.pin ? stage : false,
+            scrub: true,
+            anticipatePin: 1,
+            invalidateOnRefresh: true
+          } });
+
+          const setFinalPoint = (object, index, extra = {}) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, opacity: 1, filter: 'none', duration: .62, ease: 'power2.inOut', ...extra }, .12 + index * .018);
+          if (behavior.scroll === 'horizontal') {
+            objects.forEach((object, index) => gsap.set(object, { left: `${50 + index * 34}%`, top: `${index % 2 ? 61 : 38}%`, xPercent: -50, yPercent: -50, scale: index ? .88 : 1.08, opacity: index ? .7 : 1, filter: 'none' }));
+            timeline.to(scene, { x: () => -Math.max(0, objects.length - 1) * window.innerWidth * .31, duration: 1, ease: 'none' }, 0);
+            objects.forEach((object, index) => timeline.to(object, { scale: 1.08, opacity: 1, duration: .18 }, Math.min(.82, index / Math.max(1, objects.length - 1) * .78)));
+          } else if (behavior.layout === 'orbit') {
+            const orbitState = { progress: 0 };
+            objects.forEach((object, index) => gsap.set(object, { xPercent: -50, yPercent: -50, opacity: .82, scale: .78 + (index % 3) * .1, filter: 'none' }));
+            timeline.to(orbitState, { progress: 1, duration: .78, ease: 'none', onUpdate: () => {
+              objects.forEach((object, index) => {
+                const [finalX, finalY] = points[index];
+                const dx = finalX - 50; const dy = finalY - 50;
+                const angle = (-135 * (1 - orbitState.progress)) * Math.PI / 180;
+                const contraction = .5 + orbitState.progress * .5;
+                gsap.set(object, { left: `${50 + (dx * Math.cos(angle) - dy * Math.sin(angle)) * contraction}%`, top: `${50 + (dx * Math.sin(angle) + dy * Math.cos(angle)) * contraction}%`, rotationY: 24 * (1 - orbitState.progress), scale: .78 + orbitState.progress * .22, opacity: .82 + orbitState.progress * .18 });
+              });
+            } }, 0);
+          } else if (behavior.layout === 'timeline') {
+            objects.forEach((object, index) => gsap.set(object, { left: '68%', top: `${42 + (index % 2) * 13}%`, xPercent: -50, yPercent: -50, scale: .68, opacity: .12, filter: 'blur(1px) brightness(.7)' }));
+            objects.forEach((object, index) => {
+              const moment = index / Math.max(1, objects.length) * .76;
+              if (index) timeline.to(objects[index - 1], { left: '25%', scale: .62, opacity: .2, filter: 'grayscale(.7) blur(1px)', duration: .16 }, moment);
+              timeline.to(object, { left: '50%', top: '48%', scale: 1.12, opacity: 1, filter: 'none', duration: .2, ease: 'power2.out' }, moment);
+            });
+          } else {
+            const scales = behavior.layout === 'cluster' ? [1.18, .82, .72, .98, .78, 1.04] : behavior.layout === 'freeform' ? [.78, 1.16, .88, 1.05, .7, .94] : [1, .9, 1.05, .88, 1.08, .94];
+            objects.forEach((object, index) => gsap.set(object, { left: `${50 + (points[index][0] - 50) * .25}%`, top: `${50 + (points[index][1] - 50) * .25}%`, xPercent: -50, yPercent: -50, rotationZ: behavior.layout === 'freeform' ? (index % 2 ? 5 : -4) : 0, ...entranceState }));
+            objects.forEach((object, index) => setFinalPoint(object, index, { scale: scales[index] || 1, rotationZ: behavior.layout === 'freeform' ? (index % 2 ? -3 : 2) : 0 }));
+          }
+
+          if (lightRef.current) timeline.to(lightRef.current, { opacity: .9, scale: 1.15, duration: .45 }, .05);
+          if (behavior.scroll === 'zoom') {
+            const focusObject = objects.find((object) => object.dataset.itemId === hubId) || objects[0];
+            const others = objects.filter((object) => object !== focusObject);
+            if (others.length) timeline.to(others, { opacity: .08, scale: .62, filter: 'blur(3px)', duration: .2 }, .52);
+            timeline.to(focusObject, { left: '50%', top: '50%', scale: 3.6, zIndex: 8, filter: 'brightness(1.14)', duration: .26, ease: 'power2.in' }, .5)
+              .to(focusObject, { scale: 1.08, duration: .2, ease: 'power2.out' }, .82);
+            if (others.length) timeline.to(others, { opacity: .72, filter: 'none', duration: .18 }, .82);
+          }
+          if (behavior.scroll === 'camera-motion') {
+            timeline.fromTo(scene, { rotationY: -11, rotationX: 3, xPercent: -4, scale: .9 }, { rotationY: 10, rotationX: -2, xPercent: 5, scale: 1.08, transformOrigin: '50% 50%', duration: .5, ease: 'sine.inOut' }, 0)
+              .to(scene, { rotationY: -5, rotationX: 1, xPercent: 0, scale: .96, duration: .42, ease: 'sine.inOut' }, .55);
+            objects.forEach((object, index) => timeline.to(object, { z: (index % 3 - 1) * 140, y: index % 2 ? -26 : 24, duration: .65 }, .12));
+          }
+          if (behavior.motion.parallax) {
+            if (lightRef.current) timeline.to(lightRef.current, { yPercent: -18, xPercent: 4, duration: .8 }, .15);
+            if (kickerRef.current) timeline.to(kickerRef.current, { y: -22, duration: .7 }, .08);
+            if (particlesRef.current) timeline.to(particlesRef.current, { yPercent: -9, xPercent: 3, duration: .82 }, .08);
+            if (relationCopyRef.current) timeline.to(relationCopyRef.current, { y: 18, duration: .7 }, .2);
+            objects.forEach((object, index) => timeline.to(object, { y: index % 3 === 0 ? -28 : index % 3 === 1 ? 10 : 34, duration: .45 }, .5));
+          }
+          if (labels.length) timeline.to(labels, { opacity: 1, y: 0, duration: .14, stagger: .018 }, .48);
+          if (behavior.interactions.connections && lines.length) timeline.to(lines, { opacity: .72, scaleX: 1, duration: .2, stagger: .025 }, .64);
+          if (relationCopyRef.current) timeline.to(relationCopyRef.current, { opacity: 1, duration: .14 }, .72);
+          if (narrative.length && behavior.motion.progressiveText) narrative.forEach((step, index) => {
+            const moment = .48 + index * .12;
+            if (index) timeline.to(narrative[index - 1], { opacity: .16, y: -8, duration: .06 }, moment);
+            timeline.to(step, { opacity: 1, y: 0, duration: .1 }, moment);
+          });
+          else if (narrative.length) timeline.to(narrative, { opacity: 1, y: 0, duration: .01 }, .48);
+          refreshFrame = requestAnimationFrame(() => ScrollTrigger.refresh());
+          return () => timeline.scrollTrigger?.kill();
         });
-        else if (narrative.length) timeline.to(narrative, { opacity: 1, y: 0, duration: .01 }, .58);
-        if (behavior.scroll === 'horizontal') timeline.to('.stage-object-cluster', { xPercent: -8, duration: .2 }, .8);
-        if (behavior.scroll === 'zoom') timeline.to(objects, { scale: 1.12, duration: .2, stagger: .015 }, .8);
-        if (behavior.scroll === 'camera-motion') timeline.to('.stage-object-cluster', { rotationZ: .8, scale: 1.025, duration: .2 }, .8);
-        requestAnimationFrame(() => ScrollTrigger.refresh());
-      });
-    }, root);
-    return () => { media?.revert(); context.revert(); };
-  }, [behavior.entrance, behavior.interactions.connections, behavior.layout, behavior.motion.parallax, behavior.motion.progressiveText, behavior.scroll, items.length, narrativeSteps.length, station?.id]);
+      }, root);
+    });
+    return () => { cancelAnimationFrame(setupFrame); if (refreshFrame) cancelAnimationFrame(refreshFrame); media?.revert(); context?.revert(); };
+  }, [behavior.entrance, behavior.interactions.connections, behavior.layout, behavior.motion.parallax, behavior.motion.progressiveText, behavior.scroll, hubId, items.length, narrativeSteps.length, renderer.distance, renderer.pin, station?.id]);
 
   const discover = (itemId) => {
     setActiveItemId(itemId);
@@ -126,13 +179,16 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
     });
   };
   const resetStagePointer = () => stageRef.current?.querySelectorAll('.stage-object').forEach((object) => { object.style.setProperty('--mag-x', '0px'); object.style.setProperty('--mag-y', '0px'); });
-  return <div ref={rootRef} className={`station-stage-shell layout-${behavior.layout} entrance-${behavior.entrance} scroll-${behavior.scroll} atmosphere-${behavior.atmosphere.theme}`} style={{ '--station-accent': behavior.atmosphere.accent }}>
+  return <div ref={rootRef} className={`station-stage-shell ${renderer.layoutClass} ${renderer.scrollClass} ${renderer.motionClass} entrance-${behavior.entrance} atmosphere-${behavior.atmosphere.theme}`} style={{ '--station-accent': behavior.atmosphere.accent }}>
     <div ref={stageRef} className={`station-stage ${activeItemId ? 'has-active-object' : ''} ${behavior.interactions.spotlight ? 'has-spotlight' : ''} ${behavior.interactions.discoveryMode ? 'has-discovery' : ''} ${behavior.motion.floating ? 'has-floating' : ''} ${behavior.motion.depthOfField ? 'has-depth' : ''} ${behavior.motion.clusterExplode ? 'has-explode' : ''}`} onPointerMove={moveStagePointer} onPointerLeave={resetStagePointer}>
       {behavior.atmosphere.grain && <div className="stage-grain" aria-hidden="true" />}
-      {behavior.atmosphere.particles && <div className="stage-particles" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ '--particle-index': index }} />)}</div>}
-      <div className="stage-light" aria-hidden="true" />
-      <div className="stage-kicker"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><b>Objektkonstellation</b></div>
-      <div className="stage-object-cluster">
+      {behavior.atmosphere.particles && <div ref={particlesRef} className="stage-particles" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ '--particle-index': index }} />)}</div>}
+      <div ref={lightRef} className="stage-light" aria-hidden="true" />
+      <div ref={kickerRef} className="stage-kicker"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><b>{behavior.layout === 'orbit' ? 'Objekte im Umlauf' : behavior.layout === 'timeline' ? 'Objekte in Folge' : behavior.scroll === 'horizontal' ? 'Horizontaler Rundgang' : behavior.scroll === 'zoom' ? 'Annäherung' : behavior.scroll === 'camera-motion' ? 'Perspektivwechsel' : 'Objektkonstellation'}</b></div>
+      {behavior.layout === 'orbit' && <div className="stage-orbit-geometry" aria-hidden="true"><i /><i /><i /></div>}
+      {behavior.layout === 'timeline' && <div className="stage-timeline-geometry" aria-hidden="true"><i /></div>}
+      {(behavior.layout === 'cluster' || behavior.scroll === 'camera-motion') && <div className="stage-depth-geometry" aria-hidden="true"><i /><i /><i /></div>}
+      <div ref={sceneRef} className={`stage-scene ${renderer.layoutClass} ${renderer.scrollClass}`}>
         {behavior.interactions.connections && relations.map((relation, index) => {
           const { fromItemId: fromId, toItemId: toId } = relation;
           const fromIndex = Math.max(0, items.findIndex((item) => item.id === fromId));
@@ -159,8 +215,8 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           </button>;
         })}
       </div>
-      <div className="stage-relation-copy"><span>{activeRelation?.label || (activeItemId ? 'Objekt im Zusammenhang' : 'Beziehungen lesen')}</span><p>{activeRelation?.description || (activeItemId ? items.find((item) => item.id === activeItemId)?.description : 'Ein Objekt tritt hervor, verwandte Stücke antworten. Öffne es, um vom Überblick in die 3D-Nahsicht zu wechseln.')}</p></div>
-      {narrativeSteps.length > 0 && <div className="stage-narrative" aria-label="Kuratorische Erzählmomente">{narrativeSteps.map((step, index) => <article key={step.id} className="stage-narrative-step"><span>{step.eyebrow || `Moment ${String(index + 1).padStart(2, '0')}`}</span><b>{step.title}</b>{step.text && <p>{step.text}</p>}</article>)}</div>}
+      <div ref={relationCopyRef} className="stage-relation-copy"><span>{activeRelation?.label || (activeItemId ? 'Objekt im Zusammenhang' : 'Beziehungen lesen')}</span><p>{activeRelation?.description || (activeItemId ? items.find((item) => item.id === activeItemId)?.description : 'Ein Objekt tritt hervor, verwandte Stücke antworten. Öffne es, um vom Überblick in die 3D-Nahsicht zu wechseln.')}</p></div>
+      {narrativeSteps.length > 0 && <div ref={narrativeRef} className="stage-narrative" aria-label="Kuratorische Erzählmomente">{narrativeSteps.map((step, index) => <article key={step.id} className="stage-narrative-step"><span>{step.eyebrow || `Moment ${String(index + 1).padStart(2, '0')}`}</span><b>{step.title}</b>{step.text && <p>{step.text}</p>}</article>)}</div>}
       {behavior.interactions.discoveryMode && <div className="stage-discovery-count"><Eye size={14} /> {discovered.size} von {items.length} entdeckt</div>}
       <div className="stage-cursor-feedback" aria-hidden="true"><span /></div>
     </div>

@@ -1,9 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_STATION_BEHAVIOR, normalizeStationBehavior } from '../src/utils/stationBehavior.js';
+import { DEFAULT_STATION_BEHAVIOR, getStationRendererDescriptor, normalizeStationBehavior } from '../src/utils/stationBehavior.js';
 
 test('station behaviors receive complete exhibition defaults', () => {
   assert.deepEqual(normalizeStationBehavior(), DEFAULT_STATION_BEHAVIOR);
+});
+
+test('renderer descriptors select genuinely different stage modes', () => {
+  assert.deepEqual(getStationRendererDescriptor({ layout: 'orbit', scroll: 'horizontal', motion: { parallax: true } }), {
+    layoutClass: 'stage-scene-orbit', scrollClass: 'stage-scroll-horizontal', motionClass: 'motion-parallax', pin: true, distance: 2.2
+  });
+  assert.equal(getStationRendererDescriptor({ layout: 'timeline', scroll: 'normal' }).pin, false);
+  assert.equal(getStationRendererDescriptor({ layout: 'cluster', scroll: 'zoom' }).scrollClass, 'stage-scroll-zoom');
 });
 
 test('station behaviors preserve valid WebMCP choices and repair invalid values', () => {
