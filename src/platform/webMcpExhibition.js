@@ -1,4 +1,7 @@
 import { isValidSpatialModelUrl, normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout } from '../utils/spatialStory.js';
+import { normalizeStationBehavior } from '../utils/stationBehavior.js';
+import { normalizeStationRelations } from '../utils/stationRelations.js';
+import { normalizeNarrativeSteps } from '../utils/stationNarrative.js';
 
 export const WEB_MCP_EXHIBITION_CATEGORIES = ['Archäologie', 'Architektur', 'Kulturerbe', 'Kunst', 'Natur', 'Sonstiges'];
 export const WEB_MCP_EXHIBITION_LANGUAGES = ['de', 'en', 'fr', 'it', 'es'];
@@ -86,6 +89,9 @@ export function normalizeWebMcpStations(stations) {
       title,
       description: introduction,
       introduction,
+      behavior: normalizeStationBehavior(station?.behavior),
+      relations: normalizeStationRelations(station?.relations, items),
+      narrativeSteps: normalizeNarrativeSteps(station?.narrativeSteps, items),
       spatial: normalizeSpatialStation(spatialInput, index),
       items,
       thumbnailLayout: normalizeThumbnailLayout(station?.thumbnailLayout),

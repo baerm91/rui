@@ -7,6 +7,7 @@ import {
   WEB_MCP_EXHIBITION_LANGUAGES,
   WEB_MCP_MATERIAL_IDS
 } from './webMcpExhibition.js';
+import { STATION_BEHAVIOR_OPTIONS } from '../utils/stationBehavior.js';
 
 const vectorSchema = {
   type: 'array',
@@ -45,6 +46,41 @@ const itemSchema = {
     thumbnailUrl: { type: 'string', description: 'Optionale HTTP(S)-URL zum Vorschaubild.' },
     attribution: { type: 'string', maxLength: 500 },
     license: { type: 'string', maxLength: 160 },
+    facts: {
+      type: 'object',
+      description: 'Strukturierte Angaben für Objektansicht und Vergleich.',
+      properties: {
+        material: { type: 'string', maxLength: 240 },
+        date: { type: 'string', maxLength: 240 },
+        dimensions: { type: 'string', maxLength: 240 },
+        findspot: { type: 'string', maxLength: 240 },
+        collection: { type: 'string', maxLength: 240 }
+      }
+    },
+    hotspots: {
+      type: 'array', maxItems: 12,
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }, label: { type: 'string', maxLength: 120 },
+          description: { type: 'string', maxLength: 1000 },
+          x: { type: 'number', minimum: 0, maximum: 100 }, y: { type: 'number', minimum: 0, maximum: 100 }
+        },
+        required: ['label', 'x', 'y']
+      }
+    },
+    hiddenLayers: {
+      type: 'array', maxItems: 6,
+      description: 'Zusätzliche, vom Besucher aktiv zu öffnende Inhaltsebenen.',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }, label: { type: 'string', maxLength: 120 },
+          title: { type: 'string', maxLength: 160 }, text: { type: 'string', maxLength: 1600 }
+        },
+        required: ['label', 'title', 'text']
+      }
+    },
     thumbnailTransform: transformSchema,
     modelTransform: transformSchema
   },
@@ -61,6 +97,73 @@ const stationSchema = {
     thumbnailGridSpacing: { type: 'number', minimum: 60, maximum: 140 },
     selectedItemId: { type: 'string' },
     initialItemId: { type: 'string' },
+    behavior: {
+      type: 'object',
+      description: 'Kombinierbare Inszenierung der Scrolling-Station.',
+      properties: {
+        layout: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.layout },
+        entrance: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.entrance },
+        scroll: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.scroll },
+        interactions: {
+          type: 'object',
+          properties: {
+            hoverTilt: { type: 'boolean' },
+            objectFocus: { type: 'boolean' },
+            connections: { type: 'boolean' },
+            spotlight: { type: 'boolean' },
+            discoveryMode: { type: 'boolean' }
+          }
+        },
+        motion: {
+          type: 'object',
+          description: 'Scroll- und Cursorbewegung innerhalb der Stationsbühne.',
+          properties: {
+            parallax: { type: 'boolean' }, floating: { type: 'boolean' },
+            magneticCursor: { type: 'boolean' }, depthOfField: { type: 'boolean' },
+            clusterExplode: { type: 'boolean' }, progressiveText: { type: 'boolean' }
+          }
+        },
+        viewerTransition: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.viewerTransition },
+        stationTransition: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.stationTransition },
+        atmosphere: {
+          type: 'object',
+          properties: {
+            theme: { type: 'string', enum: STATION_BEHAVIOR_OPTIONS.atmosphere },
+            particles: { type: 'boolean' }, grain: { type: 'boolean' },
+            accent: { type: 'string', description: 'Sechsstellige CSS-Hexfarbe.' }
+          }
+        }
+      }
+    },
+    narrativeSteps: {
+      type: 'array', maxItems: 5,
+      description: 'Scroll-Momente, die die kuratorische Erzählung innerhalb einer Station takten.',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' }, eyebrow: { type: 'string', maxLength: 80 },
+          title: { type: 'string', maxLength: 160 }, text: { type: 'string', maxLength: 1200 },
+          itemId: { type: 'string', description: 'Optionales Objekt, das dieser Moment hervorhebt.' }
+        },
+        required: ['title']
+      }
+    },
+    relations: {
+      type: 'array',
+      maxItems: 30,
+      description: 'Semantische Beziehungen zwischen den Objekten dieser Station.',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          fromItemId: { type: 'string', description: 'ID des Ausgangsobjekts.' },
+          toItemId: { type: 'string', description: 'ID des verbundenen Objekts.' },
+          label: { type: 'string', maxLength: 120, description: 'Kurze kuratorische Bezeichnung, etwa Attribut oder gleicher Fundort.' },
+          description: { type: 'string', maxLength: 1000 }
+        },
+        required: ['fromItemId', 'toItemId']
+      }
+    },
     spatial: {
       type: 'object',
       properties: {
@@ -235,7 +338,7 @@ export async function registerRiuWebMcpTools(modelContext = document.modelContex
     },
     {
       name: 'get_exhibition_draft',
-      description: 'Liest das vollständige Konzept, die Stationen, Medien, Materialien, Beleuchtung, Kameras und 3D-Objekte eines bearbeitbaren RIU-Ausstellungsentwurfs.',
+      description: 'Liest das vollständige Konzept, die Stationen, Effekt- und Interaktionsverhalten, Medien, Materialien, Beleuchtung, Kameras und 3D-Objekte eines bearbeitbaren RIU-Ausstellungsentwurfs.',
       inputSchema: {
         type: 'object',
         properties: { id: { type: 'string', description: 'ID des Ausstellungsentwurfs.' } },
@@ -246,14 +349,14 @@ export async function registerRiuWebMcpTools(modelContext = document.modelContex
     },
     {
       name: 'create_exhibition_draft',
-      description: 'Konzipiert und speichert eine vollständige RIU-Scrolling-Ausstellung als privaten Entwurf. Lege eine schlüssige vertikale Dramaturgie mit 1 bis 20 aufeinanderfolgenden Stationen an und verwende ausschließlich belegte, lizenzierte Medien- und 3D-Modell-URLs. Veröffentlicht die Ausstellung nicht.',
+      description: 'Konzipiert und speichert eine vollständige RIU-Scrolling-Ausstellung als privaten Entwurf. Pro Station können Layout, Entrance, Scrollverhalten, Interaktionen und Viewer-Übergang kombiniert werden. Lege eine schlüssige vertikale Dramaturgie mit 1 bis 20 Stationen an und verwende ausschließlich belegte, lizenzierte Medien- und 3D-Modell-URLs. Veröffentlicht die Ausstellung nicht.',
       inputSchema: WEB_MCP_CREATE_EXHIBITION_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       execute: async (input) => jsonResult(await createDraft(input))
     },
     {
       name: 'update_exhibition_draft',
-      description: 'Überarbeitet einen bearbeitbaren privaten RIU-Scrolling-Ausstellungsentwurf. Angegebene Felder werden ersetzt, ausgelassene Felder bleiben erhalten. Veröffentlicht die Ausstellung nicht.',
+      description: 'Überarbeitet einen privaten RIU-Scrolling-Ausstellungsentwurf einschließlich seiner Stations-Effekte. Angegebene Felder werden ersetzt, ausgelassene Felder bleiben erhalten. Veröffentlicht die Ausstellung nicht.',
       inputSchema: WEB_MCP_UPDATE_EXHIBITION_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       execute: async (input) => jsonResult(await updateDraft(input))

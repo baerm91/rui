@@ -22,7 +22,26 @@ if (!usesModelViewer) document.title = 'RIU — Räumliche Geschichten';
 const rootElement = document.getElementById('react-root');
 if (rootElement) {
   let app;
-  if (import.meta.env.DEV && window.location.pathname === '/__scroll-preview') {
+  if (import.meta.env.DEV && window.location.pathname === '/__effects-preview') {
+    const [{ default: ScrollingStory }, { SPATIAL_DEMO_STORY }] = await Promise.all([
+      import('./scrolling/ScrollingStory.jsx'),
+      import('./exhibition/spatialDemo.js')
+    ]);
+    const effectStations = SPATIAL_DEMO_STORY.stations.map((station, index) => ({
+      ...station,
+      behavior: { layout: index === 0 ? 'cluster' : 'orbit', entrance: 'from-darkness', scroll: index === 0 ? 'pinned' : 'normal', interactions: { hoverTilt: true, objectFocus: true, connections: true, spotlight: index === 0, discoveryMode: false }, atmosphere: { theme: index === 0 ? 'ritual' : index === 1 ? 'daylight' : 'nocturne', particles: true, grain: index !== 1, accent: index === 2 ? '#7f9fd1' : '#c99762' }, viewerTransition: 'morph' },
+      narrativeSteps: index === 0 ? [
+        { id: 'surface', eyebrow: 'Lesart 01', title: 'Oberfläche als Spur', text: 'Gebrauch und Zeit schreiben sich in Material ein.', itemId: station.items[0]?.id },
+        { id: 'translation', eyebrow: 'Lesart 02', title: 'Digital übersetzt', text: 'Licht und Textur machen diese Spuren neu lesbar.', itemId: station.items[1]?.id },
+        { id: 'memory', eyebrow: 'Lesart 03', title: 'Erinnerung wird Beziehung', text: 'Erst im Vergleich entsteht eine gemeinsame Geschichte.', itemId: station.items[2]?.id }
+      ] : [],
+      relations: index === 0 ? [
+        { id: 'material', fromItemId: station.items[0]?.id, toItemId: station.items[1]?.id, label: 'Materialwirkung', description: 'Oberflächen lassen Gebrauch, Alterung und digitale Rekonstruktion unterschiedlich lesbar werden.' },
+        { id: 'form', fromItemId: station.items[0]?.id, toItemId: station.items[2]?.id, label: 'Form und Erinnerung', description: 'Die Silhouette verbindet sehr verschiedene Objekte zu einer gemeinsamen Erzählung über Bewahrung.' }
+      ] : []
+    }));
+    app = <ScrollingStory story={{ ...SPATIAL_DEMO_STORY, stations: effectStations }} />;
+  } else if (import.meta.env.DEV && window.location.pathname === '/__scroll-preview') {
     const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');
     app = <ScrollingStory story={{
       id: 'scroll-preview',

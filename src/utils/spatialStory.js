@@ -33,6 +33,23 @@ export function getSpatialSourceType(url = '') {
 export function createSpatialItem(input = {}, index = 0) {
   const modelUrl = normalizeModelUrl(String(input.modelUrl || '').trim());
   const sourceType = input.sourceType || getSpatialSourceType(modelUrl);
+  const factsSource = input.facts && typeof input.facts === 'object' ? input.facts : {};
+  const facts = Object.fromEntries(['material', 'date', 'dimensions', 'findspot', 'collection']
+    .map((key) => [key, String(factsSource[key] || '').trim().slice(0, 240)])
+    .filter(([, value]) => value));
+  const hotspots = (Array.isArray(input.hotspots) ? input.hotspots : []).slice(0, 12).map((hotspot, hotspotIndex) => ({
+    id: String(hotspot?.id || `hotspot_${hotspotIndex + 1}`).trim().slice(0, 80),
+    label: String(hotspot?.label || `Detail ${hotspotIndex + 1}`).trim().slice(0, 120),
+    description: String(hotspot?.description || '').trim().slice(0, 1000),
+    x: number(hotspot?.x, 50, 0, 100),
+    y: number(hotspot?.y, 50, 0, 100)
+  }));
+  const hiddenLayers = (Array.isArray(input.hiddenLayers) ? input.hiddenLayers : []).slice(0, 6).map((layer, layerIndex) => ({
+    id: String(layer?.id || `layer_${layerIndex + 1}`).trim().slice(0, 80),
+    label: String(layer?.label || `Ebene ${layerIndex + 1}`).trim().slice(0, 120),
+    title: String(layer?.title || '').trim().slice(0, 160),
+    text: String(layer?.text || '').trim().slice(0, 1600)
+  }));
   return {
     id: input.id || `item_${Date.now()}_${index}`,
     modelUrl,
@@ -53,7 +70,10 @@ export function createSpatialItem(input = {}, index = 0) {
       scale: number(input.modelTransform?.scale, 1, 0.02, 20)
     },
     attribution: String(input.attribution || '').trim(),
-    license: String(input.license || '').trim()
+    license: String(input.license || '').trim(),
+    facts,
+    hotspots,
+    hiddenLayers
   };
 }
 
