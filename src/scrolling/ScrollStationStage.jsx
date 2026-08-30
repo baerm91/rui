@@ -53,14 +53,14 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
         const lines = gsap.utils.toArray('.stage-relation-line');
         const narrative = gsap.utils.toArray('.stage-narrative-step');
         const entranceState = behavior.entrance === 'fade'
-          ? { scale: 1, opacity: 0, filter: 'none' }
+          ? { scale: .96, opacity: .78, filter: 'none' }
           : behavior.entrance === 'rise'
-            ? { scale: .88, opacity: 0, filter: 'none', y: 70 }
-            : { scale: .46, opacity: .08, filter: behavior.entrance === 'from-darkness' ? 'brightness(.22) blur(3px)' : 'brightness(.65) blur(1px)' };
-        gsap.set(objects, { left: '50%', top: '50%', xPercent: -50, yPercent: -50, ...entranceState });
-        gsap.set(labels, { opacity: 0, y: 12 });
+            ? { scale: .9, opacity: .76, filter: 'none', y: 34 }
+            : { scale: .78, opacity: .72, filter: behavior.entrance === 'from-darkness' ? 'brightness(.84)' : 'brightness(.92)' };
+        objects.forEach((object, index) => gsap.set(object, { left: `${50 + (points[index][0] - 50) * .32}%`, top: `${50 + (points[index][1] - 50) * .32}%`, xPercent: -50, yPercent: -50, ...entranceState }));
+        gsap.set(labels, { opacity: .68, y: 7 });
         gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
-        gsap.set(narrative, { opacity: 0, y: 18 });
+        gsap.set(narrative, { opacity: (index) => index === 0 ? .82 : .16, y: (index) => index === 0 ? 0 : 10 });
         const timeline = gsap.timeline({ scrollTrigger: {
           trigger: root,
           start: 'top 68px',
@@ -70,7 +70,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           anticipatePin: 1,
           invalidateOnRefresh: true
         } });
-        timeline.to(objects, { opacity: 1, scale: .68, filter: 'brightness(.9) blur(0px)', duration: .18, stagger: .02 }, 0);
+        timeline.to(objects, { opacity: 1, scale: .82, filter: 'brightness(.94)', duration: .18, stagger: .02 }, 0);
         objects.forEach((object, index) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, scale: 1, duration: .48, ease: 'power2.inOut' }, .2 + index * .015));
         timeline.to('.stage-light', { opacity: 1, scale: 1.18, duration: .35 }, .05);
         if (behavior.motion.parallax) {

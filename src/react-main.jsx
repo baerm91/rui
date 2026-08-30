@@ -29,6 +29,13 @@ if (rootElement) {
     ]);
     const effectStations = SPATIAL_DEMO_STORY.stations.map((station, index) => ({
       ...station,
+      items: station.items.map((item, itemIndex) => index === 0 && itemIndex === 0 ? {
+        ...item,
+        modelUrl: 'https://sketchfab.com/models/8524a2cbf60944f6ab768655d91c5229',
+        sourceType: 'sketchfab',
+        thumbnailUrl: '',
+        providerThumbnailUrl: ''
+      } : item),
       behavior: { layout: index === 0 ? 'cluster' : 'orbit', entrance: 'from-darkness', scroll: index === 0 ? 'pinned' : 'normal', interactions: { hoverTilt: true, objectFocus: true, connections: true, spotlight: index === 0, discoveryMode: false }, atmosphere: { theme: index === 0 ? 'ritual' : index === 1 ? 'daylight' : 'nocturne', particles: true, grain: index !== 1, accent: index === 2 ? '#7f9fd1' : '#c99762' }, viewerTransition: 'morph' },
       narrativeSteps: index === 0 ? [
         { id: 'surface', eyebrow: 'Lesart 01', title: 'Oberfläche als Spur', text: 'Gebrauch und Zeit schreiben sich in Material ein.', itemId: station.items[0]?.id },

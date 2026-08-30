@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowUpRight, Check, ChevronDown, Crosshair, GitCompare, Link2, Menu, MousePointer2, Palette, Plus, Save, Trash2, Volume2, VolumeX, X } from 'lucide-react';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
+import { resolveModelSourceMetadata } from '../utils/modelSourceAdapters.js';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import { normalizeStationBehavior, STATION_BEHAVIOR_OPTIONS } from '../utils/stationBehavior.js';
 import ScrollStationStage from './ScrollStationStage.jsx';
@@ -184,6 +185,29 @@ export default function ScrollingStory({ story, initialMode = 'visitor', backHre
   const coverImage = story?.coverImage || (firstObject ? resolveSpatialThumbnailUrl(firstObject) : '');
   const totalObjects = useMemo(() => stations.reduce((sum, station) => sum + stationItems(station).length, 0), [stations]);
   const activeAudio = stations[activeIndex]?.spatial?.audio;
+
+  useEffect(() => {
+    const missing = stations.flatMap((station, stationIndex) => stationItems(station)
+      .filter((item) => item.sourceType === 'sketchfab' && !resolveSpatialThumbnailUrl(item) && item.modelUrl)
+      .map((item) => ({ stationIndex, itemId: item.id, modelUrl: item.modelUrl })));
+    if (!missing.length) return undefined;
+    let cancelled = false;
+    Promise.all(missing.map(async (entry) => {
+      try {
+        const metadata = await resolveModelSourceMetadata(entry.modelUrl);
+        return { ...entry, providerThumbnailUrl: String(metadata.providerThumbnailUrl || '').trim() };
+      } catch { return { ...entry, providerThumbnailUrl: '' }; }
+    })).then((resolved) => {
+      if (cancelled) return;
+      const available = resolved.filter((entry) => entry.providerThumbnailUrl);
+      if (!available.length) return;
+      setStations((current) => current.map((station, stationIndex) => ({ ...station, items: stationItems(station).map((item) => {
+        const match = available.find((entry) => entry.stationIndex === stationIndex && entry.itemId === item.id && entry.modelUrl === item.modelUrl);
+        return match && !resolveSpatialThumbnailUrl(item) ? { ...item, providerThumbnailUrl: match.providerThumbnailUrl } : item;
+      }) })));
+    });
+    return () => { cancelled = true; };
+  }, [stations]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
