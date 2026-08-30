@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowUpRight, Eye } from 'lucide-react';
@@ -28,6 +28,8 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
   const particlesRef = useRef(null);
   const relationCopyRef = useRef(null);
   const narrativeRef = useRef(null);
+  const pointerFrameRef = useRef(0);
+  const pointerEventRef = useRef(null);
   const [activeItemId, setActiveItemId] = useState('');
   const [discovered, setDiscovered] = useState(() => new Set());
   const behavior = normalizeStationBehavior(station?.behavior);
@@ -47,6 +49,19 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
     return [];
   }));
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      root.classList.toggle('is-stage-nearby', entry.isIntersecting);
+    }, { rootMargin: '70% 0px', threshold: 0 });
+    observer.observe(root);
+    return () => {
+      observer.disconnect();
+      if (pointerFrameRef.current) cancelAnimationFrame(pointerFrameRef.current);
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const root = rootRef.current;
     const stage = stageRef.current;
@@ -65,10 +80,10 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           const narrative = narrativeRef.current ? Array.from(narrativeRef.current.querySelectorAll('.stage-narrative-step')) : [];
           if (!objects.length) return undefined;
           const entranceState = behavior.entrance === 'fade'
-            ? { scale: .96, opacity: .78, filter: 'none' }
+            ? { scale: .96, opacity: .78 }
             : behavior.entrance === 'rise'
-              ? { scale: .9, opacity: .76, filter: 'none', y: 34 }
-              : { scale: .78, opacity: .72, filter: behavior.entrance === 'from-darkness' ? 'brightness(.84)' : 'brightness(.92)' };
+              ? { scale: .9, opacity: .76, y: 34 }
+              : { scale: .78, opacity: behavior.entrance === 'from-darkness' ? .58 : .72 };
           gsap.set(labels, { opacity: .72, y: 6 });
           if (lines.length) gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
           if (narrative.length) gsap.set(narrative, { opacity: (index) => index === 0 ? .82 : .16, y: (index) => index === 0 ? 0 : 10 });
@@ -83,29 +98,30 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
             invalidateOnRefresh: true
           } });
 
-          const setFinalPoint = (object, index, extra = {}) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, opacity: 1, filter: 'none', duration: .62, ease: 'power2.inOut', ...extra }, .12 + index * .018);
+          const setFinalPoint = (object, index, extra = {}) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, opacity: 1, duration: .62, ease: 'power2.inOut', ...extra }, .12 + index * .018);
           if (behavior.scroll === 'horizontal') {
-            objects.forEach((object, index) => gsap.set(object, { left: `${50 + index * 34}%`, top: `${index % 2 ? 61 : 38}%`, xPercent: -50, yPercent: -50, scale: index ? .88 : 1.08, opacity: index ? .7 : 1, filter: 'none' }));
+            objects.forEach((object, index) => gsap.set(object, { left: `${50 + index * 34}%`, top: `${index % 2 ? 61 : 38}%`, xPercent: -50, yPercent: -50, scale: index ? .88 : 1.08, opacity: index ? .7 : 1 }));
             timeline.to(scene, { x: () => -Math.max(0, objects.length - 1) * window.innerWidth * .31, duration: 1, ease: 'none' }, 0);
             objects.forEach((object, index) => timeline.to(object, { scale: 1.08, opacity: 1, duration: .18 }, Math.min(.82, index / Math.max(1, objects.length - 1) * .78)));
           } else if (behavior.layout === 'orbit') {
             const orbitState = { progress: 0 };
-            objects.forEach((object, index) => gsap.set(object, { xPercent: -50, yPercent: -50, opacity: .82, scale: .78 + (index % 3) * .1, filter: 'none' }));
+            const orbitSize = { width: scene.clientWidth, height: scene.clientHeight };
+            objects.forEach((object, index) => gsap.set(object, { left: '50%', top: '50%', xPercent: -50, yPercent: -50, opacity: .82, scale: .78 + (index % 3) * .1 }));
             timeline.to(orbitState, { progress: 1, duration: .78, ease: 'none', onUpdate: () => {
               objects.forEach((object, index) => {
                 const [finalX, finalY] = points[index];
                 const dx = finalX - 50; const dy = finalY - 50;
                 const angle = (-135 * (1 - orbitState.progress)) * Math.PI / 180;
                 const contraction = .5 + orbitState.progress * .5;
-                gsap.set(object, { left: `${50 + (dx * Math.cos(angle) - dy * Math.sin(angle)) * contraction}%`, top: `${50 + (dx * Math.sin(angle) + dy * Math.cos(angle)) * contraction}%`, rotationY: 24 * (1 - orbitState.progress), scale: .78 + orbitState.progress * .22, opacity: .82 + orbitState.progress * .18 });
+                gsap.set(object, { x: (dx * Math.cos(angle) - dy * Math.sin(angle)) * contraction * orbitSize.width / 100, y: (dx * Math.sin(angle) + dy * Math.cos(angle)) * contraction * orbitSize.height / 100, rotationY: 24 * (1 - orbitState.progress), scale: .78 + orbitState.progress * .22, opacity: .82 + orbitState.progress * .18 });
               });
             } }, 0);
           } else if (behavior.layout === 'timeline') {
-            objects.forEach((object, index) => gsap.set(object, { left: '68%', top: `${42 + (index % 2) * 13}%`, xPercent: -50, yPercent: -50, scale: .68, opacity: .12, filter: 'blur(1px) brightness(.7)' }));
+            objects.forEach((object, index) => gsap.set(object, { left: '68%', top: `${42 + (index % 2) * 13}%`, xPercent: -50, yPercent: -50, scale: .68, opacity: .12 }));
             objects.forEach((object, index) => {
               const moment = index / Math.max(1, objects.length) * .76;
-              if (index) timeline.to(objects[index - 1], { left: '25%', scale: .62, opacity: .2, filter: 'grayscale(.7) blur(1px)', duration: .16 }, moment);
-              timeline.to(object, { left: '50%', top: '48%', scale: 1.12, opacity: 1, filter: 'none', duration: .2, ease: 'power2.out' }, moment);
+              if (index) timeline.to(objects[index - 1], { left: '25%', scale: .62, opacity: .2, duration: .16 }, moment);
+              timeline.to(object, { left: '50%', top: '48%', scale: 1.12, opacity: 1, duration: .2, ease: 'power2.out' }, moment);
             });
           } else {
             const scales = behavior.layout === 'cluster' ? [1.18, .82, .72, .98, .78, 1.04] : behavior.layout === 'freeform' ? [.78, 1.16, .88, 1.05, .7, .94] : [1, .9, 1.05, .88, 1.08, .94];
@@ -117,10 +133,10 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           if (behavior.scroll === 'zoom') {
             const focusObject = objects.find((object) => object.dataset.itemId === hubId) || objects[0];
             const others = objects.filter((object) => object !== focusObject);
-            if (others.length) timeline.to(others, { opacity: .08, scale: .62, filter: 'blur(3px)', duration: .2 }, .52);
-            timeline.to(focusObject, { left: '50%', top: '50%', scale: 3.6, zIndex: 8, filter: 'brightness(1.14)', duration: .26, ease: 'power2.in' }, .5)
+            if (others.length) timeline.to(others, { opacity: .08, scale: .62, duration: .2 }, .52);
+            timeline.to(focusObject, { left: '50%', top: '50%', scale: 3.6, zIndex: 8, duration: .26, ease: 'power2.in' }, .5)
               .to(focusObject, { scale: 1.08, duration: .2, ease: 'power2.out' }, .82);
-            if (others.length) timeline.to(others, { opacity: .72, filter: 'none', duration: .18 }, .82);
+            if (others.length) timeline.to(others, { opacity: .72, duration: .18 }, .82);
           }
           if (behavior.scroll === 'camera-motion') {
             timeline.fromTo(scene, { rotationY: -11, rotationX: 3, xPercent: -4, scale: .9 }, { rotationY: 10, rotationX: -2, xPercent: 5, scale: 1.08, transformOrigin: '50% 50%', duration: .5, ease: 'sine.inOut' }, 0)
@@ -156,33 +172,47 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
     if (behavior.interactions.discoveryMode) setDiscovered((current) => new Set([...current, itemId]));
   };
   const moveStagePointer = (event) => {
-    const bounds = stageRef.current.getBoundingClientRect();
-    const x = event.clientX - bounds.left;
-    const y = event.clientY - bounds.top;
-    stageRef.current.style.setProperty('--cursor-x', `${x}px`);
-    stageRef.current.style.setProperty('--cursor-y', `${y}px`);
-    if (behavior.interactions.spotlight) {
-      stageRef.current.style.setProperty('--spot-x', `${x}px`);
-      stageRef.current.style.setProperty('--spot-y', `${y}px`);
-    }
-    if (behavior.motion.parallax) {
-      stageRef.current.style.setProperty('--pointer-x', `${(x / bounds.width - .5) * 2}`);
-      stageRef.current.style.setProperty('--pointer-y', `${(y / bounds.height - .5) * 2}`);
-    }
-    if (behavior.motion.magneticCursor) stageRef.current.querySelectorAll('.stage-object').forEach((object) => {
-      const objectBounds = object.getBoundingClientRect();
-      const dx = event.clientX - (objectBounds.left + objectBounds.width / 2);
-      const dy = event.clientY - (objectBounds.top + objectBounds.height / 2);
-      const strength = Math.max(0, 1 - Math.hypot(dx, dy) / 240);
-      object.style.setProperty('--mag-x', `${dx * strength * .075}px`);
-      object.style.setProperty('--mag-y', `${dy * strength * .075}px`);
+    pointerEventRef.current = { clientX: event.clientX, clientY: event.clientY };
+    if (pointerFrameRef.current) return;
+    pointerFrameRef.current = requestAnimationFrame(() => {
+      pointerFrameRef.current = 0;
+      const stage = stageRef.current;
+      const pointer = pointerEventRef.current;
+      if (!stage || !pointer) return;
+      const bounds = stage.getBoundingClientRect();
+      const objects = behavior.motion.magneticCursor ? Array.from(stage.querySelectorAll('.stage-object')) : [];
+      const objectBounds = objects.map((object) => object.getBoundingClientRect());
+      const x = pointer.clientX - bounds.left;
+      const y = pointer.clientY - bounds.top;
+      stage.style.setProperty('--cursor-x', `${x}px`);
+      stage.style.setProperty('--cursor-y', `${y}px`);
+      if (behavior.interactions.spotlight) {
+        stage.style.setProperty('--spot-x', `${x}px`);
+        stage.style.setProperty('--spot-y', `${y}px`);
+      }
+      if (behavior.motion.parallax) {
+        stage.style.setProperty('--pointer-x', `${(x / bounds.width - .5) * 2}`);
+        stage.style.setProperty('--pointer-y', `${(y / bounds.height - .5) * 2}`);
+      }
+      objects.forEach((object, index) => {
+        const rect = objectBounds[index];
+        const dx = pointer.clientX - (rect.left + rect.width / 2);
+        const dy = pointer.clientY - (rect.top + rect.height / 2);
+        const strength = Math.max(0, 1 - Math.hypot(dx, dy) / 240);
+        object.style.setProperty('--mag-x', `${dx * strength * .075}px`);
+        object.style.setProperty('--mag-y', `${dy * strength * .075}px`);
+      });
     });
   };
-  const resetStagePointer = () => stageRef.current?.querySelectorAll('.stage-object').forEach((object) => { object.style.setProperty('--mag-x', '0px'); object.style.setProperty('--mag-y', '0px'); });
+  const resetStagePointer = () => {
+    if (pointerFrameRef.current) cancelAnimationFrame(pointerFrameRef.current);
+    pointerFrameRef.current = 0;
+    stageRef.current?.querySelectorAll('.stage-object').forEach((object) => { object.style.setProperty('--mag-x', '0px'); object.style.setProperty('--mag-y', '0px'); });
+  };
   return <div ref={rootRef} className={`station-stage-shell ${renderer.layoutClass} ${renderer.scrollClass} ${renderer.motionClass} entrance-${behavior.entrance} atmosphere-${behavior.atmosphere.theme}`} style={{ '--station-accent': behavior.atmosphere.accent }}>
     <div ref={stageRef} className={`station-stage ${activeItemId ? 'has-active-object' : ''} ${behavior.interactions.spotlight ? 'has-spotlight' : ''} ${behavior.interactions.discoveryMode ? 'has-discovery' : ''} ${behavior.motion.floating ? 'has-floating' : ''} ${behavior.motion.depthOfField ? 'has-depth' : ''} ${behavior.motion.clusterExplode ? 'has-explode' : ''}`} onPointerMove={moveStagePointer} onPointerLeave={resetStagePointer}>
       {behavior.atmosphere.grain && <div className="stage-grain" aria-hidden="true" />}
-      {behavior.atmosphere.particles && <div ref={particlesRef} className="stage-particles" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} style={{ '--particle-index': index }} />)}</div>}
+      {behavior.atmosphere.particles && <div ref={particlesRef} className="stage-particles" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} style={{ '--particle-index': index }} />)}</div>}
       <div ref={lightRef} className="stage-light" aria-hidden="true" />
       <div ref={kickerRef} className="stage-kicker"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><b>{behavior.layout === 'orbit' ? 'Objekte im Umlauf' : behavior.layout === 'timeline' ? 'Objekte in Folge' : behavior.scroll === 'horizontal' ? 'Horizontaler Rundgang' : behavior.scroll === 'zoom' ? 'Annäherung' : behavior.scroll === 'camera-motion' ? 'Perspektivwechsel' : 'Objektkonstellation'}</b></div>
       {behavior.layout === 'orbit' && <div className="stage-orbit-geometry" aria-hidden="true"><i /><i /><i /></div>}
@@ -209,7 +239,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
             onPointerEnter={() => discover(item.id)} onPointerLeave={(event) => { setActiveItemId(''); event.currentTarget.style.setProperty('--rx', '0deg'); event.currentTarget.style.setProperty('--ry', '0deg'); }} onFocus={() => discover(item.id)} onBlur={() => setActiveItemId('')}
             onPointerMove={(event) => { if (!behavior.interactions.hoverTilt) return; const rect = event.currentTarget.getBoundingClientRect(); event.currentTarget.style.setProperty('--rx', `${((event.clientY - rect.top) / rect.height - .5) * -7}deg`); event.currentTarget.style.setProperty('--ry', `${((event.clientX - rect.left) / rect.width - .5) * 7}deg`); }}
             onClick={(event) => onOpen(item, behavior.viewerTransition, event.currentTarget)} aria-label={`${item.title || `Objekt ${index + 1}`} öffnen`}>
-            <span className="stage-object-art">{image ? <img src={image} alt="" loading="lazy" onLoad={() => ScrollTrigger.refresh()} /> : <b>{String(index + 1).padStart(2, '0')}</b>}</span>
+            <span className="stage-object-art">{image ? <img src={image} alt="" loading="lazy" decoding="async" /> : <b>{String(index + 1).padStart(2, '0')}</b>}</span>
             <span className="stage-object-label"><b>{item.title || `Objekt ${index + 1}`}</b><small>{item.attribution || item.license || 'Sammlungsobjekt'}</small></span>
             <i className="stage-object-open"><ArrowUpRight size={15} /></i>
           </button>;
