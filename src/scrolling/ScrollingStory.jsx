@@ -64,7 +64,8 @@ function ObjectDialog({ item, onClose, onCompare, compareSelected, transition = 
     <div className="scroll-object-dialog-panel">
       <button type="button" className="scroll-dialog-close" onClick={onClose} aria-label="Schließen"><X /></button>
       <div className={`scroll-dialog-media transition-${transition}`} style={{ '--viewer-origin': origin, viewTransitionName: item?.id ? `riu-object-${item.id}` : 'none' }}>
-        {uid ? <iframe title={`3D-Ansicht: ${item.title || 'Objekt'}`} src={`https://sketchfab.com/models/${uid}/embed?autostart=1&ui_theme=dark&ui_infos=0&ui_watermark=0`} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen /> : image ? <img src={image} alt="" /> : <div className="scroll-dialog-placeholder">Keine Medienvorschau vorhanden</div>}
+        {uid && image && <img className="scroll-dialog-fallback" src={image} alt="" />}
+        {uid ? <iframe title={`3D-Ansicht: ${item.title || 'Objekt'}`} src={`https://sketchfab.com/models/${uid}/embed?autostart=0&dnt=1&ui_theme=dark&ui_infos=0&ui_watermark=0`} allow="autoplay; fullscreen; xr-spatial-tracking" allowFullScreen /> : image ? <img src={image} alt="" /> : <div className="scroll-dialog-placeholder">Keine Medienvorschau vorhanden</div>}
         <HotspotLayer key={item.id} hotspots={item.hotspots} />
       </div>
       <div className="scroll-dialog-copy">
@@ -185,26 +186,40 @@ export default function ScrollingStory({ story, initialMode = 'visitor', backHre
   const coverImage = story?.coverImage || (firstObject ? resolveSpatialThumbnailUrl(firstObject) : '');
   const totalObjects = useMemo(() => stations.reduce((sum, station) => sum + stationItems(station).length, 0), [stations]);
   const activeAudio = stations[activeIndex]?.spatial?.audio;
+  const lastStation = stations[stations.length - 1];
 
   useEffect(() => {
     const missing = stations.flatMap((station, stationIndex) => stationItems(station)
-      .filter((item) => item.sourceType === 'sketchfab' && !resolveSpatialThumbnailUrl(item) && item.modelUrl)
+      .filter((item) => item.sourceType === 'sketchfab' && item.modelUrl && (!resolveSpatialThumbnailUrl(item) || !item.attribution || !item.license))
       .map((item) => ({ stationIndex, itemId: item.id, modelUrl: item.modelUrl })));
     if (!missing.length) return undefined;
     let cancelled = false;
     Promise.all(missing.map(async (entry) => {
       try {
         const metadata = await resolveModelSourceMetadata(entry.modelUrl);
-        return { ...entry, providerThumbnailUrl: String(metadata.providerThumbnailUrl || '').trim() };
-      } catch { return { ...entry, providerThumbnailUrl: '' }; }
+        return {
+          ...entry,
+          providerThumbnailUrl: String(metadata.providerThumbnailUrl || '').trim(),
+          attribution: String(metadata.attribution || '').trim(),
+          license: String(metadata.license || '').trim()
+        };
+      } catch { return { ...entry, providerThumbnailUrl: '', attribution: '', license: '' }; }
     })).then((resolved) => {
       if (cancelled) return;
-      const available = resolved.filter((entry) => entry.providerThumbnailUrl);
+      const available = resolved.filter((entry) => entry.providerThumbnailUrl || entry.attribution || entry.license);
       if (!available.length) return;
+      const enrichItem = (item, match) => match ? {
+        ...item,
+        providerThumbnailUrl: resolveSpatialThumbnailUrl(item) ? item.providerThumbnailUrl : match.providerThumbnailUrl,
+        attribution: item.attribution || match.attribution,
+        license: item.license || match.license
+      } : item;
       setStations((current) => current.map((station, stationIndex) => ({ ...station, items: stationItems(station).map((item) => {
         const match = available.find((entry) => entry.stationIndex === stationIndex && entry.itemId === item.id && entry.modelUrl === item.modelUrl);
-        return match && !resolveSpatialThumbnailUrl(item) ? { ...item, providerThumbnailUrl: match.providerThumbnailUrl } : item;
+        return enrichItem(item, match);
       }) })));
+      setOpenItem((current) => enrichItem(current, available.find((entry) => entry.modelUrl === current?.modelUrl)));
+      setCompareItems((current) => current.map((item) => enrichItem(item, available.find((entry) => entry.modelUrl === item.modelUrl))));
     });
     return () => { cancelled = true; };
   }, [stations]);
@@ -285,6 +300,13 @@ export default function ScrollingStory({ story, initialMode = 'visitor', backHre
         </section>;
       })}
     </div>
+
+    <section className="scroll-finale" data-final-index={String(stations.length).padStart(2, '0')}>
+      <span>Ende der Geschichte</span>
+      <h2>Die Erzählung endet.<br />Die Objekte bleiben offen.</h2>
+      <p>Du hast {stations.length} Kapitel und {totalObjects} Objekte durchlaufen. {lastStation?.title ? `„${lastStation.title}“ setzt bewusst keinen Schlusspunkt, sondern lässt Raum für weitere Deutungen.` : 'Ihre Bedeutungen reichen über diese Geschichte hinaus.'}</p>
+      <a href={backHref}><ArrowLeft size={15} /> Zurück zu den Stories</a>
+    </section>
 
     <StoryTrail stations={stations} activeIndex={activeIndex} onJump={jumpTo} />
     {compareItems.length > 0 && <div className="scroll-compare-tray"><GitCompare size={16} /><span>{compareItems.length === 1 ? 'Noch ein Objekt für den Vergleich wählen' : `${compareItems[0].title} × ${compareItems[1].title}`}</span>{compareItems.length === 2 && <button onClick={() => { setCompareOpen(true); setOpenItem(null); }}>Vergleichen</button>}<button onClick={() => setCompareItems([])} aria-label="Vergleich leeren"><X size={15} /></button></div>}

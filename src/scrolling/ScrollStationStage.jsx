@@ -71,6 +71,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
     let context;
     let refreshFrame;
     const setupFrame = requestAnimationFrame(() => {
+      if (!root.isConnected || !stage.isConnected || !scene.isConnected) return;
       context = gsap.context(() => {
         media = gsap.matchMedia();
         media.add('(min-width: 761px) and (prefers-reduced-motion: no-preference)', () => {
@@ -86,7 +87,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
               : { scale: .78, opacity: behavior.entrance === 'from-darkness' ? .58 : .72 };
           gsap.set(labels, { opacity: .72, y: 6 });
           if (lines.length) gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
-          if (narrative.length) gsap.set(narrative, { opacity: (index) => index === 0 ? .82 : .16, y: (index) => index === 0 ? 0 : 10 });
+          if (narrative.length) gsap.set(narrative, { opacity: (index) => index === 0 ? .92 : .46, y: (index) => index === 0 ? 0 : 8 });
 
           const timeline = gsap.timeline({ scrollTrigger: {
             trigger: root,
@@ -107,15 +108,17 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
             const orbitState = { progress: 0 };
             const orbitSize = { width: scene.clientWidth, height: scene.clientHeight };
             objects.forEach((object, index) => gsap.set(object, { left: '50%', top: '50%', xPercent: -50, yPercent: -50, opacity: .82, scale: .78 + (index % 3) * .1 }));
-            timeline.to(orbitState, { progress: 1, duration: .78, ease: 'none', onUpdate: () => {
+            const renderOrbit = () => {
               objects.forEach((object, index) => {
                 const [finalX, finalY] = points[index];
                 const dx = finalX - 50; const dy = finalY - 50;
                 const angle = (-135 * (1 - orbitState.progress)) * Math.PI / 180;
-                const contraction = .5 + orbitState.progress * .5;
+                const contraction = .72 + orbitState.progress * .28;
                 gsap.set(object, { x: (dx * Math.cos(angle) - dy * Math.sin(angle)) * contraction * orbitSize.width / 100, y: (dx * Math.sin(angle) + dy * Math.cos(angle)) * contraction * orbitSize.height / 100, rotationY: 24 * (1 - orbitState.progress), scale: .78 + orbitState.progress * .22, opacity: .82 + orbitState.progress * .18 });
               });
-            } }, 0);
+            };
+            renderOrbit();
+            timeline.to(orbitState, { progress: 1, duration: .78, ease: 'none', onUpdate: renderOrbit }, 0);
           } else if (behavior.layout === 'timeline') {
             objects.forEach((object, index) => gsap.set(object, { left: '68%', top: `${42 + (index % 2) * 13}%`, xPercent: -50, yPercent: -50, scale: .68, opacity: .12 }));
             objects.forEach((object, index) => {
@@ -155,11 +158,11 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
           if (relationCopyRef.current) timeline.to(relationCopyRef.current, { opacity: 1, duration: .14 }, .72);
           if (narrative.length && behavior.motion.progressiveText) narrative.forEach((step, index) => {
             const moment = .48 + index * .12;
-            if (index) timeline.to(narrative[index - 1], { opacity: .16, y: -8, duration: .06 }, moment);
+            if (index) timeline.to(narrative[index - 1], { opacity: .42, y: -6, duration: .06 }, moment);
             timeline.to(step, { opacity: 1, y: 0, duration: .1 }, moment);
           });
           else if (narrative.length) timeline.to(narrative, { opacity: 1, y: 0, duration: .01 }, .48);
-          refreshFrame = requestAnimationFrame(() => ScrollTrigger.refresh());
+          refreshFrame = requestAnimationFrame(() => { if (root.isConnected) ScrollTrigger.refresh(); });
           return () => timeline.scrollTrigger?.kill();
         });
       }, root);
