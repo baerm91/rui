@@ -37,9 +37,9 @@ if (rootElement) {
     if (!access.allowed) {
       window.location.replace(access.isEditor && !access.session ? '/login' : '/');
     } else if (isRoomStory(access.story)) {
-      const { default: ExhibitionRoom } = await import('./exhibition/ExhibitionRoom.jsx');
+      const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');
       app = (
-        <ExhibitionRoom
+        <ScrollingStory
           story={access.story}
           initialMode={access.isEditor ? 'editor' : 'visitor'}
           backHref={access.isEditor ? '/dashboard' : '/discover'}
