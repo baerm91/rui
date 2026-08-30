@@ -70,7 +70,8 @@ export default function ScrollingStory({ story, initialMode = 'visitor', backHre
   const sectionRefs = useRef([]);
   const title = story?.branding?.title || story?.name || 'RIU Story';
   const subtitle = story?.branding?.subtitle || story?.description || '';
-  const coverImage = story?.coverImage || resolveSpatialThumbnailUrl(stationItems(stations[0])[0]);
+  const firstObject = stationItems(stations[0])[0] || null;
+  const coverImage = story?.coverImage || (firstObject ? resolveSpatialThumbnailUrl(firstObject) : '');
   const totalObjects = useMemo(() => stations.reduce((sum, station) => sum + stationItems(station).length, 0), [stations]);
 
   useEffect(() => {

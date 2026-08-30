@@ -22,7 +22,15 @@ if (!usesModelViewer) document.title = 'RIU — Räumliche Geschichten';
 const rootElement = document.getElementById('react-root');
 if (rootElement) {
   let app;
-  if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
+  if (import.meta.env.DEV && window.location.pathname === '/__scroll-preview') {
+    const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');
+    app = <ScrollingStory story={{
+      id: 'scroll-preview',
+      name: 'Leere Station – Regressionstest',
+      description: 'Diese Vorschau prüft eine Scrolling-Story ohne Titelbild und ohne Objekte.',
+      stations: [{ id: 'empty-station', title: 'Auftakt', description: 'Das Kapitel rendert auch ohne ein zugewiesenes Objekt.', items: [] }]
+    }} />;
+  } else if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
     const [{ default: ExhibitionRoom }, { SPATIAL_DEMO_STORY }] = await Promise.all([
       import('./exhibition/ExhibitionRoom.jsx'),
       import('./exhibition/spatialDemo.js')

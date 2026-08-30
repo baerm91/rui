@@ -48,6 +48,11 @@ test('custom thumbnails override the persistent Sketchfab provider fallback', ()
   assert.equal(item.providerThumbnailUrl, 'https://media.sketchfab.com/default.jpg');
 });
 
+test('thumbnail resolution safely handles an empty story item', () => {
+  assert.equal(resolveSpatialThumbnailUrl(null), '');
+  assert.equal(resolveSpatialThumbnailUrl(undefined), '');
+});
+
 test('station start model is explicit and visitors get a random fallback', () => {
   const items = [{ id: 'one' }, { id: 'two' }];
   assert.equal(resolveSpatialInitialItemId({ initialItemId: 'two', selectedItemId: 'one' }, items), 'two');

@@ -58,6 +58,7 @@ export function createSpatialItem(input = {}, index = 0) {
 }
 
 export function resolveSpatialThumbnailUrl(item = {}) {
+  if (!item || typeof item !== 'object') return '';
   return String(item.thumbnailUrl || item.providerThumbnailUrl || '').trim();
 }
 
