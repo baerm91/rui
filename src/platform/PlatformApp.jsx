@@ -593,14 +593,15 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
     }
   }
 
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     setError('');
     const form = new FormData(event.currentTarget);
     const categories = form.getAll('categories').map(String);
     try {
       if (!categories.length) throw new Error('Bitte wählen Sie mindestens eine Kategorie aus.');
-      onSave({
+      setBusy(true);
+      await onSave({
         name: form.get('name'),
         description: form.get('description'),
         coverImage,
@@ -611,6 +612,8 @@ function StoryMetadataDialog({ story, onClose, onSave }) {
       onClose();
     } catch (cause) {
       setError(cause.message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -968,8 +971,8 @@ function Dashboard({ session, onSession }) {
       setReleaseBusyId('');
     }
   }
-  function saveMetadata(metadata) {
-    const updated = updateStoryMetadata(metadataStory.id, session.id, metadata);
+  async function saveMetadata(metadata) {
+    const updated = await updateStoryMetadata(metadataStory.id, session.id, metadata);
     updateProjectListingMetadata(metadataStory.id, {
       name: updated.name,
       description: updated.description,

@@ -18,7 +18,9 @@ import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js'
 import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
 import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
 import { ensurePublishedStoryPreviewImage, ensurePublishedStoryPreviewImages } from './storyPreviewImage.js';
-import { ensureSharedPublishedStoryCover } from './storyCoverPublishing.js';
+import {
+  ensureSharedPublishedStoryCover, invalidatePublishedStoryCoverUpload, isSharedPublishedStoryCover
+} from './storyCoverPublishing.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -529,9 +531,26 @@ export function createStory({
 
 export async function saveStory(story) {
   const stories = readStories();
-  const next = ensurePublishedStoryPreviewImages(stories.some((item) => item.id === story.id)
-    ? stories.map((item) => item.id === story.id ? { ...story, updatedAt: now() } : item)
-    : [...stories, story]);
+  const previousStory = stories.find((item) => item.id === story.id);
+  const coverImageChanged = Boolean(previousStory)
+    && String(previousStory.coverImage || '').trim() !== String(story.coverImage || '').trim();
+  let storyToSave = {
+    ...story,
+    updatedAt: previousStory ? now() : story.updatedAt
+  };
+  if (coverImageChanged) {
+    storyToSave = invalidatePublishedStoryCoverUpload(storyToSave);
+  }
+  let remoteSynced = false;
+  if (storyToSave.status === 'published' && coverImageChanged) {
+    storyToSave = ensurePublishedStoryPreviewImage(storyToSave);
+    storyToSave = await ensureSharedPublishedStoryCover(storyToSave, uploadStoryCoverToSupabase);
+    await syncStoryToSupabase(storyToSave, { required: true });
+    remoteSynced = true;
+  }
+  const next = ensurePublishedStoryPreviewImages(previousStory
+    ? stories.map((item) => item.id === story.id ? storyToSave : item)
+    : [...stories, storyToSave]);
   const previousStories = storiesCache;
   storiesCache = clone(next);
   try {
@@ -540,12 +559,14 @@ export async function saveStory(story) {
     storiesCache = previousStories;
     throw error;
   }
-  await syncStoryToSupabase(storiesCache.find((item) => item.id === story.id) ?? story);
+  if (!remoteSynced) {
+    await syncStoryToSupabase(storiesCache.find((item) => item.id === story.id) ?? storyToSave);
+  }
   window.dispatchEvent(new CustomEvent('riu-stories-changed'));
   return storiesCache.find((item) => item.id === story.id) ?? story;
 }
 
-export function updateStoryMetadata(storyId, actorId, metadata) {
+export async function updateStoryMetadata(storyId, actorId, metadata) {
   const stories = readStories();
   const story = stories.find((item) => item.id === storyId);
   if (!story || !canEditStory(story, actorId)) throw new Error('Die Metadaten dieser Story dürfen nicht geändert werden.');
@@ -555,7 +576,7 @@ export function updateStoryMetadata(storyId, actorId, metadata) {
   const categories = normalizeStoryCategories(metadata.categories, metadata.category || story.metadata?.category);
   const nextCoverImage = String(metadata.coverImage || '').trim();
   const coverImageChanged = nextCoverImage !== String(story.coverImage || '').trim();
-  const updated = {
+  let updated = {
     ...story,
     name,
     description: String(metadata.description || '').trim(),
@@ -575,8 +596,8 @@ export function updateStoryMetadata(storyId, actorId, metadata) {
     branding: { ...story.branding, title: name },
     updatedAt: now()
   };
-  const persistedStories = writeStories(stories.map((item) => item.id === storyId ? updated : item));
-  return persistedStories.find((item) => item.id === storyId) || updated;
+  if (coverImageChanged) updated = invalidatePublishedStoryCoverUpload(updated);
+  return saveStory(updated);
 }
 
 function requireOwnedStory(storyId, ownerId) {
@@ -875,7 +896,7 @@ export function updateStoryProject(projectId, project) {
   const projectCoverImage = String(project.coverImage || '').trim();
   const coverImage = projectCoverImage || story.coverImage;
   const coverImageChanged = Boolean(projectCoverImage) && projectCoverImage !== story.coverImage;
-  const updated = ensurePublishedStoryPreviewImage({
+  let updated = ensurePublishedStoryPreviewImage({
     ...story,
     name: project.name ?? story.name,
     description: project.description ?? story.description,
@@ -892,9 +913,29 @@ export function updateStoryProject(projectId, project) {
     stations: clone(project.stations ?? story.stations),
     updatedAt: now()
   });
+  if (coverImageChanged) updated = invalidatePublishedStoryCoverUpload(updated);
   storiesCache = storiesCache.map((item) => item.id === projectId ? updated : item);
   putRecord(STORES.stories, updated).catch(reportDatabaseError);
-  syncStoryToSupabase(updated).catch(reportDatabaseError);
+  if (updated.status === 'published' && coverImageChanged) {
+    ensureSharedPublishedStoryCover(updated, uploadStoryCoverToSupabase)
+      .then(async (sharedCoverStory) => {
+        const latest = storiesCache.find((item) => item.id === projectId);
+        if (!latest || latest.coverImage !== updated.coverImage) return;
+        const shared = {
+          ...latest,
+          coverImage: sharedCoverStory.coverImage,
+          coverImageStoragePath: sharedCoverStory.coverImageStoragePath,
+          coverImageUploadedAt: sharedCoverStory.coverImageUploadedAt
+        };
+        await syncStoryToSupabase(shared, { required: true });
+        storiesCache = storiesCache.map((item) => item.id === projectId ? shared : item);
+        await putRecord(STORES.stories, shared);
+        window.dispatchEvent(new CustomEvent('riu-stories-changed'));
+      })
+      .catch(reportDatabaseError);
+  } else if (updated.status !== 'published' || isSharedPublishedStoryCover(updated)) {
+    syncStoryToSupabase(updated).catch(reportDatabaseError);
+  }
   return updated;
 }
 

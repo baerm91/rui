@@ -7,6 +7,14 @@ export function isSharedPublishedStoryCover(story) {
     || (Boolean(story?.coverImageStoragePath) && /^https?:\/\//i.test(coverImage));
 }
 
+export function invalidatePublishedStoryCoverUpload(story) {
+  return {
+    ...story,
+    coverImageStoragePath: '',
+    coverImageUploadedAt: ''
+  };
+}
+
 export async function ensureSharedPublishedStoryCover(story, uploadCover) {
   const coverImage = String(story?.coverImage || '').trim();
   if (!coverImage) throw new Error('Bitte erstellen oder wählen Sie vor der Veröffentlichung ein Vorschaubild.');

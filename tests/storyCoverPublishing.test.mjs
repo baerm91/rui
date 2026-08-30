@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ensureSharedPublishedStoryCover,
+  invalidatePublishedStoryCoverUpload,
   isSharedPublishedStoryCover
 } from '../src/platform/storyCoverPublishing.js';
 
@@ -34,6 +35,20 @@ test('browser-local cover data is uploaded and replaced by its public URL', asyn
   assert.ok(uploadedBlob.size > 0);
   assert.match(published.coverImage, /^https:\/\/project\.supabase\.co\//);
   assert.equal(published.coverImageStoragePath, 'owner/local-cover-cover.png');
+});
+
+test('changing an already published cover invalidates the previous upload', () => {
+  const changed = invalidatePublishedStoryCoverUpload({
+    id: 'published-story',
+    status: 'published',
+    coverImage: 'data:image/png;base64,iVBORw0KGgo=',
+    coverImageStoragePath: 'owner/published-story-cover.jpg',
+    coverImageUploadedAt: '2026-08-01T10:00:00.000Z'
+  });
+
+  assert.equal(changed.coverImageStoragePath, '');
+  assert.equal(changed.coverImageUploadedAt, '');
+  assert.equal(isSharedPublishedStoryCover(changed), false);
 });
 
 test('publishing rejects missing or invalid local cover data', async () => {
