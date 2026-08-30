@@ -37,6 +37,7 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
   const items = safeItems(station);
   const narrativeSteps = normalizeNarrativeSteps(station?.narrativeSteps, items);
   const narrativeLinkSignature = narrativeSteps.map((step) => step.itemId || '').join('|');
+  const sequentialNarrative = behavior.motion.progressiveText && behavior.layout === 'timeline';
   const points = POINTS[behavior.layout] || POINTS.cluster;
   const hubId = station?.initialItemId || items[0]?.id || '';
   const relations = useMemo(() => {
@@ -89,19 +90,19 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
               : { scale: .78, opacity: behavior.entrance === 'from-darkness' ? .58 : .72 };
           gsap.set(labels, { opacity: .72, y: 6 });
           if (lines.length) gsap.set(lines, { opacity: 0, scaleX: 0, transformOrigin: '0 50%' });
-          if (narrative.length) gsap.set(narrative, { opacity: (index) => index === 0 ? .92 : .46, y: (index) => index === 0 ? 0 : 8 });
+          if (narrative.length) gsap.set(narrative, { opacity: sequentialNarrative ? (index) => index === 0 ? 1 : .72 : .9, y: sequentialNarrative ? (index) => index === 0 ? 0 : 6 : 0 });
 
           const timeline = gsap.timeline({ scrollTrigger: {
             trigger: root,
-            start: 'top 68px',
-            end: () => `+=${Math.max(window.innerHeight * renderer.distance, 1050)}`,
+            start: renderer.pin ? 'top 68px' : 'top 92%',
+            end: renderer.pin ? () => `+=${Math.max(window.innerHeight * renderer.distance, 1050)}` : 'bottom 18%',
             pin: renderer.pin ? stage : false,
             scrub: true,
             anticipatePin: 1,
             invalidateOnRefresh: true
           } });
 
-          const setFinalPoint = (object, index, extra = {}) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, opacity: 1, duration: .62, ease: 'power2.inOut', ...extra }, .12 + index * .018);
+          const setFinalPoint = (object, index, extra = {}) => timeline.to(object, { left: `${points[index][0]}%`, top: `${points[index][1]}%`, opacity: 1, duration: .46, ease: 'power2.inOut', ...extra }, .04 + index * .012);
           if (behavior.scroll === 'horizontal') {
             objects.forEach((object, index) => gsap.set(object, { left: `${50 + index * 34}%`, top: `${index % 2 ? 61 : 38}%`, xPercent: -50, yPercent: -50, scale: index ? .88 : 1.08, opacity: index ? .7 : 1 }));
             timeline.to(scene, { x: () => -Math.max(0, objects.length - 1) * window.innerWidth * .31, duration: 1, ease: 'none' }, 0);
@@ -156,20 +157,20 @@ export default function ScrollStationStage({ station, stationIndex, onOpen, open
             if (relationCopyRef.current) timeline.to(relationCopyRef.current, { y: 18, duration: .7 }, .2);
             objects.forEach((object, index) => timeline.to(object, { y: index % 3 === 0 ? -28 : index % 3 === 1 ? 10 : 34, duration: .45 }, .5));
           }
-          if (labels.length) timeline.to(labels, { opacity: 1, y: 0, duration: .14, stagger: .018 }, .48);
+          if (labels.length) timeline.to(labels, { opacity: 1, y: 0, duration: .14, stagger: .018 }, behavior.layout === 'cluster' ? .28 : .48);
           if (behavior.interactions.connections && lines.length) timeline.to(lines, { opacity: .72, scaleX: 1, duration: .2, stagger: .025 }, .64);
           if (relationCopyRef.current) timeline.to(relationCopyRef.current, { opacity: 1, duration: .14 }, .72);
-          if (narrative.length && behavior.motion.progressiveText) narrative.forEach((step, index) => {
+          if (narrative.length && sequentialNarrative) narrative.forEach((step, index) => {
             const linkedObjectIndex = narrativeSteps[index]?.itemId
               ? objects.findIndex((object) => object.dataset.itemId === narrativeSteps[index].itemId)
               : index;
             const moment = behavior.layout === 'timeline'
               ? (objectMoments[Math.max(0, linkedObjectIndex)] ?? objectMoments[index] ?? .48)
               : .48 + index * .12;
-            if (index) timeline.to(narrative[index - 1], { opacity: .42, y: -6, duration: .06 }, moment);
+            if (index) timeline.to(narrative[index - 1], { opacity: .72, y: -4, duration: .06 }, moment);
             timeline.to(step, { opacity: 1, y: 0, duration: .1 }, moment);
           });
-          else if (narrative.length) timeline.to(narrative, { opacity: 1, y: 0, duration: .01 }, .48);
+          else if (narrative.length) timeline.to(narrative, { opacity: 1, y: 0, duration: .08 }, behavior.layout === 'cluster' ? .16 : .38);
           refreshFrame = requestAnimationFrame(() => { if (root.isConnected) ScrollTrigger.refresh(); });
           return () => timeline.scrollTrigger?.kill();
         });

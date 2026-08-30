@@ -28,7 +28,7 @@ if (rootElement) {
       import('./exhibition/spatialDemo.js')
     ]);
     const rendererPresets = [
-      ['cluster', 'pinned', 'Räumlicher Cluster'], ['orbit', 'normal', 'Umlaufbahn'], ['timeline', 'normal', 'Objekte in Folge'],
+      ['cluster', 'normal', 'Räumlicher Cluster'], ['orbit', 'normal', 'Umlaufbahn'], ['timeline', 'normal', 'Objekte in Folge'],
       ['freeform', 'horizontal', 'Horizontaler Rundgang'], ['grid', 'zoom', 'Zoom durch das Objekt'], ['cluster', 'camera-motion', 'Perspektivwechsel']
     ];
     const sourceItems = SPATIAL_DEMO_STORY.stations[0].items;
