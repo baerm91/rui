@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createAuthStorage, readRememberLoginPreference, REMEMBER_LOGIN_KEY, writeRememberLoginPreference
+  createAuthStorage, MIN_DIRECT_PASSWORD_LENGTH, readRememberLoginPreference, REMEMBER_LOGIN_KEY,
+  validateDirectPassword, writeRememberLoginPreference
 } from '../src/platform/supabaseClient.js';
 
 const memoryStorage = () => {
@@ -43,4 +44,12 @@ test('temporary sessions use tab storage and clear the persistent copy', () => {
   assert.equal(storage.getItem('session'), 'temporary-session');
   storage.removeItem('session');
   assert.equal(tab.getItem('session'), null);
+});
+
+test('direct login passwords enforce the RIU minimum length', () => {
+  assert.equal(validateDirectPassword('acht-zeichen'), 'acht-zeichen');
+  assert.throws(
+    () => validateDirectPassword('kurz'),
+    new RegExp(`mindestens ${MIN_DIRECT_PASSWORD_LENGTH} Zeichen`)
+  );
 });

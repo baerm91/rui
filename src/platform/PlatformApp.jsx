@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
-  isValidModelUrl, loginWithOAuth, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
+  isValidModelUrl, loginWithOAuth, loginWithPassword, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
   readSession, readStories, removeStoryCollaborator, respondToCollaboration,
-  saveStory, unpublishStory, updateStoryCollaboratorRole, updateStoryMetadata, updateUserProfile, writeStories
+  saveStory, setDirectLoginPassword, unpublishStory, updateStoryCollaboratorRole, updateStoryMetadata, updateUserProfile, writeStories
 } from './platformStore.js';
 import { readProjects, updateProjectListingMetadata } from '../projects/projectStore.js';
 import { getStoryCreatedAt, getStoryPublishedAt } from './storyDates.js';
@@ -827,7 +827,7 @@ function Gallery({ session }) {
 function AuthPage({ mode }) {
   const isRegister = mode === 'register';
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState('');
   const [rememberLogin, setRememberLogin] = useState(() => readRememberLoginPreference());
   const [registrationsEnabled, setRegistrationsEnabled] = useState(!isRegister);
   const [settingsBusy, setSettingsBusy] = useState(isRegister);
@@ -840,11 +840,20 @@ function AuthPage({ mode }) {
       .catch((cause) => setError(cause.message))
       .finally(() => setSettingsBusy(false));
   }, [isRegister]);
-  async function authenticate() {
-    setBusy(true); setError('');
+  async function authenticateWithGoogle() {
+    setBusy('google'); setError('');
     try {
       await loginWithOAuth(isRegister ? 'register' : 'login', isRegister || rememberLogin);
-    } catch (cause) { setError(cause.message); setBusy(false); }
+    } catch (cause) { setError(cause.message); setBusy(''); }
+  }
+  async function authenticateWithPassword(event) {
+    event.preventDefault();
+    setBusy('password'); setError('');
+    try {
+      const form = new FormData(event.currentTarget);
+      await loginWithPassword(form.get('email'), form.get('password'), rememberLogin);
+      go('/dashboard');
+    } catch (cause) { setError(cause.message); setBusy(''); }
   }
   return (
     <div className="riu-page auth-page">
@@ -863,9 +872,18 @@ function AuthPage({ mode }) {
             <div className="auth-oauth">
               <p>{isRegister
                 ? 'Wählen Sie Ihr Google-Konto. Damit wird Ihr RIU-Konto erstellt; anschließend kommen Sie automatisch in Ihren persönlichen Bereich.'
-                : 'Melden Sie sich mit demselben Google-Konto an, das Sie bei der Registrierung verwendet haben.'}</p>
+                : 'Melden Sie sich direkt bei RIU an. Das funktioniert auch in Cloud-Browsern, sobald Sie in Ihren Kontoeinstellungen ein RIU-Passwort eingerichtet haben.'}</p>
               {error && <div className="form-error">{error}</div>}
               {isRegister && !settingsBusy && !registrationsEnabled && <div className="form-error">Neue Konten sind derzeit nicht freigeschaltet. Bereits registrierte Personen können sich weiterhin anmelden.</div>}
+              {!isRegister && (
+                <form className="auth-direct" onSubmit={authenticateWithPassword}>
+                  <label>E-Mail<input name="email" type="email" required autoComplete="email" /></label>
+                  <label>RIU-Passwort<input name="password" type="password" required autoComplete="current-password" /></label>
+                  <button className="riu-button" disabled={Boolean(busy)}>
+                    <LogIn size={18} /> {busy === 'password' ? 'Anmelden …' : 'Direkt anmelden'}
+                  </button>
+                </form>
+              )}
               {!isRegister && (
                 <label className="auth-remember">
                   <input type="checkbox" checked={rememberLogin} onChange={(event) => setRememberLogin(event.target.checked)} />
@@ -873,8 +891,9 @@ function AuthPage({ mode }) {
                   <span>Angemeldet bleiben</span>
                 </label>
               )}
-              <button type="button" className="riu-button" disabled={busy || settingsBusy || (isRegister && !registrationsEnabled)} onClick={authenticate}>
-                <CircleUserRound size={18} /> {busy ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : (isRegister ? 'Mit Google registrieren' : 'Mit Google anmelden')}
+              {!isRegister && <div className="auth-divider"><span>oder</span></div>}
+              <button type="button" className="riu-button auth-google" disabled={Boolean(busy) || settingsBusy || (isRegister && !registrationsEnabled)} onClick={authenticateWithGoogle}>
+                <CircleUserRound size={18} /> {busy === 'google' ? 'Weiterleitung …' : settingsBusy ? 'Freigabe wird geprüft …' : (isRegister ? 'Mit Google registrieren' : 'Mit Google anmelden')}
               </button>
             </div>
             <p className="auth-switch">{isRegister
@@ -1004,6 +1023,9 @@ function AccountPage({ session, onSession }) {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
   const [, setCollaborationRevision] = useState(0);
   const collaborationStories = readStories().filter((story) => normalizeStoryCollaborators(story.collaborators)
     .some((collaborator) => collaborator.userId === session.id));
@@ -1026,6 +1048,28 @@ function AccountPage({ session, onSession }) {
       setError(cause.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function submitPassword(event) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    setPasswordBusy(true);
+    setPasswordError('');
+    setPasswordSaved(false);
+    try {
+      const form = new FormData(formElement);
+      const password = String(form.get('password') || '');
+      if (password !== String(form.get('passwordConfirmation') || '')) {
+        throw new Error('Die beiden Passwörter stimmen nicht überein.');
+      }
+      await setDirectLoginPassword(password);
+      formElement.reset();
+      setPasswordSaved(true);
+    } catch (cause) {
+      setPasswordError(cause.message);
+    } finally {
+      setPasswordBusy(false);
     }
   }
 
@@ -1053,6 +1097,17 @@ function AccountPage({ session, onSession }) {
             {error && <div className="form-error">{error}</div>}
             {saved && <div className="form-success"><Check size={16} /> Profil gespeichert</div>}
             <button className="riu-button" disabled={busy}>{busy ? 'Speichern …' : 'Änderungen speichern'}</button>
+          </form>
+          <form className="account-form account-security" onSubmit={submitPassword}>
+            <span className="riu-overline">Direkte Anmeldung</span>
+            <h2>RIU-Passwort</h2>
+            <p>Richten Sie ein zusätzliches Passwort für <strong>{session.email}</strong> ein. Damit können Sie sich ohne Google-Weiterleitung anmelden, etwa im ChatGPT-Cloud-Browser.</p>
+            <label>Neues Passwort<input name="password" type="password" required minLength="8" autoComplete="new-password" /></label>
+            <label>Passwort bestätigen<input name="passwordConfirmation" type="password" required minLength="8" autoComplete="new-password" /></label>
+            <small>Mindestens 8 Zeichen. Ihre Google-Anmeldung bleibt weiterhin verfügbar.</small>
+            {passwordError && <div className="form-error">{passwordError}</div>}
+            {passwordSaved && <div className="form-success"><Check size={16} /> Direkte Anmeldung ist eingerichtet</div>}
+            <button className="riu-button" disabled={passwordBusy}>{passwordBusy ? 'Speichern …' : 'RIU-Passwort speichern'}</button>
           </form>
           <section className="account-collaborations" aria-labelledby="collaboration-settings-title">
             <span className="riu-overline">Zusammenarbeit</span>

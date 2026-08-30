@@ -37,7 +37,7 @@ Der Modellserver muss CORS für den Browser-Origin erlauben. Eine `.gltf`-Datei 
 
 ## Persistenz und Konten
 
-Konten und vollständige Story-Datensätze liegen zentral in Supabase. Supabase Auth übernimmt die Anmeldung per Google OAuth, PostgreSQL speichert Story-Metadaten, Eigentümer, externe Modell-URLs, Alignment, Einstellungen, Stationen, Kameras und Annotationen. Row Level Security beschränkt Entwürfe und Schreibzugriffe auf Eigentümer und berechtigte Mitwirkende. IndexedDB bleibt als lokaler Cache sowie für noch nicht synchronisierte Editor- und Preview-Daten bestehen.
+Konten und vollständige Story-Datensätze liegen zentral in Supabase. Supabase Auth übernimmt die Anmeldung per Google OAuth. Bestehende Nutzer können in ihren Kontoeinstellungen zusätzlich ein direktes RIU-Passwort setzen, um sich ohne OAuth-Weiterleitung anzumelden, etwa in einem Cloud-Browser. PostgreSQL speichert Story-Metadaten, Eigentümer, externe Modell-URLs, Alignment, Einstellungen, Stationen, Kameras und Annotationen. Row Level Security beschränkt Entwürfe und Schreibzugriffe auf Eigentümer und berechtigte Mitwirkende. IndexedDB bleibt als lokaler Cache sowie für noch nicht synchronisierte Editor- und Preview-Daten bestehen.
 
 Beim ersten OAuth-Login werden vorhandene lokale RIU-Daten einmalig übernommen. Dazu gehört ausdrücklich der bisher unter Carnuntum geführte Heidentor-Bestand; Starhemberg wird im selben Schritt zugeordnet. Eine Importmarke verhindert doppelte Übernahmen. Die glTF-Dateien werden nicht in der Datenbank gespeichert oder kopiert, sondern weiterhin direkt von den bestehenden Vercel-Websites geladen. RIU speichert keine Passwörter.
 

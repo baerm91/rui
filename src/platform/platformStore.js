@@ -5,7 +5,8 @@ import {
 } from './platformDatabase.js';
 import { HEIDENTOR_STABLE_LIGHTING } from '../projects/projectLightingPresets.js';
 import {
-  isSupabaseConfigured, readOAuthCallbackError, retryFutureJwtError, signInWithOAuth, signOutFromSupabase
+  isSupabaseConfigured, readOAuthCallbackError, retryFutureJwtError, signInWithOAuth, signInWithPassword,
+  signOutFromSupabase, updateAuthPassword
 } from './supabaseClient.js';
 import {
   deleteStoryFromSupabase, deleteStoryPreviewFromSupabase, fetchRemoteStories, importLegacyStories,
@@ -86,6 +87,7 @@ let usersCache = [];
 let storiesCache = [];
 let demoOwnerId = '';
 const recordedStoryViews = new Set();
+const HEIDENTOR_COVER_IMAGE = '/heidentor-cover.jpg';
 
 function ensureUsernames(users) {
   const used = new Set();
@@ -135,7 +137,8 @@ const demoStories = [
     createdAt: '2026-07-10T10:00:00.000Z',
     updatedAt: '2026-07-13T16:18:22.000Z',
     stationRevision: 1,
-    coverImage: '',
+    coverImage: HEIDENTOR_COVER_IMAGE,
+    previewImageSource: 'bundled',
     location: 'Petronell-Carnuntum, Österreich',
     metadata: { language: 'de', category: 'Archäologie', categories: ['Archäologie'] },
     stats: { views: 0, lastViewedAt: null },
@@ -208,6 +211,18 @@ export function migrateHeidentorRevealStation(savedStations, bundledStations = h
   } : clone(station));
 }
 
+export function migrateHeidentorPreviewImage(story, bundledCoverImage = HEIDENTOR_COVER_IMAGE) {
+  if (story?.id !== 'demo-heidentor') return story;
+  const hasCoverImage = Boolean(String(story.coverImage || '').trim());
+  if (hasCoverImage && story.previewImageSource !== 'automatic') return story;
+  return {
+    ...story,
+    coverImage: bundledCoverImage,
+    previewImageSource: 'bundled',
+    previewImageSignature: ''
+  };
+}
+
 function seededStories(current = storiesCache) {
   const userStories = Array.isArray(current)
     ? current.filter((story) => !demoStories.some((demo) => demo.id === story?.id)).map((story) => {
@@ -242,7 +257,7 @@ function seededStories(current = storiesCache) {
       );
       const demoLightingRevision = Number(demo.settings?.lighting?.stationConsistencyRevision) || 0;
       const existingLightingRevision = Number(storyData.settings?.lighting?.stationConsistencyRevision) || 0;
-      return {
+      return migrateHeidentorPreviewImage({
         ...storyData,
         ...(demoLightingRevision > existingLightingRevision ? {
           settings: {
@@ -265,7 +280,7 @@ function seededStories(current = storiesCache) {
         collaborators: normalizeStoryCollaborators(storyData.collaborators),
         metadata: { ...storyData.metadata, category: categories[0], categories },
         stats: { views: Number(existing?.stats?.views) || 0, lastViewedAt: existing?.stats?.lastViewedAt || null }
-      };
+      });
     }),
     ...userStories
   ]);
@@ -280,6 +295,30 @@ export function mergeStoryCollections(localStories = [], remoteStories = []) {
     if (story?.id) merged.set(story.id, story);
   }
   return [...merged.values()];
+}
+
+export function restoreOwnedLocalCoverImages(remoteStories = [], localStories = [], ownerId = '') {
+  if (!ownerId) return remoteStories;
+  const localById = new Map((Array.isArray(localStories) ? localStories : [])
+    .filter((story) => story?.id)
+    .map((story) => [story.id, story]));
+  return (Array.isArray(remoteStories) ? remoteStories : []).map((remoteStory) => {
+    const localStory = localById.get(remoteStory?.id);
+    const localCoverImage = String(localStory?.coverImage || '').trim();
+    const remoteCoverImage = String(remoteStory?.coverImage || '').trim();
+    const remoteNeedsCover = !remoteCoverImage
+      || remoteStory.previewImageSource === 'automatic'
+      || remoteStory.previewImageSource === 'bundled';
+    const localHasAuthoredCover = localCoverImage && localStory.previewImageSource !== 'automatic';
+    if (remoteStory?.ownerId !== ownerId || !remoteNeedsCover || !localHasAuthoredCover) return remoteStory;
+    return {
+      ...remoteStory,
+      coverImage: localCoverImage,
+      previewImageSource: localStory.previewImageSource || 'manual',
+      previewImageSignature: '',
+      updatedAt: localStory.updatedAt || remoteStory.updatedAt
+    };
+  });
 }
 
 async function migrateLocalStoryPreviews(remoteStories) {
@@ -351,14 +390,27 @@ export async function initializePlatformStore() {
         if (canCreateStories(remoteState.user)) {
           await importLegacyStories(storiesCache, remoteState.authUser, [legacyActiveUserId, demoOwnerId]);
         }
-        const remoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
-        const missingPreviewImageIds = new Set(remoteStories
-          .filter((story) => story.status === 'published' && !String(story.coverImage || '').trim())
-          .map((story) => story.id));
+        const fetchedRemoteStories = await migrateLocalStoryPreviews(await fetchRemoteStories());
+        const remoteCovers = new Map(fetchedRemoteStories.map((story) => [story.id, {
+          coverImage: String(story.coverImage || '').trim(),
+          previewImageSource: story.previewImageSource || ''
+        }]));
+        const remoteStories = restoreOwnedLocalCoverImages(
+          fetchedRemoteStories,
+          storiesCache,
+          remoteState.user.id
+        );
         usersCache = ensureUsernames(remoteState.users);
         demoOwnerId = remoteState.user.id;
         storiesCache = seededStories(remoteStories);
-        previewImageBackfillsToSync = storiesCache.filter((story) => missingPreviewImageIds.has(story.id));
+        previewImageBackfillsToSync = storiesCache.filter((story) => {
+          const remoteCover = remoteCovers.get(story.id);
+          if (story.ownerId !== remoteState.user.id || !String(story.coverImage || '').trim()) return false;
+          return !remoteCover?.coverImage
+            || remoteCover.previewImageSource === 'automatic'
+            || remoteCover.previewImageSource === 'bundled'
+            || remoteCover.coverImage !== String(story.coverImage).trim();
+        });
         localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: remoteState.user.id }));
         if (typeof indexedDB !== 'undefined') await writeMeta('demoOwnerId', demoOwnerId);
       }
@@ -793,6 +845,14 @@ export async function updateUserProfile(userId, { name, username }) {
 
 export async function loginWithOAuth(mode = 'login', rememberLogin = true) {
   await signInWithOAuth('google', { mode, rememberLogin });
+}
+
+export async function loginWithPassword(email, password, rememberLogin = true) {
+  return signInWithPassword(email, password, { rememberLogin });
+}
+
+export async function setDirectLoginPassword(password) {
+  return updateAuthPassword(password);
 }
 
 export async function logoutUser() {

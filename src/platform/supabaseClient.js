@@ -8,6 +8,15 @@ const supabaseKey = viteEnv.VITE_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
 export const REMEMBER_LOGIN_KEY = 'riu_remember_login';
+export const MIN_DIRECT_PASSWORD_LENGTH = 8;
+
+export function validateDirectPassword(password) {
+  const value = String(password || '');
+  if (value.length < MIN_DIRECT_PASSWORD_LENGTH) {
+    throw new Error(`Das Passwort muss mindestens ${MIN_DIRECT_PASSWORD_LENGTH} Zeichen lang sein.`);
+  }
+  return value;
+}
 
 export function readRememberLoginPreference(storage = globalThis.localStorage) {
   return storage?.getItem(REMEMBER_LOGIN_KEY) !== 'false';
@@ -119,6 +128,32 @@ export async function signInWithOAuth(provider = 'google', { mode = 'login', rem
     options: { redirectTo, queryParams: { prompt: 'select_account' } }
   });
   if (error) throw error;
+}
+
+export async function signInWithPassword(email, password, { rememberLogin = true } = {}) {
+  const client = await getSupabase();
+  if (!client) throw new Error('Supabase ist für diese Umgebung noch nicht konfiguriert.');
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) throw new Error('Bitte geben Sie Ihre E-Mail-Adresse ein.');
+  if (!String(password || '')) throw new Error('Bitte geben Sie Ihr Passwort ein.');
+  writeRememberLoginPreference(rememberLogin);
+  localStorage.setItem('riu_auth_attempt', JSON.stringify({ mode: 'login', method: 'password', startedAt: Date.now() }));
+  const { data, error } = await client.auth.signInWithPassword({ email: normalizedEmail, password });
+  if (error) {
+    if (/invalid login credentials/i.test(error.message || '')) {
+      throw new Error('E-Mail-Adresse oder Passwort ist nicht korrekt.');
+    }
+    throw error;
+  }
+  return data?.session || null;
+}
+
+export async function updateAuthPassword(password) {
+  const client = await getSupabase();
+  if (!client) throw new Error('Supabase ist für diese Umgebung noch nicht konfiguriert.');
+  const { data, error } = await client.auth.updateUser({ password: validateDirectPassword(password) });
+  if (error) throw error;
+  return data?.user || null;
 }
 
 export async function signOutFromSupabase() {
