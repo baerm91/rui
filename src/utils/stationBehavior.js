@@ -69,8 +69,14 @@ export function normalizeStationBehavior(value) {
 
 export function getStationRendererDescriptor(value) {
   const behavior = normalizeStationBehavior(value);
-  const pin = ['pinned', 'horizontal', 'zoom', 'camera-motion'].includes(behavior.scroll);
-  const distance = behavior.scroll === 'horizontal' ? 2.2 : behavior.scroll === 'zoom' ? 2 : behavior.scroll === 'camera-motion' ? 1.9 : behavior.scroll === 'pinned' ? 1.65 : 1.15;
+  const pin = ['pinned', 'horizontal', 'zoom', 'camera-motion'].includes(behavior.scroll)
+    || (behavior.scroll === 'normal' && ['orbit', 'timeline'].includes(behavior.layout));
+  const distance = behavior.scroll === 'horizontal' ? 2.2
+    : behavior.scroll === 'zoom' ? 2
+      : behavior.scroll === 'camera-motion' ? 1.9
+        : behavior.scroll === 'pinned' || behavior.layout === 'timeline' ? 1.65
+          : behavior.layout === 'orbit' ? 1.5
+            : 1.15;
   return {
     layoutClass: `stage-scene-${behavior.layout}`,
     scrollClass: `stage-scroll-${behavior.scroll}`,

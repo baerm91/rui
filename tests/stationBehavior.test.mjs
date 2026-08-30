@@ -10,7 +10,21 @@ test('renderer descriptors select genuinely different stage modes', () => {
   assert.deepEqual(getStationRendererDescriptor({ layout: 'orbit', scroll: 'horizontal', motion: { parallax: true } }), {
     layoutClass: 'stage-scene-orbit', scrollClass: 'stage-scroll-horizontal', motionClass: 'motion-parallax', pin: true, distance: 2.2
   });
-  assert.equal(getStationRendererDescriptor({ layout: 'timeline', scroll: 'normal' }).pin, false);
+  assert.deepEqual(
+    {
+      pin: getStationRendererDescriptor({ layout: 'timeline', scroll: 'normal' }).pin,
+      distance: getStationRendererDescriptor({ layout: 'timeline', scroll: 'normal' }).distance
+    },
+    { pin: true, distance: 1.65 }
+  );
+  assert.deepEqual(
+    {
+      pin: getStationRendererDescriptor({ layout: 'orbit', scroll: 'normal' }).pin,
+      distance: getStationRendererDescriptor({ layout: 'orbit', scroll: 'normal' }).distance
+    },
+    { pin: true, distance: 1.5 }
+  );
+  assert.equal(getStationRendererDescriptor({ layout: 'cluster', scroll: 'normal' }).pin, false);
   assert.equal(getStationRendererDescriptor({ layout: 'cluster', scroll: 'zoom' }).scrollClass, 'stage-scroll-zoom');
 });
 
