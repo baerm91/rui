@@ -11,13 +11,14 @@ import {
 import {
   deleteStoryFromSupabase, deleteStoryPreviewFromSupabase, fetchRemoteStories, importLegacyStories,
   loadSupabaseState, syncStoriesToSupabase, syncStoryToSupabase, updateSupabaseProfile,
-  uploadStoryPreviewToSupabase
+  uploadStoryCoverToSupabase, uploadStoryPreviewToSupabase
 } from './supabaseStore.js';
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
 import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
 import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
 import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
 import { ensurePublishedStoryPreviewImage, ensurePublishedStoryPreviewImages } from './storyPreviewImage.js';
+import { ensureSharedPublishedStoryCover } from './storyCoverPublishing.js';
 
 export const STORIES_KEY = 'three_story_projects_v1';
 export const ACTIVE_STORY_KEY = 'three_story_active_project_v1';
@@ -682,16 +683,22 @@ export function recordStoryView(storyId, viewerId = '') {
   return updated;
 }
 
-export function publishStory(storyId, ownerId) {
+export async function publishStory(storyId, ownerId) {
   const stories = readStories();
   const story = stories.find((item) => item.id === storyId);
   if (!story || story.ownerId !== ownerId) throw new Error('Diese Story darf nicht veröffentlicht werden.');
   const publishedAt = story.publishedAt || now();
-  const next = stories.map((item) => item.id === storyId
-    ? ensurePublishedStoryPreviewImage({ ...item, status: 'published', publishedAt, updatedAt: now() })
-    : item);
+  const candidate = ensurePublishedStoryPreviewImage({
+    ...story,
+    status: 'published',
+    publishedAt,
+    updatedAt: now()
+  });
+  const published = await ensureSharedPublishedStoryCover(candidate, uploadStoryCoverToSupabase);
+  await syncStoryToSupabase(published, { required: true });
+  const next = stories.map((item) => item.id === storyId ? published : item);
   writeStories(next);
-  return next.find((item) => item.id === storyId);
+  return published;
 }
 
 export function unpublishStory(storyId, ownerId) {
@@ -711,6 +718,7 @@ export function deleteStory(storyId, ownerId) {
   writeStories(readStories().filter((item) => item.id !== storyId));
   deleteStoryFromSupabase(storyId).catch(reportDatabaseError);
   deleteStoryPreviewFromSupabase(story.previewVideoStoragePath).catch(reportDatabaseError);
+  deleteStoryPreviewFromSupabase(story.coverImageStoragePath).catch(reportDatabaseError);
   if (story.previewVideoAssetId && typeof indexedDB !== 'undefined') {
     deleteRecord(STORES.previewAssets, story.previewVideoAssetId).catch(reportDatabaseError);
   }

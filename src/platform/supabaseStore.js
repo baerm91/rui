@@ -130,12 +130,20 @@ export async function fetchRemoteStories() {
   return (data || []).map(rowToStory);
 }
 
-export async function syncStoryToSupabase(story) {
+export async function syncStoryToSupabase(story, { required = false } = {}) {
   const client = await getSupabase();
-  if (!client || !story?.id) return story;
-  const { data: sessionData } = await client.auth.getSession();
+  if (!story?.id) return story;
+  if (!client) {
+    if (required) throw new Error('Die öffentliche RIU-Datenbank ist nicht verfügbar. Die Story bleibt ein Entwurf.');
+    return story;
+  }
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
   const userId = sessionData.session?.user?.id;
-  if (!userId || story.ownerId !== userId) return story;
+  if (!userId || story.ownerId !== userId) {
+    if (required) throw new Error('Bitte melden Sie sich erneut an, um die Story zu veröffentlichen.');
+    return story;
+  }
   const { error } = await client.from('stories').upsert(storyToRow(story, userId), { onConflict: 'id' });
   if (error) throw error;
   return story;
@@ -165,6 +173,42 @@ export async function uploadStoryPreviewToSupabase(story, previewBlob, generated
 
   const { data } = client.storage.from(STORY_PREVIEW_BUCKET).getPublicUrl(storagePath);
   if (!data?.publicUrl) throw new Error('Supabase hat keine URL für die Preview zurückgegeben.');
+  return {
+    storagePath,
+    publicUrl: `${data.publicUrl}?v=${encodeURIComponent(generatedAt)}`
+  };
+}
+
+export async function uploadStoryCoverToSupabase(story, coverBlob, generatedAt) {
+  const client = await getSupabase();
+  if (!client || !story?.id || !(coverBlob instanceof Blob)) {
+    throw new Error('Der öffentliche Bildspeicher ist nicht verfügbar. Die Story bleibt ein Entwurf.');
+  }
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  const userId = sessionData.session?.user?.id;
+  if (!userId || story.ownerId !== userId) {
+    throw new Error('Bitte melden Sie sich erneut an, um das Vorschaubild zu veröffentlichen.');
+  }
+
+  const extensions = {
+    'image/avif': 'avif',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/svg+xml': 'svg',
+    'image/webp': 'webp'
+  };
+  const extension = extensions[coverBlob.type] || 'jpg';
+  const storagePath = `${userId}/${story.id}-cover.${extension}`;
+  const { error } = await client.storage.from(STORY_PREVIEW_BUCKET).upload(storagePath, coverBlob, {
+    cacheControl: '31536000',
+    contentType: coverBlob.type || 'image/jpeg',
+    upsert: true
+  });
+  if (error) throw error;
+
+  const { data } = client.storage.from(STORY_PREVIEW_BUCKET).getPublicUrl(storagePath);
+  if (!data?.publicUrl) throw new Error('Der Bildspeicher hat keine öffentliche URL zurückgegeben.');
   return {
     storagePath,
     publicUrl: `${data.publicUrl}?v=${encodeURIComponent(generatedAt)}`

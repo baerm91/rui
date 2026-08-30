@@ -920,6 +920,8 @@ function Dashboard({ session, onSession }) {
   const [collaborationStory, setCollaborationStory] = useState(null);
   const [versionStory, setVersionStory] = useState(null);
   const [viewCounts, setViewCounts] = useState({});
+  const [releaseBusyId, setReleaseBusyId] = useState('');
+  const [releaseError, setReleaseError] = useState('');
   const filtered = stories.filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
   const getViewCount = (story) => viewCounts[story.id]?.views ?? (Number(story.stats?.views) || 0);
   const totalViews = stories.reduce((sum, story) => sum + getViewCount(story), 0);
@@ -953,10 +955,18 @@ function Dashboard({ session, onSession }) {
     deleteStory(story.id, session.id);
     setStories(readDashboardStories());
   }
-  function toggleRelease(story) {
-    if (story.status === 'published') unpublishStory(story.id, session.id);
-    else publishStory(story.id, session.id);
-    setStories(readDashboardStories());
+  async function toggleRelease(story) {
+    setReleaseBusyId(story.id);
+    setReleaseError('');
+    try {
+      if (story.status === 'published') unpublishStory(story.id, session.id);
+      else await publishStory(story.id, session.id);
+      setStories(readDashboardStories());
+    } catch (cause) {
+      setReleaseError(cause?.message || 'Die Story konnte nicht veröffentlicht werden.');
+    } finally {
+      setReleaseBusyId('');
+    }
   }
   function saveMetadata(metadata) {
     const updated = updateStoryMetadata(metadataStory.id, session.id, metadata);
@@ -976,6 +986,7 @@ function Dashboard({ session, onSession }) {
         <div className="dashboard-content">
           <div className="dashboard-main">
             <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label></div>
+            {releaseError && <div className="form-error">{releaseError}</div>}
             {filtered.length ? <div className="dashboard-grid">{filtered.map((story) => (
           <article className="dashboard-card" key={story.id}>
             <a className="dashboard-cover-link" href={`/stories/${story.slug || story.id}`} aria-label={`„${story.name}“ ansehen`}>
@@ -999,7 +1010,7 @@ function Dashboard({ session, onSession }) {
               {story.ownerId === session.id && <button onClick={() => setCollaborationStory(story)}><Users size={15} /> Team</button>}
               {story.ownerId === session.id && <button onClick={() => setVersionStory(story)}><History size={15} /> Versionen</button>}
               {story.ownerId === session.id && <button onClick={() => go(`/analytics/${story.id}`)}><BarChart3 size={15} /> Analytics</button>}
-              {story.ownerId === session.id && <button className="release" onClick={() => toggleRelease(story)}>{story.status === 'published' ? <><LockKeyhole size={15} /> Freigabe aufheben</> : <><Globe2 size={15} /> Story freigeben</>}</button>}
+              {story.ownerId === session.id && <button className="release" disabled={releaseBusyId === story.id} onClick={() => toggleRelease(story)}>{releaseBusyId === story.id ? 'Wird veröffentlicht …' : story.status === 'published' ? <><LockKeyhole size={15} /> Freigabe aufheben</> : <><Globe2 size={15} /> Story freigeben</>}</button>}
               {story.ownerId === session.id && <button className="danger" onClick={() => remove(story)}>Löschen</button>}
             </div>
           </article>
