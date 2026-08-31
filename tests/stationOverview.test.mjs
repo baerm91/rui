@@ -16,8 +16,7 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
       assert.ok(html.includes(`Station ${index + 1}: Sammlung ${index + 1} öffnen`));
-      assert.ok(html.includes(`data-station-number="${String(index + 1).padStart(2, '0')}"`));
-      assert.ok(html.includes(`<span class="station-map-station-name">Sammlung ${index + 1}</span>`));
+      assert.ok(html.includes(`<span class="station-map-station-name"><span class="station-map-station-number">${String(index + 1).padStart(2, '0')} · </span>Sammlung ${index + 1}</span>`));
     }
     assert.match(html, /Heranzoomen/);
     assert.match(html, /Alle Stationen anzeigen/);
@@ -26,6 +25,8 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.match(html, /loading="lazy"/);
     assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
+    assert.equal((html.match(/class="station-map-station-number"/g) || []).length, 5);
+    assert.doesNotMatch(html, /data-station-number=/);
     assert.equal((html.match(/class="station-map-image"/g) || []).length, 4);
     assert.doesNotMatch(html, /transform:|station-map-world/);
     const focusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
