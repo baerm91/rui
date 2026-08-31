@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BarChart3, Box, CalendarDays, Check, ChevronDown, ChevronRight, CircleUserRound, ExternalLink,
-  Ban, Camera, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Moon, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Sun, Timer, Upload, UserPlus, Users, X
+  Ban, Camera, Eye, FilePenLine, Globe2, History, Layers3, Library, ListFilter, LockKeyhole, LogIn, LogOut, MapPin, Menu, Moon, Play, Plus, RotateCcw, Search, Settings, ShieldCheck, Sparkles, Sun, Timer, Upload, UserPlus, Users, X
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
@@ -441,9 +441,10 @@ function Discover({ session, loading = false }) {
               <h1>{selectedStory.name}</h1>
               <p>{selectedStory.description || 'Eine interaktive, räumliche Erzählung.'}</p>
               <StoryFacts story={selectedStory} className="discover-hero-facts" />
-              <button type="button" onClick={() => go(`/stories/${selectedStory.slug || selectedStory.id}`)}>
-                Story öffnen <ArrowRight size={16} />
+              <button key={selectedStory.id} className="discover-story-open" type="button" aria-describedby="discover-story-open-hint" onClick={() => go(`/stories/${selectedStory.slug || selectedStory.id}`)}>
+                <Play size={18} fill="currentColor" aria-hidden="true" /> Story öffnen <ArrowRight size={20} aria-hidden="true" />
               </button>
+              <span className="discover-story-open-hint" id="discover-story-open-hint">Hier starten Sie die interaktive 3D-Story.</span>
             </div>
           </article>
         )}
