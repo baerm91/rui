@@ -19,6 +19,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@panzoom/panzoom": "^4.6.1",
     "@supabase/supabase-js": "^2.112.3",
     "gsap": "^3.12.7",
     "lucide-react": "^1.16.0",

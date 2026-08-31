@@ -3,10 +3,15 @@ import { ArrowUpRight, Box } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import './stationOverview.css';
+import { useMobileModelView } from './MobileModelDialog.jsx';
+import { MobileStationMap } from './MobileStationMap.jsx';
 
-export function StationOverview({ title, stations, stationIndex, onOpenStation, onOpenItem }) {
+export function StationOverview({ title, stations, stationIndex, onOpenStation, onOpenItem, mapViewRef }) {
+  const mobile = useMobileModelView();
   const headingRef = useRef(null);
-  useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, [mobile]);
+
+  if (mobile) return <MobileStationMap title={title} stations={stations} stationIndex={stationIndex} onOpenStation={onOpenStation} viewRef={mapViewRef} />;
 
   return <section className="station-overview" aria-labelledby="station-overview-title">
     <div className="station-overview-intro">
