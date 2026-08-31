@@ -45,19 +45,21 @@ export function createStationMapLayout(stations, width, height, focus = {}) {
   return result.sort((a, b) => a.index - b.index);
 }
 
+export const STATION_MAP_CAPTION_HEIGHT = 64;
+
 export function getSemanticPreviewCount(itemCount, progress = 0, { width = 0, height = 0 } = {}) {
   if (itemCount < 1) return 0;
   // Show a small collection immediately when the tile has room for legible
   // previews. Reserve some height for its caption; never pack tiny tiles.
   const columns = Math.max(0, Math.floor((width - 6) / 150));
-  const rows = Math.max(0, Math.floor((height - 50) / 150));
+  const rows = Math.max(0, Math.floor((height - 6 - STATION_MAP_CAPTION_HEIGHT) / 150));
   const overviewCount = Math.min(itemCount, 4, Math.max(1, columns * rows));
   const detail = Math.max(0, Math.min(1, progress));
   return Math.min(itemCount, overviewCount + Math.floor(detail * (itemCount - overviewCount)));
 }
 
-// Arrange image rectangles in balanced, justified rows. Aspect ratios influence
-// widths; each row meets both edges and no incomplete last row leaves a hole.
+// Aspect ratios determine widths within each row. Equal-height rows prevent a
+// single portrait preview from pushing the remaining objects into thin strips.
 export function createImageMosaicLayout(ratios, width, height) {
   if (!ratios.length || width <= 0 || height <= 0) return [];
   const normalized = ratios.map((ratio) => Number.isFinite(ratio) && ratio > 0 ? Math.max(.4, Math.min(3, ratio)) : 1);
@@ -76,11 +78,10 @@ export function createImageMosaicLayout(ratios, width, height) {
     start = end;
     remaining -= sum;
   }
-  const naturalHeight = rows.reduce((sum, row) => sum + width / row.sum, 0);
   const result = [];
   let y = 0;
   for (const row of rows) {
-    const rowHeight = width / row.sum * height / naturalHeight;
+    const rowHeight = height / rows.length;
     let x = 0;
     for (let index = row.start; index < row.end; index++) {
       const tileWidth = width * normalized[index] / row.sum;
@@ -90,6 +91,87 @@ export function createImageMosaicLayout(ratios, width, height) {
     y += rowHeight;
   }
   return result;
+}
+
+// Compute previews only in the image region, never beneath the title strip.
+// Reduce density if actual aspect ratios would create unreadably small cells,
+// including at full zoom. All objects remain accessible by opening the station.
+export function createStationPreviewLayout(ratios, width, height, progress = 0, imageFocus = {}) {
+  const imageWidth = Math.max(0, width - 6);
+  const imageHeight = Math.max(0, height - 6 - STATION_MAP_CAPTION_HEIGHT);
+  if (!ratios.length || !imageWidth || !imageHeight) return { imageWidth, imageHeight, images: [] };
+  const minimumCell = 112;
+  const capacity = Math.max(1, Math.floor(imageWidth / minimumCell) * Math.floor(imageHeight / minimumCell));
+  let count = Math.min(capacity, getSemanticPreviewCount(ratios.length, progress, { width, height }));
+  let images;
+  do {
+    images = createImageMosaicLayout(ratios.slice(0, count), imageWidth, imageHeight);
+    if (count === 1 || images.every((image) => image.width >= minimumCell && image.height >= minimumCell)) break;
+    count--;
+  } while (count > 0);
+  return { imageWidth, imageHeight, images: expandImageMosaic(images, imageWidth, imageHeight, imageFocus.index, imageFocus.progress) };
+}
+
+// Reweight the existing rows, preserving image order and row membership.
+// Every non-focused image loses area as the chosen image grows.
+export function expandImageMosaic(images, width, height, focusIndex, progress = 0) {
+  const selected = images.find((image) => image.index === focusIndex);
+  const detail = Math.max(0, Math.min(1, progress));
+  if (!selected || !detail || images.length < 2 || width <= 0 || height <= 0) return images;
+  const total = width * height;
+  const baseWeight = selected.width * selected.height;
+  const baseShare = baseWeight / total;
+  if (baseShare >= .82) return images;
+  const share = baseShare + (.82 - baseShare) * detail;
+  const extra = (total - baseWeight) * share / (1 - share) - baseWeight;
+  const rows = [];
+  images.forEach((image) => {
+    let row = rows.find((entry) => Math.abs(entry.y - image.y) < .001);
+    if (!row) { row = { y: image.y, entries: [] }; rows.push(row); }
+    row.entries.push({ ...image, weight: image.width * image.height + (image.index === focusIndex ? extra : 0) });
+  });
+  let y = 0;
+  const result = [];
+  for (const row of rows) {
+    const rowWeight = row.entries.reduce((sum, image) => sum + image.weight, 0);
+    const rowHeight = height * rowWeight / (total + extra);
+    let x = 0;
+    for (const image of row.entries) {
+      const tileWidth = width * image.weight / rowWeight;
+      result.push({ index: image.index, x, y, width: tileWidth, height: rowHeight });
+      x += tileWidth;
+    }
+    y += rowHeight;
+  }
+  return result;
+}
+
+// Spend zoom on the station first, then on its image mosaic. Reverse that
+// order on zoom-out; a naturally dominant station can enter image zoom early.
+export function advanceStationMapZoom(current, amount, { stationIndex = current.focusIndex, imageIndex = 0, stationAtMaximum = false, canZoomImages = true } = {}) {
+  const sameStation = stationIndex === current.focusIndex;
+  const next = {
+    focusIndex: amount < 0 ? current.focusIndex : stationIndex,
+    progress: sameStation || amount < 0 ? current.progress : 0,
+    imageFocusIndex: sameStation || amount < 0 ? current.imageFocusIndex ?? 0 : 0,
+    imageProgress: sameStation || amount < 0 ? current.imageProgress || 0 : 0
+  };
+  if (amount < 0) {
+    const released = Math.min(next.imageProgress, -amount);
+    next.imageProgress -= released;
+    next.progress = Math.max(0, next.progress + amount + released);
+    return next;
+  }
+  if (stationAtMaximum) next.progress = 1;
+  const stationDelta = Math.min(amount, 1 - next.progress);
+  next.progress += stationDelta;
+  const remaining = amount - stationDelta;
+  if (remaining > 0 && canZoomImages) {
+    if (next.imageFocusIndex !== imageIndex) next.imageProgress = 0;
+    next.imageFocusIndex = imageIndex;
+    next.imageProgress = Math.min(1, next.imageProgress + remaining);
+  }
+  return next;
 }
 
 // Panzoom scales both the tile and its translation around the viewport centre.
