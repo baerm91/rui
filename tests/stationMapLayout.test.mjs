@@ -1,31 +1,58 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStationMapLayout, createStationMapGesture, createStationPreviewTree, getStationMapDetail } from '../src/utils/stationMapLayout.js';
+import { createStationMapLayout, createStationMapGesture, projectStationTile, getStationPreviewCapacity, getStationMapMaxZoom } from '../src/utils/stationMapLayout.js';
 
-test('progressive image splits fill the tile at every zoom level without reserving hidden slots', () => {
-  assert.equal(createStationPreviewTree(0, 400, 200), null);
-  for (const [width, height] of [[400, 200], [200, 400]]) {
-    for (let count = 1; count <= 6; count++) {
-      const tree = createStationPreviewTree(count, width, height);
-      for (const scale of [1, 2.3, 2.9, 3.1, 3.6, 4.1, 5.8, 8]) {
-        const detail = getStationMapDetail(scale);
-        const areas = new Map();
-        const visit = (node, area) => {
-          if (!node.direction) { areas.set(node.index, area); return; }
-          const fraction = detail.previewOpacities[node.revealIndex] / 2;
-          visit(node.first, area * (1 - fraction));
-          visit(node.second, area * fraction);
-        };
-        visit(tree, width * height);
-        assert.equal(areas.size, count);
-        assert.ok(Math.abs([...areas.values()].reduce((sum, area) => sum + area, 0) - width * height) < .001);
-        for (let index = 1; index < count; index++) {
-          assert.equal(areas.get(index) > 0, detail.previewOpacities[index] > 0);
+test('projected station tiles remain inside the viewport and cover it without gaps during zoom and pan', () => {
+  for (const [width, height] of [[360, 520], [1800, 700]]) {
+    const tiles = createStationMapLayout(Array.from({ length: 18 }, (_, index) => ({ items: Array(index % 7).fill({}) })), width, height);
+    for (const scale of [1, 1.5, 2.12, 4, 6]) {
+      for (const direction of [-1, 0, 1]) {
+        const view = { scale, x: direction * width * (1 - 1 / scale) / 2, y: -direction * height * (1 - 1 / scale) / 2 };
+        const projected = tiles.map((tile) => projectStationTile(tile, width, height, view));
+        assert.ok(Math.abs(projected.reduce((area, tile) => area + tile.width * tile.height, 0) - width * height) < .001);
+        for (const tile of projected) {
+          assert.ok(tile.x >= 0 && tile.y >= 0 && tile.width >= 0 && tile.height >= 0);
+          assert.ok(tile.x + tile.width <= width + .001 && tile.y + tile.height <= height + .001);
         }
-        if (scale < 2.85) assert.equal(areas.get(0), width * height);
       }
     }
   }
+  const tile = { x: 0, y: 0, width: 100, height: 100 };
+  assert.deepEqual(projectStationTile(tile, 400, 400), tile);
+  assert.deepEqual(projectStationTile(tile, 400, 400, { scale: 2, x: 100, y: 100 }), { x: 0, y: 0, width: 200, height: 200 });
+  const hidden = projectStationTile(tile, 400, 400, { scale: 2, x: -100, y: -100 });
+  assert.equal(hidden.width * hidden.height, 0);
+  const clipped = projectStationTile({ x: 50, y: 50, width: 200, height: 200 }, 400, 400, { scale: 2 });
+  assert.deepEqual(clipped, { x: 0, y: 0, width: 300, height: 300 });
+});
+
+test('preview capacity follows visible space and never promises missing or unreadably small objects', () => {
+  assert.equal(getStationPreviewCapacity(800, 600, 0), 0);
+  assert.equal(getStationPreviewCapacity(99, 600, 6), 0);
+  assert.equal(getStationPreviewCapacity(600, 99, 6), 0);
+  assert.equal(getStationPreviewCapacity(100, 100, 6), 1);
+  assert.equal(getStationPreviewCapacity(320, 410, 12), 4);
+  assert.equal(getStationPreviewCapacity(1000, 800, 3), 3);
+  assert.equal(getStationPreviewCapacity(1000, 800, 20), 6);
+  for (let width = 100; width <= 1000; width += 20) {
+    for (let height = 100; height <= 800; height += 20) {
+      const count = getStationPreviewCapacity(width, height, 12);
+      assert.ok(count <= getStationPreviewCapacity(width + 20, height, 12));
+      assert.ok(count <= getStationPreviewCapacity(width, height + 20, 12));
+    }
+  }
+});
+
+test('small exhibitions have a useful zoom ceiling while dense maps allow closer inspection', () => {
+  for (const [width, height] of [[360, 520], [1800, 700]]) {
+    const layout = (count) => createStationMapLayout(Array.from({ length: count }, () => ({ items: [{}] })), width, height);
+    const few = getStationMapMaxZoom(layout(3), width, height);
+    const many = getStationMapMaxZoom(layout(60), width, height);
+    assert.ok(few >= 1.5 && few < 3);
+    assert.ok(many > few && many <= 6);
+    assert.equal(getStationMapMaxZoom(layout(1000), width, height), 6);
+  }
+  assert.equal(getStationMapMaxZoom([], 0, 0), 1.5);
 });
 
 test('station map fills portrait and landscape surfaces without overlapping or losing stations', () => {
@@ -49,26 +76,6 @@ test('station map fills portrait and landscape surfaces without overlapping or l
     }
   }
   assert.deepEqual(createStationMapLayout([], 360, 520), []);
-});
-
-test('details fade continuously before more previews become visible', () => {
-  assert.equal(getStationMapDetail(1).previewCount, 0);
-  assert.equal(getStationMapDetail(1).titleOpacity, 0);
-  assert.ok(getStationMapDetail(1.4).titleOpacity > 0 && getStationMapDetail(1.4).titleOpacity < 1);
-  assert.equal(getStationMapDetail(1.9).titleOpacity, 1);
-  assert.equal(getStationMapDetail(2.3).previewCount, 1);
-  assert.equal(getStationMapDetail(3.1).previewCount, 2);
-  assert.equal(getStationMapDetail(8).previewCount, 6);
-  let previous = getStationMapDetail(1);
-  for (let scale = 1.01; scale <= 8; scale += .01) {
-    const current = getStationMapDetail(scale);
-    assert.ok(current.previewCount >= previous.previewCount);
-    for (let index = 0; index < 6; index++) {
-      const difference = current.previewOpacities[index] - previous.previewOpacities[index];
-      assert.ok(difference >= 0 && difference < .018);
-    }
-    previous = current;
-  }
 });
 
 test('taps open stations, while drags, pinches and canceled touches never open them', () => {

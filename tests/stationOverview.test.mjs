@@ -21,7 +21,10 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.match(html, /Heranzoomen/);
     assert.match(html, /Alle Stationen anzeigen/);
     assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-/);
-    assert.doesNotMatch(html, /<img|NaN|Infinity|station-overview-grid/);
+    assert.match(html, /Station direkt öffnen/);
+    assert.match(html, /loading="lazy"/);
+    assert.match(html, /Station öffnen/);
+    assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
   } finally {
     await compiler.close();
   }
