@@ -16,7 +16,6 @@ import {
 import { canCreateStories, normalizeUserRole } from './accessControl.js';
 import { isSupportedModelUrl, normalizeModelUrl } from '../utils/modelSource.js';
 import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
-import { normalizeStationBehavior } from '../utils/stationBehavior.js';
 import { applyProfileIdentityToStories, getOwnedProfileStoryUpdates } from './profileIdentity.js';
 import { ensurePublishedStoryPreviewImage, ensurePublishedStoryPreviewImages } from './storyPreviewImage.js';
 import {
@@ -518,7 +517,6 @@ export function createStory({
       id: `station_${Date.now()}`,
       title: 'Auftakt',
       description: 'Beginnen Sie hier Ihre Scrolling-Erzählung.',
-      behavior: normalizeStationBehavior(),
       viewMode: 'ruin',
       cameraPos: roomExperience ? { x: 0, y: 1.7, z: 5 } : { x: 0, y: 5, z: 14 },
       cameraTarget: roomExperience ? { x: 0, y: 1.5, z: 0 } : { x: 0, y: 2.5, z: 0 },

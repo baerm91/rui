@@ -4,9 +4,6 @@ import { preserveDistinctAnnotations } from './utils/annotationIdentity.js';
 import { findCrossStoryStationSource, getRouteStory, platformReady, readStories } from './platform/platformStore.js';
 import { normalizeSpatialItems, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId } from './utils/spatialStory.js';
 import { normalizeInterpretationComparison } from './utils/interpretationComparison.js';
-import { normalizeStationBehavior } from './utils/stationBehavior.js';
-import { normalizeStationRelations } from './utils/stationRelations.js';
-import { normalizeNarrativeSteps } from './utils/stationNarrative.js';
 
 const STATIONS_DRAFT_KEY = `${siteConfig.storagePrefix}_custom_stations`;
 export const getStationsDraftKey = (projectId = '') => (
@@ -178,11 +175,8 @@ const normalizeStation = (station, index, stationCount) => {
     title: station.title ?? `Station ${index + 1}`,
     description,
     introduction: station.introduction ?? description,
-    behavior: normalizeStationBehavior(station.behavior),
     spatial: normalizeSpatialStation(station, index),
     items,
-    relations: normalizeStationRelations(station.relations, items),
-    narrativeSteps: normalizeNarrativeSteps(station.narrativeSteps, items),
     thumbnailLayout: normalizeThumbnailLayout(station.thumbnailLayout),
     thumbnailGridSpacing: normalizeThumbnailGridSpacing(station.thumbnailGridSpacing),
     selectedItemId: station.selectedItemId ?? station.items?.[0]?.id ?? null,

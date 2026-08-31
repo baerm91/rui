@@ -22,41 +22,7 @@ if (!usesModelViewer) document.title = 'RIU — Räumliche Geschichten';
 const rootElement = document.getElementById('react-root');
 if (rootElement) {
   let app;
-  if (import.meta.env.DEV && window.location.pathname === '/__effects-preview') {
-    const [{ default: ScrollingStory }, { SPATIAL_DEMO_STORY }] = await Promise.all([
-      import('./scrolling/ScrollingStory.jsx'),
-      import('./exhibition/spatialDemo.js')
-    ]);
-    const rendererPresets = [
-      ['cluster', 'normal', 'Räumlicher Cluster'], ['orbit', 'normal', 'Umlaufbahn'], ['timeline', 'normal', 'Objekte in Folge'],
-      ['freeform', 'horizontal', 'Horizontaler Rundgang'], ['grid', 'zoom', 'Zoom durch das Objekt'], ['cluster', 'camera-motion', 'Perspektivwechsel']
-    ];
-    const sourceItems = SPATIAL_DEMO_STORY.stations[0].items;
-    const effectStations = rendererPresets.map(([layout, scroll, title], index) => {
-      const items = sourceItems.map((item, itemIndex) => ({
-        ...item,
-        id: `renderer-${index}-${itemIndex}`,
-        ...(index === 0 && itemIndex === 0 ? { modelUrl: 'https://sketchfab.com/models/8524a2cbf60944f6ab768655d91c5229', sourceType: 'sketchfab', thumbnailUrl: '', providerThumbnailUrl: '' } : {})
-      }));
-      return {
-        ...SPATIAL_DEMO_STORY.stations[index % SPATIAL_DEMO_STORY.stations.length], id: `renderer-station-${index}`, title,
-        introduction: `Diese Station demonstriert ${layout} mit dem Scrollmodus ${scroll}.`, description: `Diese Station demonstriert ${layout} mit dem Scrollmodus ${scroll}.`, items,
-        behavior: { layout, entrance: index % 2 ? 'assemble' : 'from-darkness', scroll, interactions: { hoverTilt: true, objectFocus: true, connections: true, spotlight: index === 0, discoveryMode: false }, motion: { parallax: true, floating: layout !== 'timeline', magneticCursor: true, depthOfField: layout === 'cluster', clusterExplode: true, progressiveText: true }, atmosphere: { theme: index % 2 ? 'daylight' : 'ritual', particles: true, grain: index % 2 === 0, accent: index === 4 ? '#7f9fd1' : '#c99762' }, viewerTransition: 'morph' },
-        initialItemId: items[0]?.id,
-        narrativeSteps: items.map((item, itemIndex) => ({ id: `step-${index}-${itemIndex}`, eyebrow: `Moment 0${itemIndex + 1}`, title: item.title, text: item.description, itemId: item.id })),
-        relations: items.slice(1).map((item, itemIndex) => ({ id: `relation-${index}-${itemIndex}`, fromItemId: items[0].id, toItemId: item.id, label: itemIndex ? 'Form und Erinnerung' : 'Materialwirkung' }))
-      };
-    });
-    app = <ScrollingStory story={{ ...SPATIAL_DEMO_STORY, stations: effectStations }} />;
-  } else if (import.meta.env.DEV && window.location.pathname === '/__scroll-preview') {
-    const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');
-    app = <ScrollingStory story={{
-      id: 'scroll-preview',
-      name: 'Leere Station – Regressionstest',
-      description: 'Diese Vorschau prüft eine Scrolling-Story ohne Titelbild und ohne Objekte.',
-      stations: [{ id: 'empty-station', title: 'Auftakt', description: 'Das Kapitel rendert auch ohne ein zugewiesenes Objekt.', items: [] }]
-    }} />;
-  } else if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
+  if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
     const [{ default: ExhibitionRoom }, { SPATIAL_DEMO_STORY }] = await Promise.all([
       import('./exhibition/ExhibitionRoom.jsx'),
       import('./exhibition/spatialDemo.js')
@@ -71,9 +37,9 @@ if (rootElement) {
     if (!access.allowed) {
       window.location.replace(access.isEditor && !access.session ? '/login' : '/');
     } else if (isRoomStory(access.story)) {
-      const { default: ScrollingStory } = await import('./scrolling/ScrollingStory.jsx');
+      const { default: ExhibitionRoom } = await import('./exhibition/ExhibitionRoom.jsx');
       app = (
-        <ScrollingStory
+        <ExhibitionRoom
           story={access.story}
           initialMode={access.isEditor ? 'editor' : 'visitor'}
           backHref={access.isEditor ? '/dashboard' : '/discover'}

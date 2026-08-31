@@ -17,13 +17,6 @@ test('WebMCP normalizes a complete exhibition into the room story format', () =>
       introduction: 'Der Rundgang beginnt mit einem Fundstück.',
       thumbnailLayout: 'carousel',
       thumbnailGridSpacing: 130,
-      behavior: {
-        layout: 'orbit', entrance: 'assemble', scroll: 'pinned',
-        interactions: { spotlight: true, connections: true },
-        motion: { parallax: true, floating: true, magneticCursor: true, depthOfField: true, clusterExplode: true, progressiveText: true },
-        atmosphere: { theme: 'archive', particles: false, grain: true, accent: '#b98a55' }, viewerTransition: 'morph', stationTransition: 'veil'
-      },
-      narrativeSteps: [{ id: 'spur', title: 'Spur lesen', text: 'Die Oberfläche wird zur Quelle.', itemId: 'fundstueck' }],
       spatial: {
         position: [2, 0, -1],
         movementRadius: 7,
@@ -44,36 +37,19 @@ test('WebMCP normalizes a complete exhibition into the room story format', () =>
         thumbnailUrl: 'https://example.org/object.jpg',
         attribution: 'Museum',
         license: 'CC BY 4.0',
-        facts: { material: 'Bronze', date: '2. Jh. n. Chr.', findspot: 'Wien' },
-        hotspots: [{ id: 'kante', label: 'Kante', description: 'Eine sichtbare Bearbeitungsspur.', x: 28, y: 42 }],
-        hiddenLayers: [{ id: 'scan', label: 'Hinter dem Scan', title: 'Digitale Ebene', text: 'Eine zusätzliche Lesart.' }],
         modelTransform: { position: [1, .2, .5], rotation: [0, .5, 0], scale: .8 }
-      }, {
-        id: 'vergleich', title: 'Vergleichsstück', modelUrl: 'https://example.org/compare.glb'
-      }],
-      relations: [{ fromItemId: 'fundstueck', toItemId: 'vergleich', label: 'Gleicher Fundort', description: 'Beide Stücke stammen aus demselben Kontext.' }]
+      }]
     }]
   });
 
   assert.equal(exhibition.name, 'Erinnerung in Bewegung');
   assert.deepEqual(exhibition.categories, ['Kunst', 'Kulturerbe']);
   assert.equal(exhibition.stations[0].thumbnailLayout, 'carousel');
-  assert.equal(exhibition.stations[0].behavior.layout, 'orbit');
-  assert.equal(exhibition.stations[0].behavior.interactions.spotlight, true);
-  assert.equal(exhibition.stations[0].behavior.viewerTransition, 'morph');
-  assert.equal(exhibition.stations[0].behavior.atmosphere.theme, 'archive');
-  assert.equal(exhibition.stations[0].behavior.motion.magneticCursor, true);
-  assert.equal(exhibition.stations[0].behavior.stationTransition, 'veil');
-  assert.equal(exhibition.stations[0].narrativeSteps[0].itemId, 'fundstueck');
   assert.equal(exhibition.stations[0].spatial.surfaceMaterials.wall.materialId, 'marble-01');
   assert.equal(exhibition.stations[0].spatial.audio.url, 'https://example.org/ambient.mp3');
   assert.equal(exhibition.stations[0].items[0].sourceType, 'gltf');
   assert.deepEqual(exhibition.stations[0].items[0].modelTransform.rotation, [0, .5, 0]);
-  assert.equal(exhibition.stations[0].items[0].facts.material, 'Bronze');
-  assert.equal(exhibition.stations[0].items[0].hotspots[0].x, 28);
-  assert.equal(exhibition.stations[0].items[0].hiddenLayers[0].title, 'Digitale Ebene');
   assert.equal(exhibition.stations[0].selectedItemId, 'fundstueck');
-  assert.equal(exhibition.stations[0].relations[0].label, 'Gleicher Fundort');
 });
 
 test('WebMCP creates ordered stations without authored room coordinates', () => {

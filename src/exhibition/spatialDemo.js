@@ -7,24 +7,19 @@ const models = [
     description: 'Ein materialreiches PBR-Beispiel für die direkte glTF-Darstellung im Raum.',
     modelUrl: 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf',
     thumbnailUrl: 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/Default_albedo.jpg',
-    attribution: 'Leonardo Carrion / Khronos glTF Sample Models', license: 'CC BY-NC 4.0',
-    facts: { material: 'Metall, Leder, textile Polsterung', date: 'Digitale Rekonstruktion, 2017', dimensions: 'Originalmaßstab', collection: 'Khronos glTF Sample Models' },
-    hotspots: [{ id: 'visor', label: 'Visierkante', description: 'Die abgeriebene Kante macht Materialalterung und Nutzung als Teil der digitalen Oberfläche lesbar.', x: 47, y: 34 }, { id: 'patina', label: 'Patina', description: 'Farb- und Rauheitswerte simulieren die unregelmäßige Oxidation des Metalls.', x: 64, y: 61 }],
-    hiddenLayers: [{ id: 'scan', label: 'Hinter dem Modell', title: 'Vom Scan zur Oberfläche', text: 'Geometrie, Materialkarten und Licht werden getrennt erfasst und erst im Browser wieder zu einem lesbaren Objekt zusammengesetzt.' }, { id: 'absence', label: 'Was fehlt?', title: 'Digitale Leerstellen', text: 'Auch ein hochauflösendes Modell bewahrt nicht Gewicht, Geruch oder Temperatur. Diese Abwesenheiten gehören zur Interpretation.' }]
+    attribution: 'Leonardo Carrion / Khronos glTF Sample Models', license: 'CC BY-NC 4.0'
   },
   {
     title: 'Ente', description: 'Direkt geladenes glTF-Sample mit eigener Modelltransformation.',
     modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF/Duck.gltf',
     thumbnailUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/screenshot/screenshot.png',
-    attribution: 'Sony / Khronos', license: 'SCEA Shared Source License',
-    facts: { material: 'Bemalte Oberfläche', date: 'Digitalisiert 2012', dimensions: '20 × 15 × 12 cm', collection: 'Khronos Sample Assets' }
+    attribution: 'Sony / Khronos', license: 'SCEA Shared Source License'
   },
   {
     title: 'Avocado', description: 'Ein weiteres reales Objekt derselben kuratierten Station.',
     modelUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF/Avocado.gltf',
     thumbnailUrl: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/screenshot/screenshot.jpg',
-    attribution: 'Microsoft / Khronos', license: 'CC BY 4.0',
-    facts: { material: 'Organisches Material', date: 'Digitale Studie, 2016', dimensions: 'Lebensgroß', collection: 'Khronos Sample Assets' }
+    attribution: 'Microsoft / Khronos', license: 'CC BY 4.0'
   }
 ];
 
