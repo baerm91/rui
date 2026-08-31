@@ -13,16 +13,15 @@ test('station overview keeps every station accessible and defers thumbnails and 
       items: Array.from({ length: count }, (_, itemIndex) => ({ id: `item-${itemIndex}`, title: `Objekt ${itemIndex + 1}`, thumbnailUrl: `/thumb-${index}-${itemIndex}.jpg` }))
     }));
     const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
-    assert.equal((html.match(/<article /g) || []).length, 5);
+    assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
       assert.ok(html.includes(`Station ${index + 1}: Sammlung ${index + 1} öffnen`));
     }
-    assert.match(html, /Diese Station wird noch kuratiert/);
     assert.match(html, /12 Objekte/);
-    assert.match(html, /\+ 3 weitere Objekte/);
-    assert.equal((html.match(/class="station-overview-object"/g) || []).length, 19);
+    assert.match(html, /Heranzoomen/);
+    assert.match(html, /Alle Stationen anzeigen/);
     assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-/);
-    assert.equal((html.match(/loading="lazy"/g) || []).length, 19);
+    assert.doesNotMatch(html, /<img|NaN|Infinity|station-overview-grid/);
   } finally {
     await compiler.close();
   }

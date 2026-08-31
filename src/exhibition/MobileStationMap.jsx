@@ -3,12 +3,27 @@ import Panzoom from '@panzoom/panzoom/dist/panzoom.es.js';
 import { Box, Minus, Plus, Scan } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
-import { createStationMapGesture, createStationMapLayout, getStationMapDetail } from '../utils/stationMapLayout.js';
+import { createStationMapGesture, createStationMapLayout, createStationPreviewTree, getStationMapDetail } from '../utils/stationMapLayout.js';
 import './mobileStationMap.css';
 
 const MAX_ZOOM = 8;
 
-export function MobileStationMap({ title, stations, stationIndex, onOpenStation, viewRef }) {
+function PreviewTree({ tree, items, previewCount }) {
+  if (!tree) return null;
+  if (tree.direction) return <span className="station-map-split" style={{ flexDirection: tree.direction }}>
+    <span className="station-map-split-first"><PreviewTree tree={tree.first} items={items} previewCount={previewCount} /></span>
+    <span className="station-map-split-next" style={{ flexBasis: `calc(50% * var(--map-object-${tree.revealIndex}, 0))` }}><PreviewTree tree={tree.second} items={items} previewCount={previewCount} /></span>
+  </span>;
+  const item = items[tree.index];
+  const src = resolveSpatialThumbnailUrl(item);
+  return <span className="station-map-preview">
+    <Box aria-hidden="true" />
+    {previewCount > tree.index && src && <LazyImage key={src} src={src} />}
+    <span className="station-map-preview-caption">{item.title}</span>
+  </span>;
+}
+
+export function StationMap({ title, stations, stationIndex, onOpenStation, viewRef }) {
   const viewportRef = useRef(null);
   const worldRef = useRef(null);
   const headingRef = useRef(null);
@@ -18,9 +33,11 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
   const localViewRef = useRef(null);
   const savedView = viewRef || localViewRef;
   const gestureRef = useRef(createStationMapGesture());
-  const [size, setSize] = useState({ width: 0, height: 0 });
+  const [size, setSize] = useState({ width: 1000, height: 700 });
   const [previewCount, setPreviewCount] = useState(0);
-  const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height), [stations, size]);
+  const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height).map((tile) => ({
+    ...tile, previews: createStationPreviewTree(Math.min(6, stations[tile.index].items.length), tile.width, tile.height)
+  })), [stations, size]);
 
   useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
@@ -28,7 +45,10 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
     const world = worldRef.current;
     let active = true;
     let lastPreviewCount = -1;
+    let lastScale = null;
     const updateDetail = (scale) => {
+      if (scale === lastScale) return;
+      lastScale = scale;
       const detail = getStationMapDetail(scale);
       world.style.setProperty('--map-scale', scale);
       world.style.setProperty('--map-title-opacity', detail.titleOpacity);
@@ -36,7 +56,6 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
       world.style.setProperty('--map-title-position', `${50 * (1 - titleMove)}%`);
       world.style.setProperty('--map-title-offset', `${(12 + 23 * titleMove) / scale}px`);
       world.style.setProperty('--map-title-shift', `${-50 * (1 - titleMove)}%`);
-      world.style.setProperty('--map-grid-progress', Math.max(0, Math.min(1, (scale - 2.85) / .6)));
       detail.previewOpacities.forEach((opacity, index) => world.style.setProperty(`--map-object-${index}`, opacity));
       if (zoomLabelRef.current) zoomLabelRef.current.textContent = `${Math.round(scale * 100)} %`;
       if (detail.previewCount !== lastPreviewCount) {
@@ -137,8 +156,6 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
         {tiles.map((tile) => {
           const station = stations[tile.index];
           const items = station.items.slice(0, 6);
-          const columns = Math.min(2, Math.max(1, items.length));
-          const rows = Math.ceil(items.length / columns) || 1;
           return <button key={station.id} type="button" className={`station-map-stone stone-${tile.index % 6} ${tile.index === stationIndex ? 'is-current' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%` }}
             aria-label={`Station ${tile.index + 1}: ${station.title} öffnen, ${station.items.length} ${station.items.length === 1 ? 'Objekt' : 'Objekte'}`}
@@ -147,20 +164,7 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
             <span className="station-map-stone-face" aria-hidden="true">
               <span className="station-map-number">{String(tile.index + 1).padStart(2, '0')}</span>
               <span className="station-map-stone-title">{station.title}</span>
-              <span className="station-map-previews">
-                {items.map((item, index) => {
-                  const src = resolveSpatialThumbnailUrl(item);
-                  return <span key={item.id} className="station-map-preview" style={{
-                    opacity: `var(--map-object-${index}, 0)`,
-                    left: `${index % columns / columns * 100}%`, top: `${Math.floor(index / columns) / rows * 100}%`,
-                    width: index === 0 ? `calc(100% - ${100 - 100 / columns}% * var(--map-grid-progress, 0))` : `${100 / columns}%`,
-                    height: index === 0 ? `calc(100% - ${100 - 100 / rows}% * var(--map-grid-progress, 0))` : `${100 / rows}%`
-                  }}>
-                    <span className="station-map-preview-image"><Box aria-hidden="true" />{previewCount > index && src && <LazyImage key={src} src={src} />}</span>
-                    <span>{item.title}</span>
-                  </span>;
-                })}
-              </span>
+              <span className="station-map-previews"><PreviewTree tree={tile.previews} items={items} previewCount={previewCount} /></span>
               <span className="station-map-count">{station.items.length ? `${station.items.length} ${station.items.length === 1 ? 'Objekt' : 'Objekte'} · Station öffnen` : 'Station öffnen'}</span>
             </span>
           </button>;
@@ -168,6 +172,6 @@ export function MobileStationMap({ title, stations, stationIndex, onOpenStation,
       </div>
     </div>
     <div className="station-map-tools" aria-label="Zoomsteuerung"><button type="button" onClick={() => zoomTo((controllerRef.current?.getScale() || 1) / 1.4)} aria-label="Herauszoomen"><Minus size={20} /></button><button type="button" onClick={() => zoomTo(1)} aria-label="Alle Stationen anzeigen"><Scan size={17} /><span ref={zoomLabelRef}>100 %</span></button><button type="button" onClick={() => zoomTo((controllerRef.current?.getScale() || 1) * 1.4)} aria-label="Heranzoomen"><Plus size={20} /></button></div>
-    <p className="station-map-instructions">Ziehen zum Verschieben · Zwei Finger zum Zoomen<br /><span>Eine Kachel antippen, um die Station zu öffnen</span></p>
+    <p className="station-map-instructions">Ziehen zum Verschieben · Mausrad oder zwei Finger zum Zoomen<br /><span>Kachel auswählen, um die Station zu öffnen</span></p>
   </section>;
 }

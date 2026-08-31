@@ -32,6 +32,27 @@ export function createStationMapLayout(stations, width, height) {
   return result.sort((a, b) => a.index - b.index);
 }
 
+// New previews divide an existing image. Even partial zoom steps fill the
+// entire station; hidden previews never reserve empty grid cells.
+export function createStationPreviewTree(count, width, height) {
+  if (count < 1) return null;
+  const root = { index: 0 };
+  const leaves = [{ node: root, width, height }];
+  for (let index = 1; index < count; index++) {
+    leaves.sort((a, b) => b.width * b.height - a.width * a.height);
+    const leaf = leaves.shift();
+    const direction = leaf.width >= leaf.height ? 'row' : 'column';
+    const first = { index: leaf.node.index };
+    const second = { index };
+    delete leaf.node.index;
+    Object.assign(leaf.node, { direction, revealIndex: index, first, second });
+    const nextWidth = leaf.width / (direction === 'row' ? 2 : 1);
+    const nextHeight = leaf.height / (direction === 'column' ? 2 : 1);
+    leaves.push({ node: first, width: nextWidth, height: nextHeight }, { node: second, width: nextWidth, height: nextHeight });
+  }
+  return root;
+}
+
 export function getStationMapDetail(scale) {
   const fade = (start, end) => Math.max(0, Math.min(1, (scale - start) / (end - start)));
   return {
