@@ -32,6 +32,42 @@ export function createStationMapLayout(stations, width, height) {
   return result.sort((a, b) => a.index - b.index);
 }
 
+// Arrange image rectangles in balanced, justified rows. Aspect ratios influence
+// widths; each row meets both edges and no incomplete last row leaves a hole.
+export function createImageMosaicLayout(ratios, width, height) {
+  if (!ratios.length || width <= 0 || height <= 0) return [];
+  const normalized = ratios.map((ratio) => Number.isFinite(ratio) && ratio > 0 ? Math.max(.4, Math.min(3, ratio)) : 1);
+  const total = normalized.reduce((sum, ratio) => sum + ratio, 0);
+  const rowCount = Math.min(ratios.length, Math.max(1, Math.round(Math.sqrt(total * height / width))));
+  const rows = [];
+  let start = 0;
+  let remaining = total;
+  for (let row = 0; row < rowCount; row++) {
+    const rowsLeft = rowCount - row;
+    const target = remaining / rowsLeft;
+    let end = start + 1;
+    let sum = normalized[start];
+    while (end < normalized.length - rowsLeft + 1 && (rowsLeft === 1 || Math.abs(sum + normalized[end] - target) < Math.abs(sum - target))) sum += normalized[end++];
+    rows.push({ start, end, sum });
+    start = end;
+    remaining -= sum;
+  }
+  const naturalHeight = rows.reduce((sum, row) => sum + width / row.sum, 0);
+  const result = [];
+  let y = 0;
+  for (const row of rows) {
+    const rowHeight = width / row.sum * height / naturalHeight;
+    let x = 0;
+    for (let index = row.start; index < row.end; index++) {
+      const tileWidth = width * normalized[index] / row.sum;
+      result.push({ index, x, y, width: tileWidth, height: rowHeight });
+      x += tileWidth;
+    }
+    y += rowHeight;
+  }
+  return result;
+}
+
 // Panzoom scales both the tile and its translation around the viewport centre.
 // Content can use this visible rectangle without letting its labels or objects
 // disappear beyond the viewport when the containing tile grows larger than it.
