@@ -274,7 +274,7 @@ function ThemeToggle() {
   );
 }
 
-function Header({ session, transparent = false, showThemeToggle = true }) {
+function Header({ session, sticky = false, showThemeToggle = true }) {
   const [open, setOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef(null);
@@ -298,15 +298,14 @@ function Header({ session, transparent = false, showThemeToggle = true }) {
   }, [accountOpen]);
 
   return (
-    <header className={`riu-header ${transparent ? 'is-transparent' : ''}`}>
+    <header className={`riu-header ${sticky ? 'is-sticky' : ''}`}>
       <Brand />
-      <button className="riu-menu" onClick={() => setOpen(!open)} aria-label="Menü öffnen">
+      <button className="riu-menu" onClick={() => setOpen(!open)} aria-label={open ? 'Menü schließen' : 'Menü öffnen'} aria-expanded={open}>
         {open ? <X /> : <Menu />}
       </button>
       <nav className={open ? 'is-open' : ''}>
-        <a className={path === '/' ? 'is-active' : ''} href="/">Home</a>
-        <a className={path === '/discover' ? 'is-active' : ''} href="/discover">Discover</a>
-        <a href="/#about">Über RIU</a>
+        <a className={path === '/' ? 'is-active' : ''} href="/" onClick={() => setOpen(false)}>Home</a>
+        <a className={path === '/discover' ? 'is-active' : ''} href="/discover" onClick={() => setOpen(false)}>Discover</a>
         {showThemeToggle && <ThemeToggle />}
         {session ? (
           <div className="riu-account-menu" ref={accountMenuRef}>
@@ -785,8 +784,8 @@ function StoryCard({ story, featured = false }) {
 function Gallery({ session }) {
   const published = getPublishedDiscoverStories(readStories());
   return (
-    <div className="riu-page">
-      <Header session={session} transparent />
+    <div className="riu-page home-page">
+      <Header session={session} sticky />
       <main>
         <section className="riu-hero">
           <div className="riu-hero-art" aria-hidden="true"><div className="hero-orbit" /><div className="hero-stone" /></div>

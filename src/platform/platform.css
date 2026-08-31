@@ -54,7 +54,9 @@ button, input, textarea { font:inherit; }
 button, a { -webkit-tap-highlight-color:transparent; }
 .riu-page { min-height:100vh; background:var(--riu-bg); color:var(--riu-ink); }
 .riu-header { height:84px; padding:0 clamp(24px,5vw,80px); display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--riu-line); position:relative; z-index:100; background:rgba(17,18,15,.94); }
-.riu-header.is-transparent { position:absolute; inset:0 0 auto; background:linear-gradient(#0d0e0cde,transparent); border:0; }
+.riu-header.is-sticky { position:sticky; top:0; }
+.home-page #stories,.home-page #about { scroll-margin-top:104px; }
+.home-page .riu-hero { min-height:calc(92vh - 84px); }
 .riu-brand { display:inline-flex; align-items:center; gap:12px; border:0; background:none; color:var(--riu-ink); letter-spacing:.3em; font-size:14px; font-weight:600; cursor:pointer; padding:0; }
 .riu-mark { width:24px; height:24px; border:1px solid var(--riu-accent); transform:rotate(45deg); display:grid; place-items:center; }
 .riu-mark span { width:8px; height:8px; border:1px solid var(--riu-accent-soft); }
@@ -197,7 +199,6 @@ body.experience-page .scroll-prompt-capsule{bottom:24px}
 /* Global platform theme. Keep these rules token-driven; see /design.md. */
 body.platform-page,.riu-page{background:var(--riu-bg);color:var(--riu-ink);font-family:var(--riu-font-body);transition:background-color .3s ease,color .3s ease}
 .riu-header{border-color:var(--riu-line);background:color-mix(in srgb,var(--riu-bg) 92%,transparent);color:var(--riu-ink);backdrop-filter:blur(18px)}
-.riu-header.is-transparent{background:linear-gradient(180deg,color-mix(in srgb,var(--riu-bg) 96%,transparent),color-mix(in srgb,var(--riu-bg) 55%,transparent),transparent)}
 .riu-brand,.riu-header nav a,.riu-header nav>button:not(.riu-button),.riu-account,.riu-menu{color:var(--riu-ink)}
 .riu-header nav a:hover,.riu-account:hover,.riu-account[aria-expanded="true"]{color:var(--riu-accent)}
 .riu-header nav>a.is-active,.riu-theme-toggle{color:var(--riu-accent)}

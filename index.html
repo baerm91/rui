@@ -6,14 +6,29 @@
   <meta name="description" content="Interaktive 3D-Präsentation des aktiven Projekts." />
   <title>RIU — Räumliche Geschichten</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/cormorant-garamond-latin.woff2" as="font" type="font/woff2" crossorigin />
   <script>
     const isExperienceShell = location.pathname === '/__spatial-preview'
       || /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(location.pathname);
     document.documentElement.classList.add(isExperienceShell ? 'route-shell-experience' : 'route-shell-platform');
+    // Apply the theme before the first paint, including while modules and data load.
+    let initialTheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    try {
+      const storedTheme = localStorage.getItem('riu-theme');
+      if (storedTheme === 'light' || storedTheme === 'dark') initialTheme = storedTheme;
+    } catch { /* Use the system preference when storage is unavailable. */ }
+    document.documentElement.dataset.riuTheme = initialTheme;
   </script>
   <style>
+    :root { --riu-bg:#faf9f4; --riu-ink:#1b1c19; --riu-accent:#823b18; color-scheme:light; }
+    html[data-riu-theme="dark"] { --riu-bg:#131413; --riu-ink:#faf9f5; --riu-accent:#ffb596; color-scheme:dark; }
     html.route-shell-platform,
-    html.route-shell-platform body { margin:0; min-height:100%; background:#faf9f4; }
+    html.route-shell-platform body { margin:0; min-height:100%; background:var(--riu-bg); color:var(--riu-ink); }
+    .platform-loading { position:fixed; inset:0; display:grid; place-content:center; gap:12px; text-align:center; font:14px/1.5 system-ui,sans-serif; }
+    .platform-loading strong { color:var(--riu-accent); font:500 32px/1.2 Georgia,serif; letter-spacing:.2em; }
+    .platform-loading p { margin:0; }
+    html.route-shell-experience .platform-loading { display:none; }
     html.route-shell-platform #loading-screen,
     html.route-shell-platform #scene-canvas,
     html.route-shell-platform #bg-root,
@@ -117,7 +132,9 @@
   </div>
 
   <!-- React UI Root -->
-  <div id="react-root" class="absolute inset-0 pointer-events-none"></div>
+  <div id="react-root" class="absolute inset-0 pointer-events-none">
+    <div class="platform-loading" role="status" aria-live="polite"><strong>RIU</strong><p>Seite wird geladen …</p><noscript>Bitte aktivieren Sie JavaScript, um RIU zu verwenden.</noscript></div>
+  </div>
   <!-- Dedicated sibling mount for the editor; never overlays the 3D stage. -->
   <div id="editor-root"></div>
 

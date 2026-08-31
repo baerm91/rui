@@ -7,9 +7,14 @@ import { ensureSeedStories, getRouteStory, platformReady, saveStory } from './pl
 import { getExperienceAccess } from './platform/experienceAccess.js';
 import { isRoomStory } from './utils/storyExperience.js';
 
-await platformReady;
-ensureSeedStories();
 const isExperiencePath = /^\/(?:stories\/(?!new(?:\/|$))|studio\/)[A-Za-z0-9_-]+/.test(window.location.pathname);
+const isSpatialPreview = import.meta.env.DEV && window.location.pathname === '/__spatial-preview';
+// Fetch the platform UI while the store initializes, without bypassing auth gates.
+const platformAppModule = !isExperiencePath && !isSpatialPreview
+  ? import('./platform/PlatformApp.jsx')
+  : null;
+const [platformUi] = await Promise.all([platformAppModule, platformReady]);
+ensureSeedStories();
 const routeStory = isExperiencePath ? getRouteStory(window.location.pathname) : null;
 const isRoomExperience = isRoomStory(routeStory);
 const usesModelViewer = isExperiencePath && !isRoomExperience;
@@ -22,7 +27,7 @@ if (!usesModelViewer) document.title = 'RIU — Räumliche Geschichten';
 const rootElement = document.getElementById('react-root');
 if (rootElement) {
   let app;
-  if (import.meta.env.DEV && window.location.pathname === '/__spatial-preview') {
+  if (isSpatialPreview) {
     const [{ default: ExhibitionRoom }, { SPATIAL_DEMO_STORY }] = await Promise.all([
       import('./exhibition/ExhibitionRoom.jsx'),
       import('./exhibition/spatialDemo.js')
@@ -30,7 +35,7 @@ if (rootElement) {
     const initialMode = new URLSearchParams(window.location.search).get('mode') === 'visitor' ? 'visitor' : 'editor';
     app = <ExhibitionRoom story={SPATIAL_DEMO_STORY} initialMode={initialMode} backHref="/" onSaveStory={() => Promise.resolve()} />;
   } else if (!isExperiencePath) {
-    const { default: PlatformApp } = await import('./platform/PlatformApp.jsx');
+    const { default: PlatformApp } = platformUi;
     app = <PlatformApp />;
   } else {
     const access = getExperienceAccess();
