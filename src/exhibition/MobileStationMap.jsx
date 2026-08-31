@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Minus, Plus, Scan } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
-import { createStationMapGesture, createStationMapLayout, createStationPreviewLayout, advanceStationMapZoom, STATION_MAP_CAPTION_HEIGHT } from '../utils/stationMapLayout.js';
+import { createStationMapGesture, createStationMapZoomTarget, createStationMapLayout, createStationPreviewLayout, advanceStationMapZoom, STATION_MAP_CAPTION_HEIGHT } from '../utils/stationMapLayout.js';
 import './mobileStationMap.css';
 
 export function StationMap({ title, stations, stationIndex, onOpenStation, viewRef }) {
@@ -11,6 +11,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   const localViewRef = useRef(null);
   const savedView = viewRef || localViewRef;
   const gestureRef = useRef(createStationMapGesture());
+  const zoomTargetRef = useRef(createStationMapZoomTarget());
   const view = useRef({ focusIndex: savedView.current?.focusIndex ?? stationIndex ?? 0, progress: savedView.current?.progress || 0, imageFocusIndex: savedView.current?.imageFocusIndex ?? 0, imageProgress: savedView.current?.imageProgress || 0 });
   const [detail, setDetail] = useState(view.current);
   const candidateRef = useRef(view.current.focusIndex);
@@ -18,11 +19,12 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   const [size, setSize] = useState({ width: 1000, height: 700 });
   const [imageRatios, setImageRatios] = useState({});
   const stationImages = useMemo(() => stations.map((station) => station.items.map((item) => ({ key: item.id, src: resolveSpatialThumbnailUrl(item) }))), [stations]);
+  const baseTiles = useMemo(() => createStationMapLayout(stations, size.width, size.height), [stations, size]);
   const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height, detail).map((tile) => {
     const ratios = stationImages[tile.index].map((image) => imageRatios[image.src] || 1);
     const focused = tile.index === detail.focusIndex;
-    return { ...tile, ...createStationPreviewLayout(ratios, tile.width, tile.height, focused ? detail.progress : 0, { index: detail.imageFocusIndex, progress: focused ? detail.imageProgress : 0 }) };
-  }), [stations, stationImages, imageRatios, size, detail]);
+    return { ...tile, ...createStationPreviewLayout(ratios, tile.width, tile.height, { index: detail.imageFocusIndex, progress: focused ? detail.imageProgress : 0 }, baseTiles[tile.index]) };
+  }), [stations, stationImages, imageRatios, size, detail, baseTiles]);
   const tilesRef = useRef(tiles);
   tilesRef.current = tiles;
 
@@ -44,6 +46,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   };
 
   const changeDetail = (focusIndex, progress) => {
+    zoomTargetRef.current.reset();
     commitDetail({ focusIndex, progress: Math.max(0, Math.min(1, progress)), imageFocusIndex: 0, imageProgress: 0 });
   };
   const zoomBy = (amount, focusIndex = candidateRef.current) => {
@@ -72,6 +75,12 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
       const image = target.closest?.('[data-image-index]');
       return image ? Number(image.dataset.imageIndex) : candidateImageRef.current;
     };
+    const trackTarget = (event) => {
+      const target = zoomTargetRef.current.resolve({ x: event.clientX, y: event.clientY, stationIndex: stationAt(event.target), imageIndex: imageAt(event.target) });
+      candidateRef.current = target.stationIndex;
+      candidateImageRef.current = target.imageIndex;
+      return target;
+    };
     const distance = () => {
       const [first, second] = [...pointers.values()];
       return Math.hypot(first.x - second.x, first.y - second.y);
@@ -79,12 +88,13 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
     const down = (event) => {
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       gestureRef.current.start(event.pointerId, event.clientX, event.clientY);
-      if (pointers.size === 1) { candidateRef.current = stationAt(event.target); candidateImageRef.current = imageAt(event.target); }
+      if (pointers.size === 1) { zoomTargetRef.current.reset(); trackTarget(event); }
       if (pointers.size === 2) {
         pinch = { distance: Math.max(1, distance()), focusIndex: candidateRef.current, imageIndex: candidateImageRef.current, detail: { ...view.current }, stationAtMaximum: zoomDetail(view.current, 0, candidateRef.current, candidateImageRef.current).progress === 1 };
       }
     };
     const move = (event) => {
+      if (event.pointerType === 'mouse' && viewport.contains(event.target) && !pointers.size) trackTarget(event);
       if (!pointers.has(event.pointerId)) return;
       pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       gestureRef.current.move(event.pointerId, event.clientX, event.clientY);
@@ -102,10 +112,9 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
     const wheel = (event) => {
       event.preventDefault();
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1);
-      const focusIndex = delta > 0 ? view.current.focusIndex : stationAt(event.target);
-      candidateRef.current = focusIndex;
-      candidateImageRef.current = imageAt(event.target);
-      commitDetail(zoomDetail(view.current, -Math.max(-120, Math.min(120, delta)) * .0018, focusIndex, candidateImageRef.current));
+      const target = trackTarget(event);
+      const focusIndex = delta > 0 ? view.current.focusIndex : target.stationIndex;
+      commitDetail(zoomDetail(view.current, -Math.max(-120, Math.min(120, delta)) * .0018, focusIndex, target.imageIndex));
     };
     viewport.addEventListener('pointerdown', down, true);
     viewport.addEventListener('wheel', wheel, { passive: false });
@@ -139,15 +148,14 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%`, '--station-caption-height': `${STATION_MAP_CAPTION_HEIGHT}px` }}
             title={`Station ${tile.index + 1}: ${station.title}`}
             aria-label={`Station ${tile.index + 1}: ${station.title} öffnen`}
-            onFocus={() => { candidateRef.current = tile.index; }}
-            onPointerEnter={(event) => { if (event.pointerType === 'mouse') candidateRef.current = tile.index; }}
+            onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) { candidateRef.current = tile.index; candidateImageRef.current = 0; zoomTargetRef.current.reset(); } }}
             onClick={(event) => { if (event.detail === 0 || gestureRef.current.canOpen()) onOpenStation(tile.index); else event.preventDefault(); }}>
             <span className="station-map-stone-face" data-preview-count={tile.images.length} aria-hidden="true">
               <span className="station-map-images">
               {!tile.images.length && <Box size={28} />}
               {tile.images.map((imageTile) => {
                 const entry = stationImages[tile.index][imageTile.index];
-                return <span key={entry.key} className="station-map-image" data-image-index={imageTile.index} onPointerEnter={(event) => { if (event.pointerType === 'mouse') candidateImageRef.current = imageTile.index; }} style={{ left: `${imageTile.x / tile.imageWidth * 100}%`, top: `${imageTile.y / tile.imageHeight * 100}%`, width: `${imageTile.width / tile.imageWidth * 100}%`, height: `${imageTile.height / tile.imageHeight * 100}%` }}><Box size={28} />{entry.src && <LazyImage key={entry.src} src={entry.src} onLoad={(event) => {
+                return <span key={entry.key} className={`station-map-image${tile.index === detail.focusIndex && detail.progress > 0 && imageTile.index === detail.imageFocusIndex ? ' is-zoom-target' : ''}`} data-image-index={imageTile.index} style={{ left: `${imageTile.x / tile.imageWidth * 100}%`, top: `${imageTile.y / tile.imageHeight * 100}%`, width: `${imageTile.width / tile.imageWidth * 100}%`, height: `${imageTile.height / tile.imageHeight * 100}%` }}><Box size={28} />{entry.src && <LazyImage key={entry.src} src={entry.src} onLoad={(event) => {
                   const { naturalWidth, naturalHeight } = event.currentTarget;
                   if (!naturalWidth || !naturalHeight) return;
                   const ratio = naturalWidth / naturalHeight;

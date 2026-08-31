@@ -1,8 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { advanceStationMapZoom, createImageMosaicLayout, expandImageMosaic } from '../src/utils/stationMapLayout.js';
+import { advanceStationMapZoom, createImageMosaicLayout, expandImageMosaic, createStationMapZoomTarget, createStationMapLayout, createStationPreviewLayout } from '../src/utils/stationMapLayout.js';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} should equal ${expected}`);
+
+test('a stationary pointer keeps its object even when another tile moves underneath it', () => {
+  const target = createStationMapZoomTarget();
+  assert.deepEqual(target.resolve({ x: 100, y: 150, stationIndex: 2, imageIndex: 5 }), { stationIndex: 2, imageIndex: 5 });
+  assert.deepEqual(target.resolve({ x: 100, y: 150, stationIndex: 0, imageIndex: 1 }), { stationIndex: 2, imageIndex: 5 });
+  assert.deepEqual(target.resolve({ x: 103, y: 152, stationIndex: 0, imageIndex: 1 }), { stationIndex: 2, imageIndex: 5 });
+  assert.deepEqual(target.resolve({ x: 112, y: 150, stationIndex: 0, imageIndex: 1 }), { stationIndex: 0, imageIndex: 1 });
+  target.reset();
+  assert.deepEqual(target.resolve({ x: 112, y: 150, stationIndex: 1, imageIndex: 3 }), { stationIndex: 1, imageIndex: 3 });
+});
+
+test('the chosen object is remembered throughout station zoom and into image zoom', () => {
+  let view = { focusIndex: 0, progress: 0, imageFocusIndex: 0, imageProgress: 0 };
+  for (let step = 0; step < 8; step++) {
+    view = advanceStationMapZoom(view, .2, { stationIndex: 1, imageIndex: 4 });
+    assert.equal(view.focusIndex, 1);
+    assert.equal(view.imageFocusIndex, 4);
+  }
+  near(view.progress, 1);
+  near(view.imageProgress, .6);
+});
+
+test('objects keep their overview rows and relative positions throughout station zoom', () => {
+  const stations = [3, 12, 5, 8].map((count) => ({ items: Array(count).fill({}) }));
+  for (const [width, height] of [[390, 650], [1400, 700]]) {
+    const baseTiles = createStationMapLayout(stations, width, height);
+    for (let step = 0; step <= 10; step++) {
+      const tiles = createStationMapLayout(stations, width, height, { focusIndex: 1, progress: step / 10 });
+      tiles.forEach((tile, index) => {
+        const ratios = stations[index].items.map((_, i) => [.5, 1, 2][i % 3]);
+        const base = createStationPreviewLayout(ratios, baseTiles[index].width, baseTiles[index].height);
+        const preview = createStationPreviewLayout(ratios, tile.width, tile.height, {}, baseTiles[index]);
+        assert.equal(preview.images.length, ratios.length);
+        preview.images.forEach((image, i) => {
+          near(image.x / preview.imageWidth, base.images[i].x / base.imageWidth);
+          near(image.y / preview.imageHeight, base.images[i].y / base.imageHeight);
+          near(image.width / preview.imageWidth, base.images[i].width / base.imageWidth);
+          near(image.height / preview.imageHeight, base.images[i].height / base.imageHeight);
+        });
+      });
+    }
+  }
+});
 
 test('zoom enters the image only after the station is maximized and unwinds in reverse order', () => {
   let view = { focusIndex: 0, progress: .9, imageFocusIndex: 0, imageProgress: 0 };

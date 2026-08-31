@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStationMapLayout, getSemanticPreviewCount } from '../src/utils/stationMapLayout.js';
+import { createStationMapLayout, createStationPreviewLayout } from '../src/utils/stationMapLayout.js';
 
 test('semantic zoom grows the selected station and shrinks every neighbour without losing the overview', () => {
   for (const [width, height] of [[360, 580], [1400, 650]]) {
@@ -31,35 +31,26 @@ test('semantic zoom grows the selected station and shrinks every neighbour witho
   }
 });
 
-test('without measured tile space, one preview is shown and zoom reveals the rest', () => {
+test('all previews are present even in small station tiles', () => {
   for (const count of [0, 1, 2, 6, 32]) {
-    assert.equal(getSemanticPreviewCount(count, 0), Math.min(1, count));
-    let previous = 0;
-    for (let step = 0; step <= 100; step++) {
-      const current = getSemanticPreviewCount(count, step / 100);
-      assert.ok(current >= previous && current <= count);
-      previous = current;
+    for (const [width, height] of [[180, 160], [1200, 140], [100, 900], [300, 60]]) {
+      const preview = createStationPreviewLayout(Array(count).fill(1), width, height);
+      assert.equal(preview.images.length, count);
+      assert.ok(preview.images.every((image) => image.width > 0 && image.height > 0));
     }
-    assert.equal(previous, count);
   }
 });
 
-test('overview preview density follows tile space and remains capped at four objects', () => {
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 180, height: 160 }), 1);
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 330, height: 230 }), 2);
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 480, height: 230 }), 3);
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 500, height: 420 }), 4);
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 1200, height: 140 }), 1);
-  assert.equal(getSemanticPreviewCount(12, 0, { width: 100, height: 900 }), 1);
-  assert.equal(getSemanticPreviewCount(2, 0, { width: 1000, height: 700 }), 2);
-  assert.equal(getSemanticPreviewCount(0, 0, { width: 1000, height: 700 }), 0);
-  for (const size of [{ width: 180, height: 160 }, { width: 330, height: 230 }, { width: 500, height: 420 }]) {
-    let previous = 0;
-    for (let step = 0; step <= 100; step++) {
-      const count = getSemanticPreviewCount(12, step / 100, size);
-      assert.ok(count >= previous && count <= 12);
-      previous = count;
+test('station zoom preserves every object in both the selected station and its shrinking neighbours', () => {
+  const counts = [0, 1, 3, 6, 12];
+  const stations = counts.map((count) => ({ items: Array(count).fill({}) }));
+  for (const [width, height] of [[390, 700], [1200, 650]]) {
+    for (const progress of [0, .5, 1]) {
+      const tiles = createStationMapLayout(stations, width, height, { focusIndex: 3, progress });
+      tiles.forEach((tile, index) => {
+        const preview = createStationPreviewLayout(Array(counts[index]).fill(1), tile.width, tile.height);
+        assert.equal(preview.images.length, counts[index]);
+      });
     }
-    assert.equal(previous, 12);
   }
 });

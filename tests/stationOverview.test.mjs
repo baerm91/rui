@@ -27,17 +27,18 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
     assert.equal((html.match(/class="station-map-station-number"/g) || []).length, 5);
     assert.doesNotMatch(html, /data-station-number=/);
-    // Large stations expose a small collection without opening or zooming.
-    assert.equal((html.match(/class="station-map-image"/g) || []).length, 11);
-    assert.deepEqual([...html.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 2, 4, 4]);
+    // Every station exposes its complete collection before any zooming.
+    assert.equal((html.match(/class="station-map-image(?: is-zoom-target)?"/g) || []).length, 22);
+    assert.deepEqual([...html.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
     assert.doesNotMatch(html, /transform:|station-map-world/);
     const focusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
       title: 'Ausstellung', stations, stationIndex: 3,
       mapViewRef: { current: { focusIndex: 3, progress: 1 } }
     }));
-    // Very short neighbours retain their title, but do not squeeze images under it.
-    assert.equal((focusedHtml.match(/class="station-map-image"/g) || []).length, 10);
-    assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 0, 0, 6, 4]);
+    // Zoom changes the space distribution, never the number of previews.
+    assert.equal((focusedHtml.match(/class="station-map-image(?: is-zoom-target)?"/g) || []).length, 22);
+    assert.equal((focusedHtml.match(/class="station-map-image is-zoom-target"/g) || []).length, 1);
+    assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
     assert.equal((html.match(/class="station-map-images"/g) || []).length, 5);
     assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);

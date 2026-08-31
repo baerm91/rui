@@ -36,24 +36,24 @@ test('mixed portrait and landscape previews never create unequal-height image st
   assert.ok(images.every((image) => Math.abs(image.height - images[0].height) < .001));
 });
 
-test('station previews reserve the title region and reduce density before cells become tiny', () => {
+test('station previews show every object at every image zoom level and reserve the title region', () => {
   const ratios = [.4, 3, .5, 2, 1, .6, 1.5, 3];
   for (const [width, height] of [[700, 340], [500, 420], [180, 260], [350, 200], [240, 240]]) {
     for (const progress of [0, .5, 1]) {
-      const layout = createStationPreviewLayout(ratios, width, height, progress);
+      const layout = createStationPreviewLayout(ratios, width, height, { index: 3, progress });
       assert.equal(layout.imageWidth, width - 6);
       assert.equal(layout.imageHeight, height - 6 - STATION_MAP_CAPTION_HEIGHT);
-      assert.ok(layout.images.length >= 1 && layout.images.length <= ratios.length);
+      assert.equal(layout.images.length, ratios.length);
       layout.images.forEach((image, index) => {
         assert.equal(image.index, index);
         assert.ok(image.y + image.height <= layout.imageHeight + .001);
         assert.ok(image.x + image.width <= layout.imageWidth + .001);
-        if (layout.images.length > 1) assert.ok(image.width >= 112 && image.height >= 112);
+        assert.ok(image.width > 0 && image.height > 0);
       });
     }
   }
-  assert.equal(createStationPreviewLayout(ratios, 240, 240, 1).images.length, 1);
-  assert.equal(createStationPreviewLayout([1, 1, 1, 1], 240, 240, 1).images.length, 2);
-  assert.equal(createStationPreviewLayout(ratios, 300, 60, 1).images.length, 0);
+  assert.equal(createStationPreviewLayout(ratios, 240, 240).images.length, 8);
+  assert.equal(createStationPreviewLayout([1, 1, 1, 1], 240, 240).images.length, 4);
+  assert.equal(createStationPreviewLayout(ratios, 300, 60).images.length, 8);
   assert.equal(createStationPreviewLayout([], 300, 400).images.length, 0);
 });

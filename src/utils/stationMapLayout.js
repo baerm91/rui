@@ -47,17 +47,6 @@ export function createStationMapLayout(stations, width, height, focus = {}) {
 
 export const STATION_MAP_CAPTION_HEIGHT = 64;
 
-export function getSemanticPreviewCount(itemCount, progress = 0, { width = 0, height = 0 } = {}) {
-  if (itemCount < 1) return 0;
-  // Show a small collection immediately when the tile has room for legible
-  // previews. Reserve some height for its caption; never pack tiny tiles.
-  const columns = Math.max(0, Math.floor((width - 6) / 150));
-  const rows = Math.max(0, Math.floor((height - 6 - STATION_MAP_CAPTION_HEIGHT) / 150));
-  const overviewCount = Math.min(itemCount, 4, Math.max(1, columns * rows));
-  const detail = Math.max(0, Math.min(1, progress));
-  return Math.min(itemCount, overviewCount + Math.floor(detail * (itemCount - overviewCount)));
-}
-
 // Aspect ratios determine widths within each row. Equal-height rows prevent a
 // single portrait preview from pushing the remaining objects into thin strips.
 export function createImageMosaicLayout(ratios, width, height) {
@@ -94,21 +83,25 @@ export function createImageMosaicLayout(ratios, width, height) {
 }
 
 // Compute previews only in the image region, never beneath the title strip.
-// Reduce density if actual aspect ratios would create unreadably small cells,
-// including at full zoom. All objects remain accessible by opening the station.
-export function createStationPreviewLayout(ratios, width, height, progress = 0, imageFocus = {}) {
+// Show every object from the outset. Short tiles reserve at most 35% for their
+// caption so shrinking neighbours during zoom still retain an image region.
+export function createStationPreviewLayout(ratios, width, height, imageFocus = {}, baseSize = { width, height }) {
   const imageWidth = Math.max(0, width - 6);
-  const imageHeight = Math.max(0, height - 6 - STATION_MAP_CAPTION_HEIGHT);
+  const faceHeight = Math.max(0, height - 6);
+  const imageHeight = faceHeight - Math.min(STATION_MAP_CAPTION_HEIGHT, faceHeight * .35);
   if (!ratios.length || !imageWidth || !imageHeight) return { imageWidth, imageHeight, images: [] };
-  const minimumCell = 112;
-  const capacity = Math.max(1, Math.floor(imageWidth / minimumCell) * Math.floor(imageHeight / minimumCell));
-  let count = Math.min(capacity, getSemanticPreviewCount(ratios.length, progress, { width, height }));
-  let images;
-  do {
-    images = createImageMosaicLayout(ratios.slice(0, count), imageWidth, imageHeight);
-    if (count === 1 || images.every((image) => image.width >= minimumCell && image.height >= minimumCell)) break;
-    count--;
-  } while (count > 0);
+  // Choose rows in the unzoomed overview, then scale that same arrangement.
+  // Recomputing rows from the growing tile would move objects between rows.
+  const baseWidth = Math.max(1, baseSize.width - 6);
+  const baseFaceHeight = Math.max(1, baseSize.height - 6);
+  const baseHeight = baseFaceHeight - Math.min(STATION_MAP_CAPTION_HEIGHT, baseFaceHeight * .35);
+  const images = createImageMosaicLayout(ratios, baseWidth, baseHeight).map((image) => ({
+    index: image.index,
+    x: image.x / baseWidth * imageWidth,
+    y: image.y / baseHeight * imageHeight,
+    width: image.width / baseWidth * imageWidth,
+    height: image.height / baseHeight * imageHeight
+  }));
   return { imageWidth, imageHeight, images: expandImageMosaic(images, imageWidth, imageHeight, imageFocus.index, imageFocus.progress) };
 }
 
@@ -163,15 +156,29 @@ export function advanceStationMapZoom(current, amount, { stationIndex = current.
     return next;
   }
   if (stationAtMaximum) next.progress = 1;
+  // Remember the object from the very first station-zoom step.
+  if (next.imageFocusIndex !== imageIndex) next.imageProgress = 0;
+  next.imageFocusIndex = imageIndex;
   const stationDelta = Math.min(amount, 1 - next.progress);
   next.progress += stationDelta;
   const remaining = amount - stationDelta;
   if (remaining > 0 && canZoomImages) {
-    if (next.imageFocusIndex !== imageIndex) next.imageProgress = 0;
-    next.imageFocusIndex = imageIndex;
     next.imageProgress = Math.min(1, next.imageProgress + remaining);
   }
   return next;
+}
+
+// Layout animations can move another image beneath a stationary pointer.
+// Retarget only after actual pointer travel, not when its DOM target changes.
+export function createStationMapZoomTarget() {
+  let anchor = null;
+  return {
+    resolve(candidate) {
+      if (!anchor || Math.hypot(candidate.x - anchor.x, candidate.y - anchor.y) > 6) anchor = { ...candidate };
+      return { stationIndex: anchor.stationIndex, imageIndex: anchor.imageIndex };
+    },
+    reset() { anchor = null; }
+  };
 }
 
 // Panzoom scales both the tile and its translation around the viewport centre.
