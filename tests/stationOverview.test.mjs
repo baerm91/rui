@@ -27,14 +27,17 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
     assert.equal((html.match(/class="station-map-station-number"/g) || []).length, 5);
     assert.doesNotMatch(html, /data-station-number=/);
-    assert.equal((html.match(/class="station-map-image"/g) || []).length, 4);
+    // Large stations expose a small collection without opening or zooming.
+    assert.equal((html.match(/class="station-map-image"/g) || []).length, 11);
+    assert.deepEqual([...html.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 2, 4, 4]);
     assert.doesNotMatch(html, /transform:|station-map-world/);
     const focusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
       title: 'Ausstellung', stations, stationIndex: 3,
       mapViewRef: { current: { focusIndex: 3, progress: 1 } }
     }));
-    // The selected station reveals all six images; neighbours keep one each.
-    assert.equal((focusedHtml.match(/class="station-map-image"/g) || []).length, 9);
+    // The selected station reveals all six images; neighbours adapt to their space.
+    assert.equal((focusedHtml.match(/class="station-map-image"/g) || []).length, 12);
+    assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 1, 6, 4]);
     assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
   } finally {

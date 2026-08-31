@@ -1,14 +1,14 @@
 .exhibition-shell.is-overview {
   min-height: 0;
   height: 100dvh;
-  background: radial-gradient(ellipse at 46% 18%, #ddd3bd 0, #c3b598 50%, #a39275 100%);
+  background: #e8e3d9;
   color: #302e27;
   color-scheme: light;
 }
 .is-overview .exhibition-footer {
-  background: linear-gradient(0deg, #e0d2b4, #c2b18f);
-  border-top: 1px solid #ffebbe;
-  box-shadow: 0 -3px 18px #ffe4ab38;
+  background: #e8e3d9;
+  border-top: 1px solid #b5ad9f66;
+  box-shadow: none;
 }
 .is-overview .exhibition-brand,
 .is-overview .exhibition-progress { background: #484234ed; color: #f3eddf; border-color: #e5d5b52e; }

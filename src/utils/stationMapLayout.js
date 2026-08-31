@@ -45,9 +45,15 @@ export function createStationMapLayout(stations, width, height, focus = {}) {
   return result.sort((a, b) => a.index - b.index);
 }
 
-export function getSemanticPreviewCount(itemCount, progress = 0) {
+export function getSemanticPreviewCount(itemCount, progress = 0, { width = 0, height = 0 } = {}) {
   if (itemCount < 1) return 0;
-  return Math.min(itemCount, 1 + Math.floor(Math.max(0, Math.min(1, progress)) * itemCount));
+  // Show a small collection immediately when the tile has room for legible
+  // previews. Reserve some height for its caption; never pack tiny tiles.
+  const columns = Math.max(0, Math.floor((width - 6) / 150));
+  const rows = Math.max(0, Math.floor((height - 50) / 150));
+  const overviewCount = Math.min(itemCount, 4, Math.max(1, columns * rows));
+  const detail = Math.max(0, Math.min(1, progress));
+  return Math.min(itemCount, overviewCount + Math.floor(detail * (itemCount - overviewCount)));
 }
 
 // Arrange image rectangles in balanced, justified rows. Aspect ratios influence

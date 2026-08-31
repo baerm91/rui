@@ -18,7 +18,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   const [imageRatios, setImageRatios] = useState({});
   const stationImages = useMemo(() => stations.map((station) => station.items.map((item) => ({ key: item.id, src: resolveSpatialThumbnailUrl(item) }))), [stations]);
   const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height, detail).map((tile) => {
-    const count = getSemanticPreviewCount(stationImages[tile.index].length, tile.index === detail.focusIndex ? detail.progress : 0);
+    const count = getSemanticPreviewCount(stationImages[tile.index].length, tile.index === detail.focusIndex ? detail.progress : 0, tile);
     return { ...tile, images: createImageMosaicLayout(stationImages[tile.index].slice(0, count).map((image) => imageRatios[image.src] || 1), tile.width, tile.height) };
   }), [stations, stationImages, imageRatios, size, detail]);
 

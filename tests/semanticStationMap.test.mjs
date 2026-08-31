@@ -31,7 +31,7 @@ test('semantic zoom grows the selected station and shrinks every neighbour witho
   }
 });
 
-test('the first detail level shows at most one object and zoom progressively reveals the rest', () => {
+test('without measured tile space, one preview is shown and zoom reveals the rest', () => {
   for (const count of [0, 1, 2, 6, 32]) {
     assert.equal(getSemanticPreviewCount(count, 0), Math.min(1, count));
     let previous = 0;
@@ -41,5 +41,25 @@ test('the first detail level shows at most one object and zoom progressively rev
       previous = current;
     }
     assert.equal(previous, count);
+  }
+});
+
+test('overview preview density follows tile space and remains capped at four objects', () => {
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 180, height: 160 }), 1);
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 330, height: 230 }), 2);
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 480, height: 230 }), 3);
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 500, height: 420 }), 4);
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 1200, height: 140 }), 1);
+  assert.equal(getSemanticPreviewCount(12, 0, { width: 100, height: 900 }), 1);
+  assert.equal(getSemanticPreviewCount(2, 0, { width: 1000, height: 700 }), 2);
+  assert.equal(getSemanticPreviewCount(0, 0, { width: 1000, height: 700 }), 0);
+  for (const size of [{ width: 180, height: 160 }, { width: 330, height: 230 }, { width: 500, height: 420 }]) {
+    let previous = 0;
+    for (let step = 0; step <= 100; step++) {
+      const count = getSemanticPreviewCount(12, step / 100, size);
+      assert.ok(count >= previous && count <= 12);
+      previous = count;
+    }
+    assert.equal(previous, 12);
   }
 });

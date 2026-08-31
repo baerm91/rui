@@ -24,12 +24,12 @@
   touch-action: none;
   overscroll-behavior: none;
   border-radius: 2px;
-  background: #84755e;
-  box-shadow: inset 0 2px 12px #392e2333, 0 1px 0 #fff0cd99;
+  background: #b5ad9f;
+  box-shadow: none;
 }
 .station-map-viewport:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 4px; }
 .station-map-content { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; pointer-events: none; }
-.station-map-stone { position: absolute; margin: 0; padding: 0; border: 0; background: transparent; color: var(--map-ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; }
+.station-map-stone { position: absolute; container-type: inline-size; margin: 0; padding: 0; border: 0; background: transparent; color: var(--map-ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; }
 .station-map-stone[hidden] { display: none; }
 .station-map-stone-face {
   position: absolute;
@@ -51,18 +51,17 @@
 .station-map-station-name {
   position: absolute;
   z-index: 1;
-  left: 16px;
-  bottom: 20px;
-  max-width: calc(100% - 32px);
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
   box-sizing: border-box;
-  padding: 13px 20px 16px;
-  border: 1px solid #f7f1e27d;
-  border-left: 2px solid #b66b48;
+  padding: clamp(6px, 1.6cqw, 9px) clamp(8px, 2cqw, 12px);
+  border: 0;
   border-radius: 0;
-  background: linear-gradient(110deg, #f0ebdfee, #e3dccce8);
+  background: #f0ece3f5;
   color: var(--map-ink);
-  box-shadow: 6px 10px 18px #41352529;
-  font: 400 clamp(23px, 2.2vw, 36px)/1.04 "Cormorant Garamond", Georgia, serif;
+  box-shadow: none;
+  font: 400 clamp(17px, 4.5cqw, 25px)/1.12 "Cormorant Garamond", Georgia, serif;
   letter-spacing: -.02em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -90,7 +89,6 @@
   .station-map { padding-right: 12px; padding-left: 12px; }
   .station-map-heading { padding: 0 4px 18px; }
   .station-map-heading h1 { font-size: 40px; }
-  .station-map-station-name { left: 8px; bottom: 10px; max-width: calc(100% - 16px); padding: 9px 10px 11px; font-size: 23px; }
   .station-map-tools button { min-width: 44px; height: 44px; }
   .station-map-heading small { padding-left: 12px; }
   .station-map-navigation { padding-top: 12px; }
@@ -105,7 +103,6 @@
   .station-map-heading { padding-bottom: 10px; }
   .station-map-heading h1 { margin: 0; font-size: 28px; }
   .station-map-heading span { display: none; }
-  .station-map-station-name { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 6px 10px; font-size: 21px; }
   .station-map-navigation { padding: 8px 0 0; flex-wrap: nowrap; }
   .station-map-direct { width: 170px; }
   .station-map-zoom-hint { display: none; }
