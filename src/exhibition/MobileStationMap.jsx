@@ -3,7 +3,7 @@ import Panzoom from '@panzoom/panzoom/dist/panzoom.es.js';
 import { Box, Minus, Plus, Scan } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
-import { createStationMapGesture, createImageMosaicLayout, getStationMapMaxZoom, projectStationTile } from '../utils/stationMapLayout.js';
+import { createStationMapGesture, createStationMapLayout, createImageMosaicLayout, getStationMapMaxZoom, projectStationTile } from '../utils/stationMapLayout.js';
 import './mobileStationMap.css';
 
 export function StationMap({ title, stations, stationIndex, onOpenStation, viewRef }) {
@@ -21,11 +21,11 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   const gestureRef = useRef(createStationMapGesture());
   const [size, setSize] = useState({ width: 1000, height: 700 });
   const [imageRatios, setImageRatios] = useState({});
-  const images = useMemo(() => stations.flatMap((station, stationIndex) => {
-    const entries = station.items.map((item) => ({ key: `${station.id}:${item.id}`, item, stationIndex, src: resolveSpatialThumbnailUrl(item) }));
-    return entries.length ? entries : [{ key: station.id, item: null, stationIndex, src: null }];
-  }), [stations]);
-  const tiles = useMemo(() => createImageMosaicLayout(images.map((image) => imageRatios[image.src] || 1), size.width, size.height), [images, imageRatios, size]);
+  const stationImages = useMemo(() => stations.map((station) => station.items.map((item) => ({ key: item.id, src: resolveSpatialThumbnailUrl(item) }))), [stations]);
+  const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height).map((tile) => ({
+    ...tile,
+    images: createImageMosaicLayout(stationImages[tile.index].map((image) => imageRatios[image.src] || 1), tile.width, tile.height)
+  })), [stations, stationImages, imageRatios, size]);
   const maxZoom = useMemo(() => getStationMapMaxZoom(tiles, size.width, size.height), [tiles, size]);
 
   useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, []);
@@ -66,6 +66,13 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
           button.style.top = `${size.height / 2 + (tile.y - size.height / 2 + y) * scale}px`;
           button.style.width = `${tile.width * scale}px`;
           button.style.height = `${tile.height * scale}px`;
+          // Anchor the station name to the visible part of its image group.
+          // Unlike the images, it must not disappear offscreen while panning.
+          const left = size.width / 2 + (tile.x - size.width / 2 + x) * scale;
+          const top = size.height / 2 + (tile.y - size.height / 2 + y) * scale;
+          button.style.setProperty('--label-left', `${rect.x - left + 8}px`);
+          button.style.setProperty('--label-top', `${rect.y - top + 8}px`);
+          button.style.setProperty('--label-width', `${Math.max(0, rect.width - 16)}px`);
         });
         if (zoomLabelRef.current) zoomLabelRef.current.textContent = `${Math.round(scale * 100)} %`;
         if (zoomOutRef.current) zoomOutRef.current.disabled = scale <= 1.001;
@@ -132,18 +139,24 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
       <div ref={worldRef} className="station-map-world" aria-hidden="true" />
       <div className="station-map-content">
         {tiles.map((tile) => {
-          const entry = images[tile.index];
-          const station = stations[entry.stationIndex];
-          return <button key={entry.key} ref={(element) => { tileRefs.current[tile.index] = element; }} type="button" className={`station-map-stone stone-${entry.stationIndex % 6} ${entry.stationIndex === stationIndex ? 'is-current' : ''}`}
+          const station = stations[tile.index];
+          return <button key={station.id} ref={(element) => { tileRefs.current[tile.index] = element; }} type="button" className={`station-map-stone stone-${tile.index % 6} ${tile.index === stationIndex ? 'is-current' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%` }}
-            aria-label={`Station ${entry.stationIndex + 1}: ${station.title} öffnen${entry.item ? ` – ${entry.item.title}` : ''}`}
-            onClick={(event) => { if (event.detail === 0 || gestureRef.current.canOpen()) onOpenStation(entry.stationIndex); else event.preventDefault(); }}>
-            <span className="station-map-stone-face" aria-hidden="true"><Box size={28} />{entry.src && <LazyImage key={entry.src} src={entry.src} onLoad={(event) => {
-              const { naturalWidth, naturalHeight } = event.currentTarget;
-              if (!naturalWidth || !naturalHeight) return;
-              const ratio = naturalWidth / naturalHeight;
-              setImageRatios((current) => current[entry.src] === ratio ? current : { ...current, [entry.src]: ratio });
-            }} />}</span>
+            aria-label={`Station ${tile.index + 1}: ${station.title} öffnen`}
+            onClick={(event) => { if (event.detail === 0 || gestureRef.current.canOpen()) onOpenStation(tile.index); else event.preventDefault(); }}>
+            <span className="station-map-stone-face" aria-hidden="true">
+              {!tile.images.length && <Box size={28} />}
+              {tile.images.map((imageTile) => {
+                const entry = stationImages[tile.index][imageTile.index];
+                return <span key={entry.key} className="station-map-image" style={{ left: `${imageTile.x / tile.width * 100}%`, top: `${imageTile.y / tile.height * 100}%`, width: `${imageTile.width / tile.width * 100}%`, height: `${imageTile.height / tile.height * 100}%` }}><Box size={28} />{entry.src && <LazyImage key={entry.src} src={entry.src} onLoad={(event) => {
+                  const { naturalWidth, naturalHeight } = event.currentTarget;
+                  if (!naturalWidth || !naturalHeight) return;
+                  const ratio = naturalWidth / naturalHeight;
+                  setImageRatios((current) => current[entry.src] === ratio ? current : { ...current, [entry.src]: ratio });
+                }} />}</span>;
+              })}
+              <span className="station-map-station-name">{station.title}</span>
+            </span>
           </button>;
         })}
       </div>

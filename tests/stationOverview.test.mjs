@@ -13,9 +13,10 @@ test('station overview keeps every station accessible and defers thumbnails and 
       items: Array.from({ length: count }, (_, itemIndex) => ({ id: `item-${itemIndex}`, title: `Objekt ${itemIndex + 1}`, thumbnailUrl: `/thumb-${index}-${itemIndex}.jpg` }))
     }));
     const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
-    assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 23);
+    assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
       assert.ok(html.includes(`Station ${index + 1}: Sammlung ${index + 1} öffnen`));
+      assert.ok(html.includes(`<span class="station-map-station-name">Sammlung ${index + 1}</span>`));
     }
     assert.match(html, /Heranzoomen/);
     assert.match(html, /Alle Stationen anzeigen/);
@@ -23,9 +24,9 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.match(html, /Station direkt öffnen/);
     assert.match(html, /loading="lazy"/);
     assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
-    const imageFaces = [...html.matchAll(/<span class="station-map-stone-face"[^>]*>(.*?)<\/span>/g)];
-    assert.equal(imageFaces.length, 23);
-    assert.ok(imageFaces.every(([, face]) => !/Sammlung|Objekt|Station öffnen/.test(face)));
+    assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
+    assert.equal((html.match(/class="station-map-image"/g) || []).length, 22);
+    assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
   } finally {
     await compiler.close();
