@@ -7,14 +7,17 @@
 .station-map-heading small { flex-shrink: 0; padding-bottom: 3px; color: #bcd0d1; font-size: 11px; }
 .station-map-viewport { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; overscroll-behavior: none; border-radius: 8px; background: #f4f0e7; }
 .station-map-viewport:focus-visible { outline: 2px solid #e3bd86; outline-offset: 3px; }
-.station-map-world, .station-map-content { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
-.station-map-world { transform-origin: 50% 50%; }
+.station-map-content { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; }
 .station-map-content { pointer-events: none; }
-.station-map-stone { position: absolute; margin: 0; padding: 0; border: 0; background: transparent; color: #252e2b; text-align: left; cursor: grab; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; }
+.station-map-stone { position: absolute; margin: 0; padding: 0; border: 0; background: transparent; color: #252e2b; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; }
 .station-map-stone[hidden] { display: none; }
-.station-map-stone:active { cursor: grabbing; }
 .station-map-stone-face { position: absolute; inset: 3px; display: grid; place-items: center; overflow: hidden; background: #d4d8d3; color: #6e7d76; pointer-events: none; }
-.station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; border: 1px solid #f4f0e7; box-sizing: border-box; }
+.station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; border: 1px solid #f4f0e7; box-sizing: border-box; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; animation: station-image-reveal .22s ease-out; }
+.station-map-stone-face[data-preview-count="1"] .lazy-image { object-fit: contain; }
+.station-map-stone.is-focused .station-map-stone-face { outline: 2px solid #d3ab74; outline-offset: -2px; }
+.station-map-zoom-hint { flex: none; margin: 0; color: #c9d8d7; text-align: center; font-size: 11px; line-height: 1.4; }
+@keyframes station-image-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .station-map-stone, .station-map-image { transition: none; animation: none; } }
 .station-map-image .lazy-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; object-fit: cover; object-position: center; }
 .station-map-station-name { position: absolute; z-index: 1; left: var(--label-left, 8px); top: var(--label-top, 8px); max-width: var(--label-width, calc(100% - 16px)); box-sizing: border-box; padding: 8px 12px; border-radius: 3px; background: #173e48eb; color: #fff; font: 500 22px/1.15 "Cormorant Garamond", Georgia, serif; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .station-map-stone:focus-visible { outline: none; }

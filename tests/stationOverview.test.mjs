@@ -25,7 +25,14 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.match(html, /loading="lazy"/);
     assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
-    assert.equal((html.match(/class="station-map-image"/g) || []).length, 22);
+    assert.equal((html.match(/class="station-map-image"/g) || []).length, 4);
+    assert.doesNotMatch(html, /transform:|station-map-world/);
+    const focusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
+      title: 'Ausstellung', stations, stationIndex: 3,
+      mapViewRef: { current: { focusIndex: 3, progress: 1 } }
+    }));
+    // The selected station reveals all six images; neighbours keep one each.
+    assert.equal((focusedHtml.match(/class="station-map-image"/g) || []).length, 9);
     assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
   } finally {

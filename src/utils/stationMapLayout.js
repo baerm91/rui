@@ -1,10 +1,19 @@
 // Weighted rectangles cover one continuous surface, without gaps left by a grid.
 // Split along the longest side, keeping station order stable within each group.
-export function createStationMapLayout(stations, width, height) {
+export function createStationMapLayout(stations, width, height, focus = {}) {
   if (!stations.length || width <= 0 || height <= 0) return [];
   const entries = stations.map((station, index) => ({ index, weight: 1 + Math.log2(1 + (station.items?.length || 0)) }));
+  const progress = Math.max(0, Math.min(1, focus.progress || 0));
+  const selected = entries[focus.focusIndex];
+  const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  // At full detail, the chosen station gets up to 78% of the surface. Keep
+  // the original partition tree and split directions so neighbours never jump.
+  const baseShare = selected ? selected.weight / totalWeight : 0;
+  const share = baseShare + Math.max(0, .78 - baseShare) * progress;
+  const extraWeight = selected && share < 1 ? Math.max(0, (totalWeight - selected.weight) * share / (1 - share) - selected.weight) : 0;
+  entries.forEach((entry) => { entry.areaWeight = entry.weight + (entry === selected ? extraWeight : 0); });
   const result = [];
-  function partition(group, x, y, w, h) {
+  function partition(group, x, y, w, h, baseWidth, baseHeight) {
     if (group.length === 1) {
       result.push({ index: group[0].index, x, y, width: w, height: h });
       return;
@@ -19,17 +28,25 @@ export function createStationMapLayout(stations, width, height) {
       const distance = Math.abs(total / 2 - accumulated);
       if (distance < nearest) { nearest = distance; split = i; firstWeight = accumulated; }
     }
-    const ratio = firstWeight / total;
-    if (w >= h) {
-      partition(group.slice(0, split), x, y, w * ratio, h);
-      partition(group.slice(split), x + w * ratio, y, w * (1 - ratio), h);
+    const baseRatio = firstWeight / total;
+    const first = group.slice(0, split);
+    const second = group.slice(split);
+    const ratio = first.reduce((sum, entry) => sum + entry.areaWeight, 0) / group.reduce((sum, entry) => sum + entry.areaWeight, 0);
+    if (baseWidth >= baseHeight) {
+      partition(first, x, y, w * ratio, h, baseWidth * baseRatio, baseHeight);
+      partition(second, x + w * ratio, y, w * (1 - ratio), h, baseWidth * (1 - baseRatio), baseHeight);
     } else {
-      partition(group.slice(0, split), x, y, w, h * ratio);
-      partition(group.slice(split), x, y + h * ratio, w, h * (1 - ratio));
+      partition(first, x, y, w, h * ratio, baseWidth, baseHeight * baseRatio);
+      partition(second, x, y + h * ratio, w, h * (1 - ratio), baseWidth, baseHeight * (1 - baseRatio));
     }
   }
-  partition(entries, 0, 0, width, height);
+  partition(entries, 0, 0, width, height, width, height);
   return result.sort((a, b) => a.index - b.index);
+}
+
+export function getSemanticPreviewCount(itemCount, progress = 0) {
+  if (itemCount < 1) return 0;
+  return Math.min(itemCount, 1 + Math.floor(Math.max(0, Math.min(1, progress)) * itemCount));
 }
 
 // Arrange image rectangles in balanced, justified rows. Aspect ratios influence
