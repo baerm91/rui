@@ -29,7 +29,7 @@ const storyCategory = (story) => story?.metadata?.categories?.[0]
   || 'Story';
 
 const storyType = (story) => story?.settings?.experienceType === 'room'
-  ? 'Scrolling-Ausstellung'
+  ? 'Räumliche Ausstellung'
   : '3D-Story';
 
 export function getStoryPreviewImageSignature(story) {

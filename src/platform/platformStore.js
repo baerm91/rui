@@ -516,7 +516,7 @@ export function createStory({
     stations: [{
       id: `station_${Date.now()}`,
       title: 'Auftakt',
-      description: 'Beginnen Sie hier Ihre Scrolling-Erzählung.',
+      description: 'Beginnen Sie hier Ihre räumliche Erzählung.',
       viewMode: 'ruin',
       cameraPos: roomExperience ? { x: 0, y: 1.7, z: 5 } : { x: 0, y: 5, z: 14 },
       cameraTarget: roomExperience ? { x: 0, y: 1.5, z: 0 } : { x: 0, y: 2.5, z: 0 },

@@ -52,16 +52,6 @@ test('WebMCP normalizes a complete exhibition into the room story format', () =>
   assert.equal(exhibition.stations[0].selectedItemId, 'fundstueck');
 });
 
-test('WebMCP creates ordered stations without authored room coordinates', () => {
-  const stations = normalizeWebMcpStations([
-    { title: 'Auftakt', introduction: 'Erste Station', items: [] },
-    { title: 'Vertiefung', introduction: 'Zweite Station', items: [] }
-  ]);
-  assert.deepEqual(stations.map((station) => station.title), ['Auftakt', 'Vertiefung']);
-  assert.deepEqual(stations[0].spatial.position, [0, 0, 0]);
-  assert.deepEqual(stations[1].spatial.position, [9, 0, 0]);
-});
-
 test('WebMCP rejects unsupported model URLs and unsafe media schemes', () => {
   const station = {
     title: 'Station',

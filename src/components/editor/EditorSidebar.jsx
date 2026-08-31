@@ -254,7 +254,7 @@ export function EditorSidebar({
               <span className="block text-[9px] text-zinc-500">
                 {projectControlsAvailable
                   ? 'Darstellung, Sounds, Licht, Nullpunkt und Annotationen'
-                  : 'Globale Modellstory-Regler sind für Scrolling-Ausstellungen nicht verfügbar'}
+                  : 'Globale Modellstory-Regler sind für Raumstories nicht verfügbar'}
               </span>
             </span>
           </span>
@@ -263,7 +263,7 @@ export function EditorSidebar({
 
         {!projectControlsAvailable && (
           <p id="room-project-controls-note" className="border-t border-white/5 px-5 py-2.5 text-[8px] leading-relaxed text-zinc-600">
-            Licht, Atmosphäre, Sound, Kamera und Modelle werden in Scrolling-Ausstellungen pro Station oder Objekt konfiguriert und beim Speichern gemeinsam mit den Stationen gesichert.
+            Licht, Atmosphäre, Sound, Kamera und Modelle werden in Raumstories pro Station oder Objekt konfiguriert und beim Speichern gemeinsam mit den Stationen gesichert.
           </p>
         )}
 

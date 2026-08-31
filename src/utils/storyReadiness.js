@@ -28,7 +28,7 @@ export function auditStoryReadiness({ project = {}, stations = [], annotations =
 
     if (spatialMode) {
       const items = Array.isArray(station.items) ? station.items : [];
-      if (items.length === 0) findings.push(issue('station-items', 'error', 'Die Station enthält kein Objekt.', location));
+      if (items.length === 0) findings.push(issue('station-items', 'error', 'Die räumliche Station enthält kein Objekt.', location));
       items.forEach((item, itemIndex) => {
         const itemLocation = `${location} · Objekt ${itemIndex + 1}`;
         if (!hasText(item.modelUrl)) findings.push(issue('item-model', 'error', 'Die Modellquelle fehlt.', itemLocation));

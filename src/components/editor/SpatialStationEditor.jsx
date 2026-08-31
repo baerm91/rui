@@ -116,6 +116,8 @@ export function SpatialStationEditor({ station, index, selectedItemIds = [], sel
       </div>}
     </div>}
     {tab === 'camera' && <div className="spatial-editor-section">
+      <VectorFields label="Stationsposition" value={station.spatial.position} onChange={(position) => onUpdateStation(index, { spatial: { ...station.spatial, position } })} />
+      <VectorFields label="Stationsausrichtung" value={station.spatial.rotation} onChange={(rotation) => onUpdateStation(index, { spatial: { ...station.spatial, rotation } })} />
       <VectorFields label="Kameraposition" value={station.spatial.camera.position} onChange={(position) => updateSpatial('camera', { position })} />
       <VectorFields label="Kamera-Zielpunkt" value={station.spatial.camera.target} onChange={(target) => updateSpatial('camera', { target })} />
       <RangeField label="Blickwinkel" value={station.spatial.camera.fov} min={25} max={100} step={1} suffix="°" onChange={(fov) => updateSpatial('camera', { fov })} />

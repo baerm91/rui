@@ -64,6 +64,8 @@ const stationSchema = {
     spatial: {
       type: 'object',
       properties: {
+        position: vectorSchema,
+        rotation: vectorSchema,
         movementRadius: { type: 'number', minimum: 1, maximum: 30 },
         wallMaterial: { type: 'string', enum: WEB_MCP_MATERIAL_IDS },
         surfaceMaterials: {
@@ -109,7 +111,7 @@ const stationSchema = {
     },
     items: { type: 'array', items: itemSchema, maxItems: 12 }
   },
-  required: ['title', 'introduction', 'items']
+  required: ['title', 'introduction', 'spatial', 'items']
 };
 
 const exhibitionProperties = {
@@ -156,7 +158,7 @@ const editableDraft = (id, session) => {
   const story = getStory(String(id || ''));
   if (!story || !canEditStory(story, session.id)) throw new Error('Dieser Ausstellungsentwurf darf nicht bearbeitet werden.');
   if (story.status !== 'draft') throw new Error('WebMCP darf nur Entwürfe bearbeiten.');
-  if (story.settings?.experienceType !== 'room') throw new Error('WebMCP bearbeitet in dieser Version nur Scrolling-Ausstellungen.');
+  if (story.settings?.experienceType !== 'room') throw new Error('WebMCP bearbeitet in dieser Version nur Raum-Ausstellungen.');
   return story;
 };
 
@@ -223,7 +225,7 @@ export async function registerRiuWebMcpTools(modelContext = document.modelContex
   const tools = [
     {
       name: 'list_my_exhibition_drafts',
-      description: 'Listet die Scrolling-Ausstellungsentwürfe auf, die der aktuell eingeloggte RIU-User bearbeiten darf.',
+      description: 'Listet die Raum-Ausstellungsentwürfe auf, die der aktuell eingeloggte RIU-User bearbeiten darf.',
       inputSchema: { type: 'object', properties: {} },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       execute: async () => {
@@ -246,14 +248,14 @@ export async function registerRiuWebMcpTools(modelContext = document.modelContex
     },
     {
       name: 'create_exhibition_draft',
-      description: 'Konzipiert und speichert eine vollständige RIU-Scrolling-Ausstellung als privaten Entwurf. Lege eine schlüssige vertikale Dramaturgie mit 1 bis 20 aufeinanderfolgenden Stationen an und verwende ausschließlich belegte, lizenzierte Medien- und 3D-Modell-URLs. Veröffentlicht die Ausstellung nicht.',
+      description: 'Konzipiert und speichert eine vollständige begehbare RIU-Raum-Ausstellung als privaten Entwurf. Lege eine schlüssige Dramaturgie mit 1 bis 20 Stationen an und verwende ausschließlich belegte, lizenzierte Medien- und 3D-Modell-URLs. Veröffentlicht die Ausstellung nicht.',
       inputSchema: WEB_MCP_CREATE_EXHIBITION_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       execute: async (input) => jsonResult(await createDraft(input))
     },
     {
       name: 'update_exhibition_draft',
-      description: 'Überarbeitet einen bearbeitbaren privaten RIU-Scrolling-Ausstellungsentwurf. Angegebene Felder werden ersetzt, ausgelassene Felder bleiben erhalten. Veröffentlicht die Ausstellung nicht.',
+      description: 'Überarbeitet einen bearbeitbaren privaten RIU-Raum-Ausstellungsentwurf. Angegebene Felder werden ersetzt, ausgelassene Felder bleiben erhalten. Veröffentlicht die Ausstellung nicht.',
       inputSchema: WEB_MCP_UPDATE_EXHIBITION_SCHEMA,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
       execute: async (input) => jsonResult(await updateDraft(input))

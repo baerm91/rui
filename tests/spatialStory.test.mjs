@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveExhibitionScrollState, resolveExhibitionStationScrollTop, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../src/utils/spatialStory.js';
+import { createSpatialItem, getSpatialSourceType, moveSpatialItem, normalizeSpatialStation, normalizeThumbnailGridSpacing, normalizeThumbnailLayout, resolveSpatialInitialItemId, resolveSpatialOverviewCamera, resolveSpatialOverviewThumbnailLayout, resolveSpatialThumbnailUrl, resolveSpatialVisitorItemId } from '../src/utils/spatialStory.js';
 import { prepareStationsForStorage } from '../src/stations.js';
 
 test('spatial items preserve source metadata and transforms', () => {
@@ -88,15 +88,6 @@ test('overview thumbnail frames follow each image aspect ratio and remain center
   assert.ok(Math.abs(layout[2].cardWidth - layout[2].cardHeight) < .001);
   assert.ok(layout[0].x < layout[1].x && layout[1].x < layout[2].x);
   assert.ok(layout[3].y < layout[0].y);
-});
-
-test('exhibition scrolling maps viewport sections to ordered stations', () => {
-  assert.deepEqual(resolveExhibitionScrollState(0, 800, 4), { progress: 0, stationIndex: 0 });
-  assert.equal(resolveExhibitionScrollState(799, 800, 4).stationIndex, 1);
-  assert.equal(resolveExhibitionScrollState(1601, 800, 4).stationIndex, 2);
-  assert.deepEqual(resolveExhibitionScrollState(9999, 800, 4), { progress: 1, stationIndex: 3 });
-  assert.equal(resolveExhibitionStationScrollTop(2, 800, 4), 1600);
-  assert.equal(resolveExhibitionStationScrollTop(8, 800, 4), 2400);
 });
 
 test('room overview camera frames the complete row of station walls', () => {

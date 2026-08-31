@@ -152,7 +152,7 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
               <span className="block truncate text-[9px] text-zinc-500">
                 {projectControlsAvailable
                   ? `${activeProject?.name ?? 'Projekt'} · ${connectedModelCount} ${connectedModelCount === 1 ? 'Modell' : 'Modelle'} verbunden`
-                  : 'In Scrolling-Ausstellungen werden Modelle direkt an Stationen bearbeitet'}
+                  : 'In Raumstories werden Modelle direkt an Stationen bearbeitet'}
               </span>
             </span>
           </span>
@@ -165,7 +165,7 @@ export function ProjectBar({ projects, activeProject, saveStatus, lastSavedAt, o
 
       {!canCreateProjects && !projectControlsAvailable && (
         <p id="room-model-controls-note" className="border-t border-white/5 px-5 py-2 text-[8px] leading-relaxed text-zinc-600">
-          Globale Modellrollen gelten nur für Modellstories. Modelle, URLs und Vorschauen dieser Scrolling-Ausstellung bleiben in der jeweiligen Station vollständig bearbeitbar.
+          Globale Modellrollen gelten nur für Modellstories. Modelle, URLs und Vorschauen dieser Raumstory bleiben in der jeweiligen Station vollständig bearbeitbar.
         </p>
       )}
 
