@@ -53,6 +53,12 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .spatial-thumbnail-layout-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px}.spatial-thumbnail-layout-switch button.is-active{border-color:rgba(245,158,11,.55);background:rgba(245,158,11,.14);color:#fbbf24}
 .spatial-grid-spacing-control{display:grid;grid-template-columns:31px minmax(0,1fr) 31px;align-items:end;gap:7px}.spatial-grid-spacing-control>.spatial-range-field{min-width:0}.spatial-grid-spacing-control>button{display:grid;place-items:center;padding:0;font-size:15px;color:#fbbf24}
 @media(max-width:900px){body.spatial-editor-mode{--editor-panel-width:340px}body.platform-page.spatial-editor-mode #editor-root{width:340px}.mode-editor.exhibition-shell{width:calc(100vw - 340px)}.spatial-story-copy{width:38vw}.spatial-sketchfab{left:38%;width:58%;height:70%}}
+/* Sketchfab uses a light document. An inherited dark color scheme makes the
+   browser paint an opaque iframe canvas, even with transparent=1. */
+.spatial-sketchfab iframe {
+  color-scheme: normal;
+}
+
 .spatial-open-hint {
   position: absolute;
   left: 50%;

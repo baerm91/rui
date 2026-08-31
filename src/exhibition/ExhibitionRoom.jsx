@@ -1039,7 +1039,7 @@ function SpatialSketchfabViewer({ item, onInteractionChange }) {
       if (disposed) return;
       const client = new Sketchfab(SKETCHFAB_VIEWER_VERSION, iframeRef.current);
       client.init(uid, {
-        autostart: 1, camera: 0, dnt: 1, transparent: 1, ui_hint: 0, ui_infos: 0, ui_controls: 0, ui_stop: 0, ui_watermark: 0,
+        autostart: 1, autospin: 0.1, camera: 0, dnt: 1, transparent: 1, ui_hint: 0, ui_infos: 0, ui_controls: 0, ui_stop: 0, ui_watermark: 0,
         success(api) {
           if (disposed) return;
           apiRef.current = api;
