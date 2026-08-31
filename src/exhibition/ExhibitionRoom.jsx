@@ -16,6 +16,7 @@ import { resolveWallBackgroundSide } from '../utils/spatialWall.js';
 import { createCuratedSpatialSurfaceMaterials } from '../utils/spatialMaterials.js';
 import { createSpatialMeshMaterial, disposeSpatialMaterial } from './spatialMaterialRenderer.js';
 import './exhibitionRoom.css';
+import { StationOverview } from './StationOverview.jsx';
 
 const disposeObject = (root) => root?.traverse((object) => {
   object.geometry?.dispose?.();
@@ -95,6 +96,9 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   const overviewOverlayRef = useRef(null);
   const modelRootRef = useRef(null);
   const runtimeRef = useRef(null);
+  // The grid unmounts this canvas; repaint its new scene and late textures even
+  // when Sketchfab is active and the room otherwise yields the GPU.
+  const roomNeedsRenderRef = useRef(true);
   const overviewModeRef = useRef(overviewMode);
   const editorModeRef = useRef(editorMode);
   const largePresentationRef = useRef(largePresentation);
@@ -115,6 +119,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
   selectSurfaceRef.current = onSelectSurface;
   modelInteractionRef.current = onModelInteractionChange;
   modelStatusRef.current = onModelStatusChange;
+  roomNeedsRenderRef.current = true;
   const activeSpatial = stations[stationIndex]?.spatial;
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -155,6 +160,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     environmentScene.dispose();
     environmentGenerator.dispose();
     const textureLoader = new THREE.TextureLoader();
+    const invalidateRoom = () => { roomNeedsRenderRef.current = true; };
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.enablePan = true;
@@ -326,6 +332,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         const wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight, showOverview ? .14 : .18);
         const wallMat = createSpatialMeshMaterial({
           surface: spatial.surfaceMaterials.wall,
+          onTextureReady: invalidateRoom,
           fallbackId: spatial.wallMaterial || 'warm-white',
           textureLoader,
           renderer,
@@ -386,6 +393,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
             backgroundMaterial.map = texture;
             backgroundMaterial.needsUpdate = true;
             background.visible = true;
+            invalidateRoom();
           });
         }
         const stepWidth = showOverview ? 6.5 : 7.18;
@@ -393,6 +401,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
         const stepGeometry = new THREE.BoxGeometry(stepWidth, .15, stepDepth);
         const step = new THREE.Mesh(stepGeometry, createSpatialMeshMaterial({
           surface: spatial.surfaceMaterials.plinth,
+          onTextureReady: invalidateRoom,
           fallbackId: 'limestone',
           textureLoader,
           renderer,
@@ -439,6 +448,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
           const padGeometry = new THREE.PlaneGeometry(8.1, 5.2);
           const pad = new THREE.Mesh(padGeometry, createSpatialMeshMaterial({
             surface: spatial.surfaceMaterials.floor,
+            onTextureReady: invalidateRoom,
             fallbackId: 'neutral-floor',
             textureLoader,
             renderer,
@@ -545,6 +555,7 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
       renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
       camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
       camera.updateProjectionMatrix();
+      invalidateRoom();
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
@@ -712,11 +723,12 @@ function SpatialRoomCanvas({ stations, stationIndex, selectedItem, editorMode, o
     let frame;
     const animate = () => {
       const sketchfabOverlayActive = largePresentationRef.current && !overviewModeRef.current && selectedItemRef.current?.sourceType === 'sketchfab';
-      if (!sketchfabOverlayActive || runtimeRef.current?.cameraTransitionFrame) {
+      if (!sketchfabOverlayActive || runtimeRef.current?.cameraTransitionFrame || roomNeedsRenderRef.current) {
         controls.update();
         canvas.dataset.cameraPosition = camera.position.toArray().map((value) => value.toFixed(4)).join(',');
         canvas.dataset.cameraTarget = controls.target.toArray().map((value) => value.toFixed(4)).join(',');
         renderer.render(scene, camera);
+        roomNeedsRenderRef.current = false;
         updateOverviewOverlay();
       }
       frame = requestAnimationFrame(animate);
@@ -1146,28 +1158,6 @@ function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect,
   return <button ref={buttonRef} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
 }
 
-function MobileOverviewNavigator({ stations, stationIndex, onPreviewStation, onOpenStation, onOpenItem }) {
-  const activeStation = stations[stationIndex];
-  if (!activeStation) return null;
-  return <nav className="mobile-overview-navigator" aria-label="Stationen und Objekte auswählen">
-    <div className="mobile-overview-stations" aria-label="Station auswählen">
-      {stations.map((entry, index) => <button key={entry.id} type="button" aria-pressed={index === stationIndex} className={index === stationIndex ? 'is-active' : ''} onClick={() => onPreviewStation(index)}><span>{String(index + 1).padStart(2, '0')}</span>{entry.title}</button>)}
-    </div>
-    <div className="mobile-overview-heading">
-      <div><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><b>{activeStation.title}</b></div>
-      <button type="button" onClick={() => onOpenStation(stationIndex)}>Station öffnen <ChevronRight size={16} /></button>
-    </div>
-    {activeStation.items.length > 0
-      ? <div className="mobile-overview-items" aria-label={`Objekte in ${activeStation.title}`}>
-        {activeStation.items.map((item) => {
-          const thumbnailUrl = resolveSpatialThumbnailUrl(item);
-          return <button key={item.id} type="button" onClick={() => onOpenItem(stationIndex, item.id)} aria-label={`${item.title} öffnen`}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={26} />}</span><b>{item.title}</b><small>Objekt öffnen</small></button>;
-        })}
-      </div>
-      : <div className="mobile-overview-empty"><Box size={22} /> Diese Station wird noch kuratiert.</div>}
-  </nav>;
-}
-
 export default function ExhibitionRoom({ story, initialMode = 'visitor', backHref = '/', onSaveStory }) {
   const [stations, setStations] = useState(() => normalizeStoryStations(story));
   const [stationIndex, setStationIndex] = useState(0);
@@ -1291,7 +1281,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       setViewTransitioning(false);
       setViewTransitionDirection(null);
       onComplete?.();
-    }, 1580 + changeDelay);
+    }, 280 + changeDelay);
   };
   const enterStation = (index) => {
     const nextItemId = resolveSpatialVisitorItemId(stations[index], stations[index]?.items);
@@ -1303,7 +1293,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       resetModelInteraction();
       setAudioPlaying(false);
     };
-    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(nextItemId), null, { direction: 'enter', changeDelay: 340 });
+    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(nextItemId), null, { direction: 'enter' });
     else applyChange();
   };
   const enterItem = (index, itemId) => {
@@ -1315,7 +1305,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       resetModelInteraction();
       setAudioPlaying(false);
     };
-    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(itemId), null, { direction: 'enter', changeDelay: 340 });
+    if (overviewMode) transitionSpatialView(applyChange, () => setOpenItemId(itemId), null, { direction: 'enter' });
     else applyChange();
   };
   const toggleOverview = () => {
@@ -1327,7 +1317,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       setOpenItemId(null);
       resetModelInteraction();
       setAudioPlaying(false);
-    }, nextOverviewMode ? undefined : () => setOpenItemId(nextItemId), null, nextOverviewMode ? { direction: 'exit' } : { direction: 'enter', changeDelay: 340 });
+    }, nextOverviewMode ? undefined : () => setOpenItemId(nextItemId), null, nextOverviewMode ? { direction: 'exit' } : { direction: 'enter' });
   };
   const selectThumbnailItem = (id, event) => {
     const additive = mode === 'editor' && (event?.shiftKey || event?.ctrlKey || event?.metaKey);
@@ -1393,7 +1383,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   }, [stations]);
   useEffect(() => {
     const audio = station?.spatial.audio;
-    if (!audio?.url || (!audio.autoplay && !audioPlaying) || mode === 'editor') return undefined;
+    if (overviewMode || !audio?.url || (!audio.autoplay && !audioPlaying) || mode === 'editor') return undefined;
     const player = new Audio(audio.url);
     player.loop = true;
     const updateVolume = () => {
@@ -1406,13 +1396,13 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     const volumeTimer = setInterval(updateVolume, 180);
     player.play().catch(() => {});
     return () => { clearInterval(volumeTimer); player.pause(); player.src = ''; };
-  }, [audioPlaying, stationIndex, mode, station?.spatial]);
+  }, [audioPlaying, stationIndex, mode, overviewMode, station?.spatial]);
   if (!station) return null;
   return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''} ${explorationMode ? 'is-exploring' : 'is-curated'} ${modelInteracting ? 'is-model-interacting' : ''} ${viewTransitioning ? 'is-view-transitioning' : ''} ${viewTransitionDirection ? `transition-${viewTransitionDirection}` : ''}`}>
-    <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onSelectSurface={setSelectedSurface} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />
+    {!overviewMode && <SpatialRoomCanvas stations={stations} stationIndex={stationIndex} selectedItem={selectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onSelectSurface={setSelectedSurface} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />}
     <div className="spatial-view-wash" aria-hidden="true" />
     <header className="exhibition-header"><a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a><div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
-    {overviewMode && <><div className="spatial-overview-hint"><MousePointer2 size={14} /><span><b>Story betreten</b> Station oder Objekt direkt auswählen</span></div>{mode === 'visitor' && <MobileOverviewNavigator stations={stations} stationIndex={stationIndex} onPreviewStation={(index) => { setStationIndex(index); setAudioPlaying(false); }} onOpenStation={enterStation} onOpenItem={enterItem} />}</>}
+    {overviewMode && <StationOverview title={story.name} stations={stations} stationIndex={stationIndex} onOpenStation={enterStation} onOpenItem={enterItem} />}
     {!overviewMode && <section className="spatial-station-content"><div className="spatial-story-copy"><span>Station {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div><div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Diese Station wird noch kuratiert.'}</span></div>}</div>
       {selectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={selectedItem} onInteractionChange={changeModelInteraction} />}
       {selectedItem?.sourceType === 'gltf' && modelStatus.state !== 'ready' && <div className={`spatial-model-status is-${modelStatus.state}`} role={modelStatus.state === 'error' ? 'alert' : 'status'} aria-live="polite"><i aria-hidden="true" /><span>{modelStatus.message || '3D-Modell wird vorbereitet'}</span></div>}

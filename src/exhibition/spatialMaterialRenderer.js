@@ -29,6 +29,7 @@ export function createSpatialMeshMaterial({
   geometry,
   width,
   height,
+  onTextureReady,
   ...options
 }) {
   const surface = normalizeSpatialSurface(rawSurface, fallbackId);
@@ -55,6 +56,7 @@ export function createSpatialMeshMaterial({
       configureTexture(texture, surface, width, height, renderer, property === 'map');
       material[property] = texture;
       material.needsUpdate = true;
+      onTextureReady?.();
     }).catch((error) => console.warn(`Raummaterial konnte nicht geladen werden: ${url}`, error));
   });
   return material;

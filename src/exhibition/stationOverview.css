@@ -1,0 +1,86 @@
+.exhibition-shell.is-overview {
+  min-height: 0;
+  height: 100dvh;
+  background: #173e48;
+}
+
+.station-overview {
+  position: absolute;
+  inset: 0 0 68px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 100px clamp(20px, 4.4vw, 80px) 36px;
+  color: #f4f0e7;
+  scrollbar-color: #729298 #173e48;
+}
+
+.station-overview-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  max-width: 1600px;
+  margin: 0 auto 30px;
+}
+
+.station-overview-eyebrow { font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: #bcd0d1; }
+.station-overview h1 { margin: 10px 0 12px; font: 400 clamp(38px, 4vw, 60px)/1 "Cormorant Garamond", Georgia, serif; }
+.station-overview h1:focus { outline: none; }
+.station-overview-intro p { margin: 0; font-size: 14px; line-height: 1.6; color: #c9d9d9; }
+.station-overview-total { flex-shrink: 0; padding-bottom: 4px; font-size: 12px; color: #c9d9d9; }
+.station-overview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-flow: row dense; grid-auto-rows: minmax(310px, auto); gap: 14px; max-width: 1600px; margin: 0 auto; }
+.station-overview-tile { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 22px; background: #f3f0e8; color: #272d29; border: 1px solid #d8ded8; transition: border-color .18s ease, box-shadow .18s ease; }
+.station-overview-tile.is-wide { grid-column: span 2; }
+.station-overview-tile.is-large { grid-column: span 2; grid-row: span 2; }
+.station-overview-tile.is-expansive { grid-column: span 2; grid-row: span 3; }
+.station-overview-tile:hover { border-color: #cb9c68; box-shadow: 0 0 0 1px #cb9c68; }
+.station-overview-meta { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #6a6558; }
+.station-overview-meta > span:first-child { color: #98512f; }
+.station-overview-tile h2 { margin: 15px 0 20px; font: 500 clamp(24px, 2.4vw, 34px)/1.05 "Cormorant Garamond", Georgia, serif; }
+.station-overview-open { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.station-overview-open > svg { flex-shrink: 0; margin-top: 3px; color: #98512f; }
+.station-overview-open::after { content: ''; position: absolute; inset: 0; }
+.station-overview-open:focus-visible { outline: none; }
+.station-overview-open:focus-visible::after { outline: 3px solid #b2673b; outline-offset: -5px; }
+.station-overview-objects { display: grid; grid-template-columns: repeat(var(--preview-columns), minmax(0, 1fr)); flex: 1; gap: 12px; }
+.station-overview-object { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.station-overview-image { position: relative; display: grid; place-items: center; width: 100%; min-height: 110px; flex: 1; background: #e7e5dd; overflow: hidden; color: #8c9388; }
+.station-overview-image .lazy-image { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; object-fit: contain; background: #e7e5dd; transition: transform .2s ease; }
+.station-overview-object:hover .lazy-image { transform: scale(1.04); }
+.station-overview-object:focus-visible { outline: 3px solid #b2673b; outline-offset: 4px; }
+.station-overview-object-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; font-size: 12px; line-height: 1.5; }
+.station-overview-tile-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-top: 20px; font-size: 10px; color: #6a6558; }
+.station-overview-tile-footer > span:last-child { display: flex; align-items: center; gap: 5px; color: #98512f; }
+.station-overview-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 20px 0; color: #6a6558; font-size: 13px; text-align: center; }
+.is-overview .exhibition-footer { background: #173e48; border: 0; }
+.is-overview .station-stepper { visibility: hidden; }
+.is-overview .exhibition-back, .is-overview .walk-hint { background: #e8eee9; color: #23434a; }
+.is-overview .exhibition-footer-actions .walk-hint { background: transparent; white-space: nowrap; }
+.is-view-transitioning .spatial-view-wash,
+.is-view-transitioning:not(.is-overview) .spatial-story-copy,
+.is-view-transitioning:not(.is-overview) .spatial-thumbnails { animation-duration: .28s; }
+
+@media (min-width: 1600px) {
+  .station-overview-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .station-overview-tile.is-expansive { grid-column: span 3; grid-row: span 2; }
+}
+@media (max-width: 1000px) {
+  .station-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .station-overview-tile.is-expansive { grid-column: span 2; }
+}
+@media (max-width: 540px) {
+  .station-overview { padding: 86px 16px 24px; }
+  .station-overview-intro { align-items: flex-start; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+  .station-overview-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+  .station-overview-tile.is-wide, .station-overview-tile.is-large, .station-overview-tile.is-expansive { grid-column: auto; grid-row: auto; }
+  .station-overview-tile { padding: 20px; }
+  .station-overview-objects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .is-compact .station-overview-objects { grid-template-columns: minmax(0, 1fr); }
+  .station-overview-image { min-height: 145px; }
+  .is-compact .station-overview-image { min-height: 180px; }
+  .is-overview .exhibition-footer-actions .walk-hint { display: flex; min-height: 44px; }
+  .is-overview .exhibition-back { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-overview-tile, .station-overview-image .lazy-image { transition: none; }
+}

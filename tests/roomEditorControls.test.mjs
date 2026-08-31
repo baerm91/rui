@@ -22,7 +22,7 @@ test('visitor room renderer yields the GPU while Sketchfab renders the active mo
   const roomSource = await readSource('../src/exhibition/ExhibitionRoom.jsx');
 
   assert.match(roomSource, /largePresentationRef\.current && !overviewModeRef\.current && selectedItemRef\.current\?\.sourceType === 'sketchfab'/);
-  assert.match(roomSource, /if \(!sketchfabOverlayActive \|\| runtimeRef\.current\?\.cameraTransitionFrame\)/);
+  assert.match(roomSource, /if \(!sketchfabOverlayActive \|\| runtimeRef\.current\?\.cameraTransitionFrame \|\| roomNeedsRenderRef\.current\)/);
 });
 
 test('room demo keeps the editor return control mounted', async () => {
