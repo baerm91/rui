@@ -33,15 +33,14 @@
 .station-map-stone[hidden] { display: none; }
 .station-map-stone-face {
   position: absolute;
-  inset: 10px;
+  inset: 0;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 1px solid #e5d7b77a;
-  border-bottom: 4px solid #ffe5b3;
-  background: radial-gradient(ellipse at 50% 90%, #e3d6b9, #bcad90 65%, #a79980);
+  border: 0;
+  background: var(--map-paper);
   color: #796c54;
-  box-shadow: 3px 8px 14px #33271833, inset 0 -12px 24px #ffe5b333;
+  box-shadow: none;
   pointer-events: none;
   transition: border-color .2s, box-shadow .2s;
 }
@@ -63,8 +62,8 @@
   text-transform: uppercase;
   pointer-events: none;
 }
-.station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; border: 6px solid transparent; box-sizing: border-box; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; animation: station-image-reveal .22s ease-out; }
-.station-map-image .lazy-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 14px; box-sizing: border-box; object-fit: contain; object-position: center; }
+.station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; border: 0; box-sizing: border-box; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; animation: station-image-reveal .22s ease-out; }
+.station-map-image .lazy-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; box-sizing: border-box; object-fit: cover; object-position: center; }
 .station-map-image:has(.lazy-image[data-image-state="loaded"]) > svg { visibility: hidden; }
 .station-map-station-name {
   position: absolute;
@@ -91,7 +90,7 @@
 .station-map-stone.is-focused .station-map-stone-face { outline: 2px solid #aa633f; outline-offset: -2px; }
 .station-map-stone:focus-visible { outline: none; }
 .station-map-stone:focus-visible .station-map-stone-face { outline: 3px solid #854125; outline-offset: -3px; }
-.station-map-stone:hover .station-map-stone-face { border-color: #fff0cd; box-shadow: 3px 8px 14px #33271833, inset 0 -16px 35px #ffedbc70; }
+.station-map-stone:hover .station-map-stone-face { outline: 2px solid #fff0cd; outline-offset: -2px; }
 .station-map-stone:hover .station-map-station-name { background: #f3eee2; }
 .station-map-navigation { display: flex; flex: none; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 17px 0 9px; }
 .station-map-tools { display: flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid #f3e9d344; border-radius: 999px; background: #484234; box-shadow: 0 3px 10px #3a302520; }
@@ -107,10 +106,7 @@
   .station-map { padding-right: 12px; padding-left: 12px; }
   .station-map-heading { padding: 0 4px 18px; }
   .station-map-heading h1 { font-size: 40px; }
-  .station-map-stone-face { inset: 5px; border-bottom-width: 3px; }
   .station-map-stone::after { top: 14px; left: 14px; max-width: calc(100% - 28px); padding: 5px 7px; font-size: 8px; }
-  .station-map-image { border-width: 2px; }
-  .station-map-image .lazy-image { padding: 8px; }
   .station-map-station-name { left: 8px; bottom: 10px; max-width: calc(100% - 16px); padding: 9px 10px 11px; font-size: 23px; }
   .station-map-tools button { min-width: 44px; height: 44px; }
   .station-map-heading small { padding-left: 12px; }
@@ -126,7 +122,6 @@
   .station-map-heading { padding-bottom: 10px; }
   .station-map-heading h1 { margin: 0; font-size: 28px; }
   .station-map-heading span { display: none; }
-  .station-map-stone-face { inset: 4px; }
   .station-map-stone::after { top: 12px; left: 12px; padding: 4px 6px; font-size: 8px; }
   .station-map-station-name { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 6px 10px; font-size: 21px; }
   .station-map-navigation { padding: 8px 0 0; flex-wrap: nowrap; }

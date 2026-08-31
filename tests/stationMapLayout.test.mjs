@@ -78,6 +78,32 @@ test('station map fills portrait and landscape surfaces without overlapping or l
   assert.deepEqual(createStationMapLayout([], 360, 520), []);
 });
 
+test('station areas are proportional to model counts, not compressed logarithmically', () => {
+  const counts = [2, 5, 12];
+  for (const [width, height] of [[390, 520], [1280, 390], [1900, 700]]) {
+    const tiles = createStationMapLayout(counts.map((count) => ({ items: Array(count).fill({}) })), width, height);
+    tiles.forEach((tile, index) => {
+      assert.ok(Math.abs(tile.width * tile.height / (width * height) - counts[index] / 19) < 1e-10);
+    });
+  }
+});
+
+test('three or more stations form a two-dimensional mosaic even on wide screens', () => {
+  for (const counts of [[3, 1, 1], [1, 1, 1], [2, 5, 12], [1, 2, 3, 4, 5, 6]]) {
+    for (const [width, height] of [[1200, 390], [1900, 300], [390, 600]]) {
+      const tiles = createStationMapLayout(counts.map((count) => ({ items: Array(count).fill({}) })), width, height);
+      assert.ok(new Set(tiles.map((tile) => tile.x)).size > 1, 'not a single column');
+      assert.ok(new Set(tiles.map((tile) => tile.y)).size > 1, 'not a single row');
+    }
+  }
+});
+
+test('an already dominant station never shrinks or moves when zooming', () => {
+  const stations = [20, 1, 1].map((count) => ({ items: Array(count).fill({}) }));
+  const original = createStationMapLayout(stations, 1200, 600);
+  assert.deepEqual(createStationMapLayout(stations, 1200, 600, { focusIndex: 0, progress: 1 }), original);
+});
+
 test('taps open stations, while drags, pinches and canceled touches never open them', () => {
   const gesture = createStationMapGesture();
   gesture.start(1, 10, 10);
