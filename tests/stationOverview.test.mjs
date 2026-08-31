@@ -16,6 +16,7 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
       assert.ok(html.includes(`Station ${index + 1}: Sammlung ${index + 1} öffnen`));
+      assert.ok(html.includes(`data-station-number="${String(index + 1).padStart(2, '0')}"`));
       assert.ok(html.includes(`<span class="station-map-station-name">Sammlung ${index + 1}</span>`));
     }
     assert.match(html, /Heranzoomen/);

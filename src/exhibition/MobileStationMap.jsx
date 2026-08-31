@@ -121,7 +121,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
       <div className="station-map-content">
         {tiles.map((tile) => {
           const station = stations[tile.index];
-          return <button key={station.id} type="button" data-station-index={tile.index} className={`station-map-stone stone-${tile.index % 6} ${tile.index === detail.focusIndex && detail.progress > 0 ? 'is-focused' : ''}`}
+          return <button key={station.id} type="button" data-station-index={tile.index} data-station-number={String(tile.index + 1).padStart(2, '0')} className={`station-map-stone stone-${tile.index % 6} ${tile.index === detail.focusIndex && detail.progress > 0 ? 'is-focused' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%` }}
             aria-label={`Station ${tile.index + 1}: ${station.title} öffnen`}
             onFocus={() => { candidateRef.current = tile.index; }}

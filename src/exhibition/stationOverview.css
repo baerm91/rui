@@ -1,7 +1,20 @@
-.exhibition-shell.is-overview { min-height: 0; height: 100dvh; background: #173e48; }
-.is-overview .exhibition-footer { background: #173e48; border: 0; }
+.exhibition-shell.is-overview {
+  min-height: 0;
+  height: 100dvh;
+  background: radial-gradient(ellipse at 46% 18%, #ddd3bd 0, #c3b598 50%, #a39275 100%);
+  color: #302e27;
+  color-scheme: light;
+}
+.is-overview .exhibition-footer {
+  background: linear-gradient(0deg, #e0d2b4, #c2b18f);
+  border-top: 1px solid #ffebbe;
+  box-shadow: 0 -3px 18px #ffe4ab38;
+}
+.is-overview .exhibition-brand,
+.is-overview .exhibition-progress { background: #484234ed; color: #f3eddf; border-color: #e5d5b52e; }
+.is-overview .exhibition-progress span:first-child { color: #e3c18d; }
 .is-overview .station-stepper { visibility: hidden; }
-.is-overview .exhibition-back, .is-overview .walk-hint { background: #e8eee9; color: #23434a; }
+.is-overview .exhibition-back, .is-overview .walk-hint { background: #ede5d5; color: #4d4436; border-color: #92816966; }
 .is-overview .exhibition-footer-actions .walk-hint { display: flex; background: transparent; white-space: nowrap; }
 .exhibition-back[type="button"] { font-family: inherit; cursor: pointer; justify-self: start; }
 .is-view-transitioning .spatial-view-wash,

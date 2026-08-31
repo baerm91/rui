@@ -59,6 +59,31 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   color-scheme: normal;
 }
 
+/* Keep the transparent model above station cards, but its input surface below
+   them. Raising the whole viewer would block thumbnail clicks and dragging.
+   The wrapper must not create a stacking context so these layers can straddle
+   the story, caption and carousel (including their interaction fade). */
+.exhibition-shell .spatial-station-content > .spatial-sketchfab {
+  z-index: auto;
+  pointer-events: none;
+}
+
+.spatial-station-content > .spatial-sketchfab iframe {
+  position: absolute;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+}
+
+.spatial-station-content > .spatial-sketchfab .spatial-sketchfab-controls {
+  z-index: 8;
+  pointer-events: auto;
+}
+
+.spatial-thumbnail-dragging .spatial-station-content > .spatial-sketchfab .spatial-sketchfab-controls {
+  pointer-events: none;
+}
+
 .spatial-open-hint {
   position: absolute;
   left: 50%;

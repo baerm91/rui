@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Station layering regression</title>
+<link rel="stylesheet" href="../../src/exhibition/exhibitionRoom.css">
+<style>
+  body { margin: 0; }
+  .exhibition-shell { height: 100vh; background: #d5cebb; }
+  .spatial-story-copy { top: 15%; }
+  .spatial-thumbnail > span { background: #415a72; }
+  output { position: fixed; z-index: 30; right: 20px; top: 20px; background: white; padding: 12px; }
+</style>
+<main class="exhibition-shell mode-visitor thumbnail-layout-carousel">
+  <section class="spatial-station-content">
+    <div class="spatial-story-copy"><span>Station 01</span><h1>Text hinter dem Modell</h1><p>Die orange Fläche muss ohne Schleier vor dieser Textbox und den Thumbnails erscheinen.</p></div>
+    <div class="spatial-thumbnails">
+      <button class="spatial-thumbnail"><span>Objekt A</span><b>Objekt A</b></button>
+      <button class="spatial-thumbnail"><span>Objekt B</span><b>Objekt B</b></button>
+      <button class="spatial-thumbnail"><span>Objekt C</span><b>Objekt C</b></button>
+    </div>
+    <div class="spatial-sketchfab">
+      <iframe title="Opaque model silhouette on transparent background" srcdoc="<style>body{margin:0}div{position:absolute;left:20%;top:8%;width:45%;height:86%;border-radius:50%;background:#da682d}</style><div></div>"></iframe>
+      <div class="spatial-sketchfab-controls" aria-label="Modell drehen"></div>
+    </div>
+    <div class="spatial-object-caption"><b>Objektbeschreibung</b><span>Auch diese Box liegt hinter der Modellfläche.</span></div>
+  </section>
+</main>
+<output aria-live="polite">Bereit</output>
+<script>
+  const shell = document.querySelector('main');
+  const output = document.querySelector('output');
+  document.querySelectorAll('.spatial-thumbnail').forEach((button) => {
+    button.addEventListener('click', () => { output.textContent = button.querySelector('b').textContent + ' gewählt'; });
+  });
+  const controls = document.querySelector('.spatial-sketchfab-controls');
+  controls.addEventListener('pointerdown', () => { shell.classList.add('is-model-interacting'); output.textContent = 'Modell wird gedreht'; });
+  window.addEventListener('pointerup', () => shell.classList.remove('is-model-interacting'));
+</script>
+</html>

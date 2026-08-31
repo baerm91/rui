@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RIU · Raumübersicht</title>
+  <style>body { margin: 0; } * { box-sizing: border-box; }</style>
+</head>
+<body>
+  <main class="exhibition-shell mode-visitor is-overview">
+    <header class="exhibition-header"><a class="exhibition-brand" href="#"><b>RIU</b></a><div class="exhibition-progress"><span>01</span><i></i><span>03</span></div></header>
+    <div id="overview"></div>
+    <footer class="exhibition-footer"><output class="exhibition-back" aria-live="polite">Meine Stories</output></footer>
+  </main>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import '../../src/fonts.css';
+    import '../../src/exhibition/exhibitionRoom.css';
+    import { StationOverview } from '../../src/exhibition/StationOverview.jsx';
+    import { SPATIAL_DEMO_STORY } from '../../src/exhibition/spatialDemo.js';
+    createRoot(document.getElementById('overview')).render(React.createElement(StationOverview, {
+      title: SPATIAL_DEMO_STORY.name,
+      stations: SPATIAL_DEMO_STORY.stations,
+      stationIndex: 0,
+      onOpenStation(index) { document.querySelector('output').textContent = `Station ${index + 1} geöffnet`; }
+    }));
+  </script>
+</body>
+</html>
