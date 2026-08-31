@@ -1,0 +1,27 @@
+.mobile-model-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #e8e4da;
+  color: #242b29;
+  color-scheme: light;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: Inter, Arial, sans-serif;
+}
+.mobile-model-dialog::backdrop { background: #e8e4da; }
+.mobile-model-header { position: absolute; z-index: 3; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(20px, env(safe-area-inset-left)); pointer-events: none; }
+.mobile-model-header h2 { margin: 0; font: 500 23px/1.15 "Cormorant Garamond", Georgia, serif; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mobile-model-header button { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border: 1px solid #bcbeb5; border-radius: 50%; background: #faf8f0; color: #242b29; cursor: pointer; pointer-events: auto; box-shadow: 0 3px 12px #22222214; }
+.mobile-model-header button:focus-visible { outline: 3px solid #98512f; outline-offset: 3px; }
+.mobile-model-stage { position: absolute; inset: calc(82px + env(safe-area-inset-top)) 0 calc(48px + env(safe-area-inset-bottom)); }
+.mobile-model-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.mobile-model-stage .spatial-sketchfab { inset: 0; width: 100%; height: 100%; visibility: visible; opacity: 1; pointer-events: auto; }
+.mobile-model-hint { position: absolute; right: 12px; bottom: max(16px, env(safe-area-inset-bottom)); left: 12px; margin: 0; color: #62685f; text-align: center; font-size: 11px; line-height: 1.5; pointer-events: none; }
+.mobile-model-status { position: absolute; top: 50%; left: 50%; width: min(280px, 85%); transform: translate(-50%, -50%); padding: 14px; background: #faf8f0; color: #41473f; font-size: 14px; line-height: 1.5; text-align: center; pointer-events: none; }

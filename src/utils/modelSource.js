@@ -58,6 +58,6 @@ export function normalizeModelUrl(value) {
 export function getSketchfabEmbedUrl(value) {
   const uid = getSketchfabModelUid(value);
   if (!uid) return '';
-  const params = new URLSearchParams({ autostart: '1', autospin: '0.1', dnt: '1', ui_infos: '0', ui_stop: '0' });
+  const params = new URLSearchParams({ autostart: '1', dnt: '1', ui_infos: '0', ui_stop: '0' });
   return `https://sketchfab.com/models/${uid}/embed?${params}`;
 }
