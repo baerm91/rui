@@ -13,8 +13,13 @@ const isSpatialPreview = import.meta.env.DEV && window.location.pathname === '/_
 const platformAppModule = !isExperiencePath && !isSpatialPreview
   ? import('./platform/PlatformApp.jsx')
   : null;
-const [platformUi] = await Promise.all([platformAppModule, platformReady]);
-ensureSeedStories();
+const platformUi = await platformAppModule;
+// Public platform chrome renders immediately. Only experience access needs the
+// initialized store here; PlatformApp gates private content until it is ready.
+if (isExperiencePath || isSpatialPreview) {
+  await platformReady;
+  ensureSeedStories();
+}
 const routeStory = isExperiencePath ? getRouteStory(window.location.pathname) : null;
 const isRoomExperience = isRoomStory(routeStory);
 const usesModelViewer = isExperiencePath && !isRoomExperience;

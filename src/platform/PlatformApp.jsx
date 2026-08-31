@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import {
   canEditStory, createStory, deleteStory, getStory, getStoryEditors, getStoryPermission, inviteStoryCollaborator,
-  isValidModelUrl, loginWithOAuth, loginWithPassword, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, publishStory,
+  isPlatformInitialized, isValidModelUrl, loginWithOAuth, loginWithPassword, logoutUser, normalizeStoryCategories, normalizeStoryCollaborators, platformReady, publishStory,
   readSession, readStories, removeStoryCollaborator, respondToCollaboration,
   saveStory, setDirectLoginPassword, unpublishStory, updateStoryCollaboratorRole, updateStoryMetadata, updateUserProfile, writeStories
 } from './platformStore.js';
@@ -382,8 +382,8 @@ function DiscoverCard({ story, selected = false, onSelect }) {
   );
 }
 
-function Discover({ session }) {
-  const published = getPublishedDiscoverStories(readStories());
+function Discover({ session, loading = false }) {
+  const published = loading ? [] : getPublishedDiscoverStories(readStories());
   const authorId = new URLSearchParams(window.location.search).get('author') || '';
   const selectedAuthor = published.find((story) => story.ownerId === authorId)?.authorName || '';
   const [query, setQuery] = useState('');
@@ -406,6 +406,13 @@ function Discover({ session }) {
       ? new Date(left.publishedAt || left.createdAt) - new Date(right.publishedAt || right.createdAt)
       : new Date(right.publishedAt || right.createdAt) - new Date(left.publishedAt || left.createdAt));
   const selectedStory = filtered.find((story) => story.id === selectedStoryId) || filtered[0];
+  useEffect(() => {
+    if (!loading && !selectedStoryId) {
+      setSelectedStoryId(getRandomFeaturedDiscoverStoryId(
+        authorId ? published.filter((story) => story.ownerId === authorId) : published
+      ));
+    }
+  }, [loading, selectedStoryId, authorId]);
 
   const selectStory = (storyId) => {
     setSelectedStoryId(storyId);
@@ -416,6 +423,7 @@ function Discover({ session }) {
     <div className="riu-page discover-page">
       <Header session={session} showThemeToggle />
       <main className="discover-shell">
+        {loading && <article className="discover-hero" aria-busy="true"><div className="discover-hero-media media-placeholder" aria-hidden="true" /><div className="discover-hero-copy"><span>Öffentliche Galerie</span><h1>Stories entdecken</h1><p role="status">Stories werden geladen. Sie können bereits suchen und sortieren.</p></div></article>}
         {selectedStory && (
           <article className="discover-hero" aria-live="polite">
             <StoryPreviewMedia
@@ -424,6 +432,7 @@ function Discover({ session }) {
               className="discover-hero-media"
               mediaClassName="discover-hero-poster"
               fallbackImage="/star_sky_bg.png"
+              priority
               autoPlay
             >
             </StoryPreviewMedia>
@@ -459,8 +468,8 @@ function Discover({ session }) {
             <button type="button" onClick={() => go('/discover')}>Alle Autor:innen anzeigen <X size={13} /></button>
           </div>
         )}
-        <div className="discover-results"><span>{filtered.length} {filtered.length === 1 ? 'Story' : 'Stories'} kuratiert</span></div>
-        {filtered.length ? (
+        <div className="discover-results"><span>{loading ? 'Stories werden geladen …' : `${filtered.length} ${filtered.length === 1 ? 'Story' : 'Stories'} kuratiert`}</span></div>
+        {loading ? <StoryGridPlaceholder className="discover-grid" /> : filtered.length ? (
           <div className="discover-grid">
             {filtered.map((story) => <DiscoverCard key={story.id} story={story} selected={story.id === selectedStory?.id} onSelect={selectStory} />)}
           </div>
@@ -781,8 +790,12 @@ function StoryCard({ story, featured = false }) {
   );
 }
 
-function Gallery({ session }) {
-  const published = getPublishedDiscoverStories(readStories());
+function StoryGridPlaceholder({ className = 'story-grid' }) {
+  return <div className={className} aria-busy="true"><p className="story-loading-status" role="status">Stories werden geladen …</p>{[0, 1].map((index) => <div key={index} className="story-card" aria-hidden="true"><div className="story-card-image media-placeholder" /><div className="story-placeholder-line" /><div className="story-placeholder-line is-short" /></div>)}</div>;
+}
+
+function Gallery({ session, loading = false }) {
+  const published = loading ? [] : getPublishedDiscoverStories(readStories());
   return (
     <div className="riu-page home-page">
       <Header session={session} sticky />
@@ -804,11 +817,11 @@ function Gallery({ session }) {
         <section className="riu-gallery" id="stories">
           <div className="section-heading">
             <div><span className="riu-overline">Öffentliche Galerie</span><h2>Räume, die etwas erzählen</h2></div>
-            <div className="gallery-count">{String(published.length).padStart(2, '0')} Stories</div>
+            <div className="gallery-count">{loading ? 'Wird geladen …' : `${String(published.length).padStart(2, '0')} Stories`}</div>
           </div>
-          <div className="story-grid">
+          {loading ? <StoryGridPlaceholder /> : <div className="story-grid">
             {published.map((story, index) => <StoryCard key={story.id} story={story} featured={index === 0} />)}
-          </div>
+          </div>}
         </section>
 
         <section className="riu-manifesto" id="about">
@@ -1247,7 +1260,17 @@ function NotFound({ session }) {
 }
 
 export default function PlatformApp() {
-  const [session, setSession] = useState(() => readSession());
+  const [ready, setReady] = useState(isPlatformInitialized);
+  const [session, setSession] = useState(() => isPlatformInitialized() ? readSession() : null);
+  useEffect(() => {
+    let active = true;
+    platformReady.then(() => {
+      if (!active) return;
+      setSession(readSession());
+      setReady(true);
+    });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     if (!session || !document.modelContext?.registerTool) return undefined;
     const controller = new AbortController();
@@ -1257,8 +1280,11 @@ export default function PlatformApp() {
     return () => controller.abort();
   }, [session?.id, session?.role, session?.isBlocked]);
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/') return <Gallery session={session} />;
-  if (path === '/discover') return <Discover session={session} />;
+  if (path === '/') return <Gallery session={session} loading={!ready} />;
+  if (path === '/discover') return <Discover session={session} loading={!ready} />;
+  // Never read cached private stories or render author controls before auth has
+  // finished. Navigation remains usable during slow network initialization.
+  if (!ready) return <div className="riu-page"><Header session={null} /><main className="platform-pending" role="status"><h1>Ihr Bereich wird vorbereitet</h1><p>Anmeldung und Stories werden geladen …</p></main></div>;
   if (path === '/login') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" onSession={setSession} />;
   if (path === '/register') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="register" onSession={setSession} />;
   if (path === '/reset-password') return session ? <Dashboard session={session} onSession={setSession} /> : <AuthPage mode="login" />;

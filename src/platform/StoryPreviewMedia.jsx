@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { readStoryPreviewBlob } from './platformStore.js';
+import { LazyImage } from './LazyImage.jsx';
 import {
   resolvePreviewLookOffset, resolveVisualPreviewProgress, storyHasPreview
 } from './storyPreviewScrub.js';
@@ -7,7 +8,7 @@ import {
 const HOVER_PLAY_DELAY_MS = 1000;
 const END_HOLD_MS = 1000;
 
-export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, autoPlay = false, children }) {
+export function StoryPreviewMedia({ story, className, mediaClassName, fallbackImage, autoPlay = false, priority = false, children }) {
   // Video media is intentionally reserved for the large Discover hero.
   // Cards and other compact previews always remain lightweight poster images.
   const hasPreview = autoPlay && storyHasPreview(story);
@@ -306,8 +307,10 @@ export function StoryPreviewMedia({ story, className, mediaClassName, fallbackIm
   return (
     <div ref={containerRef} className={`${className} story-preview-media${hasPreview ? ' has-story-preview' : ''}${ready ? ' is-video-ready' : ''}${hoverPending ? ' is-hover-pending' : ''}${active && ready ? ' is-preview-active' : ''}`}
       onPointerEnter={activate} onPointerMove={updatePreviewLook} onPointerLeave={deactivate}>
+      <div className="story-image-placeholder" aria-hidden="true" />
       {!ready && (
-        <div className={`${mediaClassName} story-preview-poster`} style={{ backgroundImage: `url("${story.coverImage || fallbackImage}")` }} />
+        <LazyImage key={`${story.coverImage}|${fallbackImage}|${priority}`} src={story.coverImage} fallback={fallbackImage}
+          className={`${mediaClassName} story-preview-poster`} priority={priority} />
       )}
       {hasPreview && (
         <>

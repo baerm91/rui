@@ -442,7 +442,10 @@ export async function initializePlatformStore() {
   }
 }
 
-export const platformReady = typeof window !== 'undefined'
+let platformInitialized = false;
+export const isPlatformInitialized = () => platformInitialized;
+
+export const platformReady = (typeof window !== 'undefined'
   ? initializePlatformStore().catch((error) => {
     reportDatabaseError(error);
     if (window.location.pathname === '/dashboard' || readOAuthCallbackError()) {
@@ -452,7 +455,7 @@ export const platformReady = typeof window !== 'undefined'
     if (!usersCache.length) usersCache = safeParse(USERS_KEY, []);
     if (!storiesCache.length) storiesCache = seededStories(safeParse(STORIES_KEY, []));
   })
-  : Promise.resolve();
+  : Promise.resolve()).then(() => { platformInitialized = true; });
 
 export function ensureSeedStories() {
   storiesCache = seededStories(storiesCache);
