@@ -67,6 +67,14 @@ export function resolveFreeMovementSpeed({ targetDistance = 0, cameraFov = 45, i
   return walkingSpeed * fovMultiplier * (isEditor ? 2.5 : 1) * (sprinting ? 4 : 1);
 }
 
+export function applyFreeNavigationFocus({ camera, target, pivot }) {
+  if (!camera?.position || !camera?.lookAt || !target?.set || !isFiniteVector(pivot)) return false;
+  target.set(pivot.x, pivot.y, pivot.z);
+  camera.lookAt(target);
+  camera.updateMatrixWorld(true);
+  return true;
+}
+
 export function applyFreeOrbitRotation({
   camera,
   target,

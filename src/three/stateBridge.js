@@ -488,10 +488,11 @@ export function setupStateBridge() {
       stationCamera.cameraPos.y,
       stationCamera.cameraPos.z
     );
+    const orbitTarget = window.appState.projectOrbitTarget;
     const cameraTarget = new THREE.Vector3(
-      stationCamera.cameraTarget.x,
-      stationCamera.cameraTarget.y,
-      stationCamera.cameraTarget.z
+      Number.isFinite(orbitTarget?.x) ? orbitTarget.x : stationCamera.cameraTarget.x,
+      Number.isFinite(orbitTarget?.y) ? orbitTarget.y : stationCamera.cameraTarget.y,
+      Number.isFinite(orbitTarget?.z) ? orbitTarget.z : stationCamera.cameraTarget.z
     );
 
     ctx.freeNavigationZoomTargetDistance = null;

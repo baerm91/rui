@@ -24,6 +24,7 @@ import { animate } from './src/three/renderLoop.js';
 import { disposeExperience } from './src/three/disposeExperience.js';
 import { resolveStationCamera } from './src/three/stationCamera.js';
 import {
+  applyFreeNavigationFocus,
   applyFreeOrbitRotation,
   applyFreeViewPan,
   createFreeNavigationActivationState,
@@ -207,6 +208,10 @@ document.addEventListener('mouseup', (event) => {
 });
 
 const freeOrbitDrag = { active: false, mode: null, x: 0, y: 0 };
+const freeFocusPointer = new THREE.Vector2();
+const freeFocusPlane = new THREE.Plane();
+const freeFocusPlaneNormal = new THREE.Vector3();
+const freeFocusPoint = new THREE.Vector3();
 const revealTouchGesture = {
   activePointers: new Set(),
   pointerId: null,
@@ -233,6 +238,47 @@ function centerCompactReveal() {
   ctx.revealUniforms.uMouseNDC.value.set(0, 0);
   ctx.hasMouseMoved = true;
   ctx.isMouseOutside = false;
+}
+
+function pickFreeNavigationFocus(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  freeFocusPointer.set(
+    ((clientX - rect.left) / rect.width) * 2 - 1,
+    -((clientY - rect.top) / rect.height) * 2 + 1
+  );
+  camera.updateMatrixWorld(true);
+  ctx.raycaster.setFromCamera(freeFocusPointer, camera);
+  const visibleModels = [ctx.localModel, ctx.ruinModel, ctx.reconModel].filter((model) => model?.visible);
+  const surfaceHit = visibleModels.length
+    ? ctx.raycaster.intersectObjects(visibleModels, true).find((hit) => hit.object?.visible)
+    : null;
+  if (surfaceHit?.point) return surfaceHit.point.clone();
+
+  camera.getWorldDirection(freeFocusPlaneNormal).normalize();
+  freeFocusPlane.setFromNormalAndCoplanarPoint(freeFocusPlaneNormal, controls.target);
+  return ctx.raycaster.ray.intersectPlane(freeFocusPlane, freeFocusPoint)
+    ? freeFocusPoint.clone()
+    : null;
+}
+
+function focusFreeNavigationAt(point) {
+  if (!point || !isFreeNavigationActive()) return false;
+  if (!applyFreeNavigationFocus({ camera, target: controls.target, pivot: point })) return false;
+  ctx.freeNavigationZoomTargetDistance = null;
+  ctx.targetCameraPos.copy(camera.position);
+  ctx.targetCameraTarget.copy(controls.target);
+  const station = window.appState.stations?.[window.appState.currentStationIndex];
+  window.appState.setFreeNavigationMaxDistance?.(
+    station?.freeNavigationMaxDistance,
+    camera.position.distanceTo(controls.target)
+  );
+  window.appState.update({
+    hasUserManipulatedCamera: true,
+    freeNavigationOrbitPivot: { x: point.x, y: point.y, z: point.z }
+  });
+  controls.update();
+  return true;
 }
 
 canvas.addEventListener('pointerdown', (event) => {
@@ -324,6 +370,13 @@ const endFreeOrbitDrag = (event) => {
 
 canvas.addEventListener('pointerup', endFreeOrbitDrag);
 canvas.addEventListener('pointercancel', endFreeOrbitDrag);
+
+canvas.addEventListener('dblclick', (event) => {
+  if (event.button !== 0 || !isFreeNavigationActive()) return;
+  const focus = pickFreeNavigationFocus(event.clientX, event.clientY);
+  if (!focusFreeNavigationAt(focus)) return;
+  event.preventDefault();
+});
 
 canvas.addEventListener('wheel', () => {
   pauseAutoRotate();
@@ -573,8 +626,18 @@ function activateFreeNavigation() {
     window.appState.projectOrbitTarget
   );
   if (!activationState) return;
+  const pivot = activationState.freeNavigationOrbitPivot;
+  applyFreeNavigationFocus({ camera, target: controls.target, pivot });
+  ctx.freeNavigationZoomTargetDistance = null;
+  ctx.targetCameraPos.copy(camera.position);
+  ctx.targetCameraTarget.copy(controls.target);
   window.appState.update(activationState);
   syncScrollControlsForStation(station);
+  window.appState.setFreeNavigationMaxDistance?.(
+    station.freeNavigationMaxDistance,
+    camera.position.distanceTo(controls.target)
+  );
+  controls.update();
 }
 
 function exitFreeNavigation() {

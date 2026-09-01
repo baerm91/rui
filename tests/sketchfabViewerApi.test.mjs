@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getSketchfabPinchZoomDelta, isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
+import { getSketchfabPinchZoomDelta, isSketchfabFocusDoubleClick, isSketchfabModelHit, normalizeSketchfabCamera, objectToVector, orbitSketchfabCamera, panSketchfabCamera, positionKey, shouldSketchfabCapturePointer, vectorToObject, zoomSketchfabCamera } from '../src/utils/sketchfabViewerApi.js';
 
 test('converts Sketchfab vectors to RIU coordinate objects and back', () => {
   assert.deepEqual(vectorToObject([1.25, -2, 3]), { x: 1.25, y: -2, z: 3 });
@@ -60,4 +60,11 @@ test('recognizes only confirmed Sketchfab geometry hits', () => {
   assert.equal(isSketchfabModelHit({ position3D: [0, 1, 2] }), true);
   assert.equal(isSketchfabModelHit({ position2D: [12, 24] }), false);
   assert.equal(isSketchfabModelHit(null), false);
+});
+
+test('two nearby Sketchfab surface clicks form a focus double-click', () => {
+  const previous = { time: 1000, position2D: [120, 180] };
+  assert.equal(isSketchfabFocusDoubleClick(previous, { position2D: [128, 190], position3D: [1, 2, 3] }, 1420), true);
+  assert.equal(isSketchfabFocusDoubleClick(previous, { position2D: [220, 280], position3D: [1, 2, 3] }, 1420), false);
+  assert.equal(isSketchfabFocusDoubleClick(previous, { position2D: [128, 190], position3D: [1, 2, 3] }, 1600), false);
 });

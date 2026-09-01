@@ -112,6 +112,16 @@ export function isSketchfabModelHit(event) {
   return Number.isInteger(event?.instanceID) || (Array.isArray(event?.position3D) && event.position3D.length >= 3);
 }
 
+export function isSketchfabFocusDoubleClick(previousClick, event, now = Date.now()) {
+  if (!previousClick || !Array.isArray(event?.position3D) || event.position3D.length < 3) return false;
+  if (!Number.isFinite(now) || now - previousClick.time < 0 || now - previousClick.time > 550) return false;
+  if (!Array.isArray(previousClick.position2D) || !Array.isArray(event.position2D)) return true;
+  return Math.hypot(
+    Number(event.position2D[0]) - Number(previousClick.position2D[0]),
+    Number(event.position2D[1]) - Number(previousClick.position2D[1])
+  ) <= 32;
+}
+
 export function getSketchfabScreenshot(api, width, height) {
   return new Promise((resolve, reject) => api.getScreenShot(width, height, 'image/png', (error, result) => {
     if (error) reject(error);

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {
+  applyFreeNavigationFocus,
   applyFreeOrbitRotation,
   applyFreeViewPan,
   createFreeNavigationActivationState,
@@ -43,6 +44,20 @@ test('activation selects the project pivot without mutating the camera view', ()
   });
   assert.deepEqual(cameraPosition, beforePosition);
   assert.deepEqual(cameraTarget, beforeTarget);
+});
+
+test('free navigation points the camera and controls at the selected project pivot', () => {
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
+  camera.position.set(8, 7, -3);
+  const target = new THREE.Vector3(1, 4, 2);
+  const pivot = { x: -2, y: 5, z: 6 };
+
+  assert.equal(applyFreeNavigationFocus({ camera, target, pivot }), true);
+  assert.deepEqual(target, new THREE.Vector3(-2, 5, 6));
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+  const expectedDirection = target.clone().sub(camera.position).normalize();
+  assert.ok(direction.distanceTo(expectedDirection) < 1e-10);
 });
 
 test('free-navigation state is recognized so OrbitControls cannot reorient it per frame', () => {

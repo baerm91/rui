@@ -2530,7 +2530,7 @@ body.annotation-placement-mode #scene-canvas {
     touch-action: manipulation;
   }
 
-  .station-title-only-button[aria-expanded='true'] svg {
+  .station-title-only-button[aria-expanded='false'] svg {
     transform: rotate(180deg);
   }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getSketchfabModelUid } from '../utils/modelSource.js';
-import { getSketchfabCamera, getSketchfabScreenshot, loadSketchfabViewerApi, positionKey, setSketchfabCamera, shouldSketchfabCapturePointer, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
+import { getSketchfabCamera, getSketchfabScreenshot, isSketchfabFocusDoubleClick, loadSketchfabViewerApi, positionKey, setSketchfabCamera, shouldSketchfabCapturePointer, SKETCHFAB_VIEWER_VERSION, vectorToObject } from '../utils/sketchfabViewerApi.js';
 import { interpolateStationCameras } from '../utils/cameraInterpolation.js';
 
 export function SketchfabViewer({
@@ -20,6 +20,8 @@ export function SketchfabViewer({
   const placementCallbackRef = useRef(null);
   const scrollCameraFrameRef = useRef(0);
   const pendingScrollCameraRef = useRef(null);
+  const focusedFreeNavigationStationRef = useRef(null);
+  const lastModelClickRef = useRef(null);
   const [status, setStatus] = useState('loading');
   const [isPlacing, setIsPlacing] = useState(false);
   const uid = getSketchfabModelUid(modelUrl);
@@ -61,9 +63,10 @@ export function SketchfabViewer({
             replace('snapToStation', (station) => station?.cameraExplicitlySet ? setSketchfabCamera(api, station, 0) : Promise.resolve());
             replace('resetFreeView', () => {
               const station = bridge.stations?.[bridge.currentStationIndex];
-              return station?.cameraExplicitlySet
-                ? setSketchfabCamera(api, station, 0.85)
-                : Promise.resolve();
+              const orbitTarget = bridge.projectOrbitTarget;
+              if (!station?.cameraExplicitlySet || !orbitTarget) return Promise.resolve();
+              bridge.update?.({ freeNavigationOrbitPivot: { ...orbitTarget } });
+              return setSketchfabCamera(api, { cameraPos: station.cameraPos, cameraTarget: orbitTarget }, 0.85);
             });
             replace('focusAnnotation', async (annotation, { orbitAroundAnnotation = false } = {}) => {
               if (!annotation?.position) return;
@@ -89,12 +92,25 @@ export function SketchfabViewer({
             replace('captureThumbnail', () => getSketchfabScreenshot(api, Math.max(960, window.innerWidth), Math.max(540, window.innerHeight)));
             api.addEventListener('click', async (event) => {
               const callback = placementCallbackRef.current;
-              if (!callback || !event?.position3D) return;
-              placementCallbackRef.current = null;
-              setIsPlacing(false);
-              document.body.classList.remove('annotation-placement-mode');
+              if (callback && event?.position3D) {
+                placementCallbackRef.current = null;
+                lastModelClickRef.current = null;
+                setIsPlacing(false);
+                document.body.classList.remove('annotation-placement-mode');
+                const camera = await getSketchfabCamera(api);
+                callback({ ...camera, position: vectorToObject(event.position3D) });
+                return;
+              }
+              if (!bridge.freeNavigationActive || !event?.position3D) return;
+              const now = Date.now();
+              const isDoubleClick = isSketchfabFocusDoubleClick(lastModelClickRef.current, event, now);
+              lastModelClickRef.current = { time: now, position2D: event.position2D };
+              if (!isDoubleClick) return;
+              lastModelClickRef.current = null;
               const camera = await getSketchfabCamera(api);
-              callback({ ...camera, position: vectorToObject(event.position3D) });
+              const focus = vectorToObject(event.position3D);
+              bridge.update?.({ hasUserManipulatedCamera: true, freeNavigationOrbitPivot: focus });
+              await setSketchfabCamera(api, { cameraPos: camera.cameraPos, cameraTarget: focus }, 0.45);
             }, { pick: 'slow' });
 
             const updateProjections = () => {
@@ -147,6 +163,26 @@ export function SketchfabViewer({
       bridge.update?.({ externalViewerStatus: null });
     };
   }, [uid]);
+
+  useEffect(() => {
+    if (!freeNavigationIsActive) {
+      focusedFreeNavigationStationRef.current = null;
+      lastModelClickRef.current = null;
+      return undefined;
+    }
+    if (status !== 'ready' || !apiRef.current || focusedFreeNavigationStationRef.current === activeStation?.id) return undefined;
+    const orbitTarget = window.appState?.freeNavigationOrbitPivot ?? window.appState?.projectOrbitTarget;
+    if (!orbitTarget) return undefined;
+    focusedFreeNavigationStationRef.current = activeStation?.id;
+    let cancelled = false;
+    getSketchfabCamera(apiRef.current)
+      .then((camera) => cancelled ? null : setSketchfabCamera(apiRef.current, {
+        cameraPos: camera.cameraPos,
+        cameraTarget: orbitTarget
+      }, 0.45))
+      .catch((error) => console.error('Sketchfab free navigation focus:', error));
+    return () => { cancelled = true; };
+  }, [activeStation?.id, freeNavigationIsActive, status]);
 
   useEffect(() => {
     if (stationMode === 'scroll' || status !== 'ready' || !activeStation?.cameraExplicitlySet || !apiRef.current) return;
