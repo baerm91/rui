@@ -49,6 +49,24 @@ export function normalizeInterpretationComparison(value) {
   };
 }
 
+export function resolveRevealInterpretationComparison(station) {
+  const normalized = normalizeInterpretationComparison(station?.interpretationComparison);
+  if (normalized || station?.viewMode !== 'reveal') return normalized;
+  return {
+    title: 'Ruine und Rekonstruktion',
+    states: [
+      { id: 'evidence', label: 'Ruine', viewMode: 'ruin', description: '' },
+      { id: 'reconstruction', label: 'Rekonstruktion', viewMode: 'recon', description: '' }
+    ],
+    explanation: null,
+    experimentalMode: {
+      label: 'Interaktiv vergleichen',
+      viewMode: 'reveal',
+      description: ''
+    }
+  };
+}
+
 export function getInterpretationState(comparison, viewMode) {
   const normalized = normalizeInterpretationComparison(comparison);
   if (!normalized) return null;

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeftRight, Check, Eye, EyeOff, MousePointer2, RotateCcw, ScanSearch } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
 import { VisitorTopControls } from './VisitorTopControls.jsx';
-import { getInterpretationState, getNextInterpretationState, normalizeInterpretationComparison } from '../utils/interpretationComparison.js';
+import { getInterpretationState, getNextInterpretationState, resolveRevealInterpretationComparison } from '../utils/interpretationComparison.js';
 import { isCompactExperienceViewport } from '../utils/revealInteraction.js';
 
 export function VisitorControls({
@@ -30,7 +30,15 @@ export function VisitorControls({
     && !!activeStation?.id
     && !!appState.freeNavigationActive
     && appState.freeNavigationStationId === activeStation.id;
-  const interpretationComparison = normalizeInterpretationComparison(activeStation?.interpretationComparison);
+  const liveActiveStation = appState.stations?.[appState.currentStationIndex];
+  const comparisonStation = liveActiveStation?.id === activeStation?.id
+    ? {
+        ...activeStation,
+        ...liveActiveStation,
+        interpretationComparison: liveActiveStation.interpretationComparison || activeStation?.interpretationComparison
+      }
+    : activeStation;
+  const interpretationComparison = resolveRevealInterpretationComparison(comparisonStation);
   const comparisonStates = interpretationComparison?.states || [];
   const activeComparisonState = getInterpretationState(interpretationComparison, appState.viewMode);
   const nextComparisonState = getNextInterpretationState(interpretationComparison, appState.viewMode);

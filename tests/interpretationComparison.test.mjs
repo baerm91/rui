@@ -7,6 +7,7 @@ import {
   getInterpretationState,
   getNextInterpretationState,
   normalizeInterpretationComparison,
+  resolveRevealInterpretationComparison,
   resolveInterpretationStation
 } from '../src/utils/interpretationComparison.js';
 
@@ -28,6 +29,16 @@ test('Heidentor comparison survives normalization and storage', () => {
 test('comparison schema rejects incomplete and unsupported view states', () => {
   assert.equal(normalizeInterpretationComparison(null), null);
   assert.equal(normalizeInterpretationComparison({ states: [{ viewMode: 'portal' }] }), null);
+});
+
+test('legacy reveal stations receive a mobile ruin and reconstruction switch', () => {
+  const comparison = resolveRevealInterpretationComparison({ id: 'legacy-reveal', viewMode: 'reveal' });
+
+  assert.deepEqual(comparison.states.map(({ label, viewMode }) => ({ label, viewMode })), [
+    { label: 'Ruine', viewMode: 'ruin' },
+    { label: 'Rekonstruktion', viewMode: 'recon' }
+  ]);
+  assert.equal(resolveRevealInterpretationComparison({ viewMode: 'ruin' }), null);
 });
 
 test('active interpretation state follows the rendered Three.js view mode', () => {
