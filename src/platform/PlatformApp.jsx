@@ -22,7 +22,7 @@ import { filterOwnedStories } from './dashboardStories.js';
 import { formatAnalyticsDuration } from './storyAnalytics.js';
 import { getPublishedDiscoverStories, getRandomFeaturedDiscoverStoryId } from './discoverStories.js';
 import { createAutomaticStoryPreviewImage } from './storyPreviewImage.js';
-import { isRoomStory } from '../utils/storyExperience.js';
+import { filterStoriesByExperienceKind, getStoryExperienceLabel, isRoomStory } from '../utils/storyExperience.js';
 import { getStoryCounts } from './storyCounts.js';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import { registerRiuWebMcpTools } from './webMcp.js';
@@ -83,7 +83,7 @@ function StoryFacts({ story, className }) {
   const counts = getStoryCounts(story);
   const facts = [
     { icon: Box, count: counts.models, singular: 'Modell', plural: 'Modelle' },
-    { icon: Layers3, count: counts.stations, singular: 'Station', plural: 'Stationen' },
+    { icon: Layers3, count: counts.stations, singular: 'Thema', plural: 'Themen' },
     { icon: MapPin, count: counts.annotations, singular: 'Annotation', plural: 'Annotationen' }
   ];
   const label = facts.map((fact) => `${fact.count} ${fact.count === 1 ? fact.singular : fact.plural}`).join(', ');
@@ -375,7 +375,7 @@ function DiscoverCard({ story, selected = false, onSelect }) {
       aria-label={`${story.name} als Hauptstory anzeigen`}
     >
       <StoryPreviewMedia story={story} className="discover-card-image" mediaClassName="discover-card-media" fallbackImage="/star_sky_bg.png">
-        <span className="discover-card-category">{getStoryCategories(story)[0]}</span>
+        <span className="discover-card-category">{getStoryExperienceLabel(story)} · {getStoryCategories(story)[0]}</span>
         <StoryFacts story={story} className="discover-card-facts" />
       </StoryPreviewMedia>
     </article>
@@ -389,6 +389,7 @@ function Discover({ session, loading = false }) {
   const [query, setQuery] = useState('');
   const [language, setLanguage] = useState('');
   const [category, setCategory] = useState('');
+  const [experienceKind, setExperienceKind] = useState('');
   const [sort, setSort] = useState('latest');
   const [selectedStoryId, setSelectedStoryId] = useState(() => getRandomFeaturedDiscoverStoryId(
     authorId ? published.filter((story) => story.ownerId === authorId) : published
@@ -396,7 +397,7 @@ function Discover({ session, loading = false }) {
   const availableLanguages = [...new Set(published.map(getStoryLanguage))];
   const availableCategories = [...new Set(published.flatMap(getStoryCategories))].sort();
   const normalizedQuery = query.trim().toLocaleLowerCase('de');
-  const filtered = published
+  const filtered = filterStoriesByExperienceKind(published, experienceKind)
     .filter((story) => !authorId || story.ownerId === authorId)
     .filter((story) => !language || getStoryLanguage(story) === language)
     .filter((story) => !category || getStoryCategories(story).includes(category))
@@ -437,7 +438,7 @@ function Discover({ session, loading = false }) {
             >
             </StoryPreviewMedia>
             <div className="discover-hero-copy">
-              <span>Ausgewählte Story · {getStoryCategories(selectedStory)[0]}</span>
+              <span>Ausgewählte {getStoryExperienceLabel(selectedStory)} · {getStoryCategories(selectedStory)[0]}</span>
               <h1>{selectedStory.name}</h1>
               <p>{selectedStory.description || 'Eine interaktive, räumliche Erzählung.'}</p>
               <StoryFacts story={selectedStory} className="discover-hero-facts" />
@@ -458,6 +459,7 @@ function Discover({ session, loading = false }) {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories, Autor:innen oder Epochen suchen …" />
           </label>
           <div className="discover-filters">
+            <label><span>Format</span><select value={experienceKind} onChange={(event) => setExperienceKind(event.target.value)}><option value="">Alle</option><option value="tour">Führungen</option><option value="exhibition">Ausstellungen</option></select><ChevronDown size={14} /></label>
             <label><span>Kategorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Alle</option>{availableCategories.map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={14} /></label>
             <label><span>Sprache</span><select value={language} onChange={(event) => setLanguage(event.target.value)}><option value="">Alle</option>{availableLanguages.map((code) => <option value={code} key={code}>{STORY_LANGUAGES[code] || code}</option>)}</select><ChevronDown size={14} /></label>
             <label><ListFilter size={15} /><select aria-label="Sortierung" value={sort} onChange={(event) => setSort(event.target.value)}><option value="latest">Neueste</option><option value="oldest">Älteste</option></select><ChevronDown size={14} /></label>
@@ -475,7 +477,7 @@ function Discover({ session, loading = false }) {
             {filtered.map((story) => <DiscoverCard key={story.id} story={story} selected={story.id === selectedStory?.id} onSelect={selectStory} />)}
           </div>
         ) : (
-          <div className="empty-state"><Search size={34} /><h2>Keine Stories gefunden</h2><p>Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.</p><button className="riu-button" onClick={() => { if (authorId) go('/discover'); else { setQuery(''); setLanguage(''); setCategory(''); } }}>Filter zurücksetzen</button></div>
+          <div className="empty-state"><Search size={34} /><h2>Keine Stories gefunden</h2><p>Versuchen Sie eine andere Suche oder setzen Sie die Filter zurück.</p><button className="riu-button" onClick={() => { if (authorId) go('/discover'); else { setQuery(''); setLanguage(''); setCategory(''); setExperienceKind(''); } }}>Filter zurücksetzen</button></div>
         )}
       </main>
       <footer><Brand /><span>Interaktive 3D-Stories, sorgfältig erzählt.</span><span>Prototyp · 2026</span></footer>
@@ -778,7 +780,7 @@ function StoryCard({ story, featured = false }) {
     <article className={`story-card ${featured ? 'is-featured' : ''}`} onClick={() => go(`/stories/${story.slug || story.id}`)}>
       <StoryPreviewMedia story={story} className="story-card-image" mediaClassName="story-card-media" fallbackImage="/star_sky_bg.png">
         <div className="story-card-shade" />
-        <span className="story-stations"><Layers3 size={13} /> {story.stations?.length || 0} Stationen</span>
+        <span className="story-stations"><Layers3 size={13} /> {story.stations?.length || 0} {(story.stations?.length || 0) === 1 ? 'Thema' : 'Themen'}</span>
         <button className="story-open" aria-label={`${story.name} öffnen`}><ArrowRight /></button>
       </StoryPreviewMedia>
       <div className="story-card-copy">
@@ -932,13 +934,15 @@ function Dashboard({ session, onSession }) {
   };
   const [stories, setStories] = useState(readDashboardStories);
   const [query, setQuery] = useState('');
+  const [experienceKind, setExperienceKind] = useState('');
   const [metadataStory, setMetadataStory] = useState(null);
   const [collaborationStory, setCollaborationStory] = useState(null);
   const [versionStory, setVersionStory] = useState(null);
   const [viewCounts, setViewCounts] = useState({});
   const [releaseBusyId, setReleaseBusyId] = useState('');
   const [releaseError, setReleaseError] = useState('');
-  const filtered = stories.filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = filterStoriesByExperienceKind(stories, experienceKind)
+    .filter((story) => story.name.toLowerCase().includes(query.toLowerCase()));
   const getViewCount = (story) => viewCounts[story.id]?.views ?? (Number(story.stats?.views) || 0);
   const totalViews = stories.reduce((sum, story) => sum + getViewCount(story), 0);
   const publishedCount = stories.filter((story) => story.status === 'published').length;
@@ -1001,7 +1005,7 @@ function Dashboard({ session, onSession }) {
         <div className="dashboard-heading"><div><span className="riu-overline">Persönlicher Bereich</span><h1>Meine Stories</h1><p>Guten Tag, {session.name}. Was möchten Sie heute erzählen?</p></div>{canCreateStories(session) && <button className="riu-button" onClick={() => go('/stories/new')}><Plus size={17} /> Neue Story</button>}</div>
         <div className="dashboard-content">
           <div className="dashboard-main">
-            <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label></div>
+            <div className="dashboard-tools"><label><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories durchsuchen" /></label><label className="dashboard-format-filter"><Layers3 size={15} /><span>Format</span><select value={experienceKind} onChange={(event) => setExperienceKind(event.target.value)}><option value="">Alle</option><option value="tour">Führungen</option><option value="exhibition">Ausstellungen</option></select><ChevronDown size={14} /></label></div>
             {releaseError && <div className="form-error">{releaseError}</div>}
             {filtered.length ? <div className="dashboard-grid">{filtered.map((story) => (
           <article className="dashboard-card" key={story.id}>
@@ -1009,7 +1013,7 @@ function Dashboard({ session, onSession }) {
               <StoryPreviewMedia story={story} className="dashboard-cover" mediaClassName="dashboard-cover-media" fallbackImage="/roman_blueprint_bg.png"><span className={`status-pill ${story.status}`}>{story.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}</span></StoryPreviewMedia>
             </a>
             <div className="dashboard-card-copy">
-              <span>Geändert {formatDate(story.updatedAt)} · Eigene Story</span>
+              <span>{getStoryExperienceLabel(story)} · Geändert {formatDate(story.updatedAt)}</span>
               <h3>{story.name}</h3>
               <p>{story.description || 'Noch keine Beschreibung.'}</p>
               <div className="dashboard-card-dates">

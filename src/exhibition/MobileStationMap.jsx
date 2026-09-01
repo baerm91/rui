@@ -139,15 +139,15 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
   };
 
   return <section className="station-map" aria-labelledby="station-map-title">
-    <header className="station-map-heading"><div><span>{title || 'Ihre Ausstellung'}</span><h1 id="station-map-title" ref={headingRef} tabIndex={-1}>Raumübersicht</h1></div><small>{stations.length} {stations.length === 1 ? 'Station' : 'Stationen'}</small></header>
-    <div ref={viewportRef} className="station-map-viewport" role="region" aria-label="Stationskarte: zuerst Station vergrößern, danach über einem Bild weiterzoomen. Plus und Minus ändern die Detailstufe." tabIndex={0} onKeyDown={handleKey}>
+    <header className="station-map-heading"><div><span>{title || 'Ihre Ausstellung'}</span><h1 id="station-map-title" ref={headingRef} tabIndex={-1}>Themenüberblick</h1></div><small>{stations.length} {stations.length === 1 ? 'Thema' : 'Themen'}</small></header>
+    <div ref={viewportRef} className="station-map-viewport" role="region" aria-label="Themenüberblick: zuerst ein Thema vergrößern, danach über einem Bild weiterzoomen. Plus und Minus ändern die Detailstufe." tabIndex={0} onKeyDown={handleKey}>
       <div className="station-map-content">
         {tiles.map((tile) => {
           const station = stations[tile.index];
           return <button key={station.id} type="button" data-station-index={tile.index} className={`station-map-stone stone-${tile.index % 6} ${tile.index === detail.focusIndex && detail.progress > 0 ? 'is-focused' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%`, '--station-caption-height': `${STATION_MAP_CAPTION_HEIGHT}px` }}
-            title={`Station ${tile.index + 1}: ${station.title}`}
-            aria-label={`Station ${tile.index + 1}: ${station.title} öffnen`}
+            title={`Thema ${tile.index + 1}: ${station.title}`}
+            aria-label={`Thema ${tile.index + 1}: ${station.title} öffnen`}
             onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) { candidateRef.current = tile.index; candidateImageRef.current = 0; zoomTargetRef.current.reset(); } }}
             onClick={(event) => { if (event.detail === 0 || gestureRef.current.canOpen()) onOpenStation(tile.index); else event.preventDefault(); }}>
             <span className="station-map-stone-face" data-preview-count={tile.images.length} aria-hidden="true">
@@ -170,9 +170,9 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
       </div>
     </div>
     <div className="station-map-navigation">
-      <div className="station-map-tools" aria-label="Detailsteuerung"><button type="button" disabled={detail.progress === 0} onClick={() => zoomBy(-.2, view.current.focusIndex)} aria-label="Herauszoomen"><Minus size={18} /></button><button type="button" onClick={() => changeDetail(view.current.focusIndex, 0)} aria-label="Alle Stationen anzeigen"><Scan size={17} /><span>Alle Stationen</span></button><button type="button" onClick={() => zoomBy(.2)} aria-label="Heranzoomen"><Plus size={18} /></button></div>
-      <select className="station-map-direct" aria-label="Station direkt öffnen" value="" onChange={(event) => { if (event.target.value !== '') onOpenStation(Number(event.target.value)); }}><option value="">Station direkt öffnen …</option>{stations.map((station, index) => <option key={station.id} value={index}>{String(index + 1).padStart(2, '0')} · {station.title}</option>)}</select>
+      <div className="station-map-tools" aria-label="Detailsteuerung"><button type="button" disabled={detail.progress === 0} onClick={() => zoomBy(-.2, view.current.focusIndex)} aria-label="Herauszoomen"><Minus size={18} /></button><button type="button" onClick={() => changeDetail(view.current.focusIndex, 0)} aria-label="Alle Themen anzeigen"><Scan size={17} /><span>Alle Themen</span></button><button type="button" onClick={() => zoomBy(.2)} aria-label="Heranzoomen"><Plus size={18} /></button></div>
+      <select className="station-map-direct" aria-label="Thema direkt öffnen" value="" onChange={(event) => { if (event.target.value !== '') onOpenStation(Number(event.target.value)); }}><option value="">Thema direkt öffnen …</option>{stations.map((station, index) => <option key={station.id} value={index}>{String(index + 1).padStart(2, '0')} · {station.title}</option>)}</select>
     </div>
-    <p className="station-map-zoom-hint">Station vergrößern · Danach über einem Bild weiterzoomen · Anklicken zum Öffnen</p>
+    <p className="station-map-zoom-hint">Thema vergrößern · Danach über einem Bild weiterzoomen · Anklicken zum Öffnen</p>
   </section>;
 }

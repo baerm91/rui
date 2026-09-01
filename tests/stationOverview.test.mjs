@@ -15,13 +15,13 @@ test('station overview keeps every station accessible and defers thumbnails and 
     const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
     assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
-      assert.ok(html.includes(`Station ${index + 1}: Sammlung ${index + 1} öffnen`));
+      assert.ok(html.includes(`Thema ${index + 1}: Sammlung ${index + 1} öffnen`));
       assert.ok(html.includes(`<span class="station-map-station-name"><span class="station-map-station-number">${String(index + 1).padStart(2, '0')} · </span>Sammlung ${index + 1}</span>`));
     }
     assert.match(html, /Heranzoomen/);
-    assert.match(html, /Alle Stationen anzeigen/);
+    assert.match(html, /Alle Themen anzeigen/);
     assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-/);
-    assert.match(html, /Station direkt öffnen/);
+    assert.match(html, /Thema direkt öffnen/);
     assert.match(html, /loading="lazy"/);
     assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);

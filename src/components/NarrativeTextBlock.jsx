@@ -126,7 +126,7 @@ export function NarrativeTextBlock({
         )}
 
         <div className="station-kicker station-motion-kicker" aria-hidden="true">
-          <span>Station {String(activeIndex + 1).padStart(2, '0')}</span>
+          <span>{isEditorMode ? 'Station' : 'Thema'} {String(activeIndex + 1).padStart(2, '0')}</span>
           <span className="station-kicker-line"></span>
         </div>
 

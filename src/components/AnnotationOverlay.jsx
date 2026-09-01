@@ -400,7 +400,7 @@ export function AnnotationOverlay({ activeStation, annotations: projectAnnotatio
           {!isEditorMode && activeStation?.id && (
             <button type="button" className="annotation-focus-button" onClick={returnToStationView}>
               <RotateCcw size={14} />
-              Zur Stationsansicht
+              Zur Themenansicht
             </button>
           )}
 

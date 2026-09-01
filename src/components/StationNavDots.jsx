@@ -7,7 +7,7 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileNavRef = useRef(null);
   const mobileToggleRef = useRef(null);
-  const activeTitle = stripHighlights(stations[currentStationIndex]?.title) || `Station ${currentStationIndex + 1}`;
+  const activeTitle = stripHighlights(stations[currentStationIndex]?.title) || `Thema ${currentStationIndex + 1}`;
   const goToStation = (index) => {
     setIsMobileMenuOpen(false);
     if (index < 0 || index >= stations.length) return;
@@ -34,7 +34,7 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
       <nav
         ref={mobileNavRef}
         className={`station-mobile-nav ${isMobileMenuOpen ? 'is-open' : ''}`}
-        aria-label="Stationsnavigation"
+        aria-label="Themennavigation"
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
             setIsMobileMenuOpen(false);
@@ -50,7 +50,7 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
           className="station-mobile-step"
           disabled={currentStationIndex <= 0}
           onClick={() => goToStation(currentStationIndex - 1)}
-          aria-label="Vorherige Station"
+          aria-label="Vorheriges Thema"
         >
           <ChevronLeft size={20} aria-hidden="true" />
         </button>
@@ -71,14 +71,14 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
           className="station-mobile-step"
           disabled={currentStationIndex >= stations.length - 1}
           onClick={() => goToStation(currentStationIndex + 1)}
-          aria-label="Nächste Station"
+          aria-label="Nächstes Thema"
         >
           <ChevronRight size={20} aria-hidden="true" />
         </button>
         {isMobileMenuOpen && (
-          <div id="station-mobile-menu" className="station-mobile-menu" aria-label="Alle Stationen">
+          <div id="station-mobile-menu" className="station-mobile-menu" aria-label="Alle Themen">
             {stations.map((station, index) => {
-              const title = stripHighlights(station.title) || `Station ${index + 1}`;
+              const title = stripHighlights(station.title) || `Thema ${index + 1}`;
               return (
                 <button
                   key={`mobile-${station.id}`}
@@ -107,14 +107,14 @@ export function StationNavDots({ stations, currentStationIndex, onScrollToStatio
       >
         {stations.map((station, index) => {
           const isActive = currentStationIndex === index;
-          const title = stripHighlights(station.title) || `Station ${index + 1}`;
+          const title = stripHighlights(station.title) || `Thema ${index + 1}`;
           return (
             <button
               key={station.id}
               onClick={() => goToStation(index)}
               className="station-line-item relative z-[1] flex items-center group outline-none"
               title={title}
-              aria-label={`Zu Station ${index + 1}: ${title}`}
+              aria-label={`Zu Thema ${index + 1}: ${title}`}
               aria-current={isActive ? 'step' : undefined}
             >
               <span className="dot-label station-line-label">
