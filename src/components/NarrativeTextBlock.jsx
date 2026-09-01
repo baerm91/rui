@@ -15,6 +15,7 @@ export function NarrativeTextBlock({
   textAnimation = 'cinematic'
 }) {
   const [expandedStationId, setExpandedStationId] = useState(null);
+  const [titleOnlyStationId, setTitleOnlyStationId] = useState(null);
   const compactViewportQuery = '(max-width: 768px), (orientation: landscape) and (max-height: 520px)';
   const [isCompactViewport, setIsCompactViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia(compactViewportQuery).matches
@@ -31,6 +32,7 @@ export function NarrativeTextBlock({
   const isEditorMode = editorModeOverride ?? appState.stationMode === 'editor';
   const mobileDetailsId = `station-details-${activeIndex}`;
   const mobileDetailsExpanded = expandedStationId === activeStation?.id;
+  const mobileTitleOnly = titleOnlyStationId === activeStation?.id;
   const showMobileCollapsible = isCompactViewport && !isEditorMode;
 
   if (!activeStation) return null;
@@ -130,16 +132,35 @@ export function NarrativeTextBlock({
           <span className="station-kicker-line"></span>
         </div>
 
-        <h1 className="station-title station-motion-title font-serif flex flex-col">
-          {(activeStation.title || "").split('\\n').map((line, idx) => (
-            <span key={idx} className="station-title-line block">
-              {parseTextWithHighlights(line)}
-            </span>
-          ))}
-        </h1>
+        <div className="station-title-row">
+          <h1 className="station-title station-motion-title font-serif flex flex-col">
+            {(activeStation.title || "").split('\\n').map((line, idx) => (
+              <span key={idx} className="station-title-line block">
+                {parseTextWithHighlights(line)}
+              </span>
+            ))}
+          </h1>
+          {showMobileCollapsible && (
+            <button
+              type="button"
+              className="station-title-only-button"
+              aria-expanded={!mobileTitleOnly}
+              aria-controls={mobileDetailsId}
+              aria-label={mobileTitleOnly ? 'Textvorschau anzeigen' : 'Nur Überschrift anzeigen'}
+              title={mobileTitleOnly ? 'Textvorschau anzeigen' : 'Nur Überschrift anzeigen'}
+              onClick={() => {
+                setTitleOnlyStationId(mobileTitleOnly ? null : activeStation.id);
+                if (!mobileTitleOnly) setExpandedStationId(null);
+              }}
+            >
+              <ChevronDown size={18} aria-hidden="true" />
+            </button>
+          )}
+        </div>
 
         <div
           id={mobileDetailsId}
+          hidden={showMobileCollapsible && mobileTitleOnly}
           data-wheel-scroll={showMobileCollapsible ? 'station-description' : undefined}
           tabIndex={showMobileCollapsible && mobileDetailsExpanded ? 0 : undefined}
           className={`station-collapsible-content station-motion-body ${mobileDetailsExpanded ? 'is-expanded' : 'is-collapsed'}`}
@@ -192,7 +213,7 @@ export function NarrativeTextBlock({
           )}
         </div>
 
-        {showMobileCollapsible && (activeStation.description || activeStation.subTitle || activeStation.subDescription) && (
+        {showMobileCollapsible && !mobileTitleOnly && (activeStation.description || activeStation.subTitle || activeStation.subDescription) && (
           <button
             type="button"
             className="station-text-more-button"

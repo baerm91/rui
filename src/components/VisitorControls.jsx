@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, Eye, EyeOff, MousePointer2, RotateCcw, ScanSearch } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
 import { VisitorTopControls } from './VisitorTopControls.jsx';
@@ -23,6 +23,8 @@ export function VisitorControls({
   const revealExploreButtonRef = useRef(null);
   const revealDoneButtonRef = useRef(null);
   const wasRevealExploringRef = useRef(false);
+  const noticeTimerRef = useRef(null);
+  const [controlNotice, setControlNotice] = useState('');
   const isActiveStationFreeView = canEnterFreeView
     && !!activeStation?.id
     && !!appState.freeNavigationActive
@@ -39,6 +41,7 @@ export function VisitorControls({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [appState.viewMode, isActiveStationFreeView]);
+  useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
   if (appState.stationMode !== 'scroll') return null;
 
@@ -47,6 +50,27 @@ export function VisitorControls({
     const station = liveState?.stations?.[liveState.currentStationIndex];
     if (!station?.interpretationComparison || station.id !== activeStation?.id) return;
     liveState.setInterpretationViewMode?.(station.id, mode);
+  };
+  const announceControl = (message) => {
+    window.clearTimeout(noticeTimerRef.current);
+    setControlNotice(message);
+    noticeTimerRef.current = window.setTimeout(() => setControlNotice(''), 2200);
+  };
+  const toggleAnnotations = () => {
+    onToggleAnnotations?.();
+    announceControl(annotationsVisible ? 'Annotationen ausgeblendet' : 'Annotationen eingeblendet');
+  };
+  const enterFreeView = () => {
+    onEnterFreeView?.();
+    announceControl('Freie Ansicht aktiviert');
+  };
+  const resetFreeView = () => {
+    window.appState?.resetFreeView?.();
+    announceControl('Freie Ansicht zurückgesetzt');
+  };
+  const exitFreeView = () => {
+    window.appState?.exitFreeNavigation?.();
+    announceControl('Geführte Ansicht aktiviert');
   };
 
   return (
@@ -66,29 +90,32 @@ export function VisitorControls({
               aria-pressed={annotationsVisible}
               aria-label={annotationsVisible ? 'Annotationen ausblenden' : 'Annotationen einblenden'}
               title={annotationsVisible ? 'Annotationen ausblenden' : 'Annotationen einblenden'}
-              onClick={onToggleAnnotations}
+              onClick={toggleAnnotations}
             >
-              {annotationsVisible ? <Eye size={15} /> : <EyeOff size={15} />}
-              <span>{annotationsVisible ? 'Annotationen an' : 'Annotationen aus'}</span>
+              {annotationsVisible ? <Eye size={17} aria-hidden="true" /> : <EyeOff size={17} aria-hidden="true" />}
+              <span className="sr-only">{annotationsVisible ? 'Annotationen ausblenden' : 'Annotationen einblenden'}</span>
             </button>
           )}
           {canEnterFreeView && !isActiveStationFreeView && (
-            <button type="button" className="visitor-view-control" onClick={onEnterFreeView} aria-label="Freie Ansicht öffnen">
-              <MousePointer2 size={15} /> <span>Freie Ansicht</span>
+            <button type="button" className="visitor-view-control" onClick={enterFreeView} aria-label="Freie Ansicht öffnen" title="Freie Ansicht öffnen">
+              <MousePointer2 size={17} aria-hidden="true" /> <span className="sr-only">Freie Ansicht öffnen</span>
             </button>
           )}
           {isActiveStationFreeView && (
             <>
-              <button type="button" className="visitor-view-control" onClick={() => window.appState?.resetFreeView?.()} aria-label="Freie Ansicht zurücksetzen" title="Freie Ansicht zurücksetzen">
-                <RotateCcw size={15} /> <span>Zurücksetzen</span>
+              <button type="button" className="visitor-view-control visitor-view-control-reset" onClick={resetFreeView} aria-label="Freie Ansicht zurücksetzen" title="Freie Ansicht zurücksetzen">
+                <RotateCcw size={17} aria-hidden="true" /> <span className="sr-only">Freie Ansicht zurücksetzen</span>
               </button>
-              <button type="button" className="visitor-view-control is-active" onClick={() => window.appState?.exitFreeNavigation?.()} aria-label="Zur geführten Ansicht zurückkehren">
-                <Check size={15} /> <span>Geführte Ansicht</span>
+              <button type="button" className="visitor-view-control is-active" onClick={exitFreeView} aria-label="Zur geführten Ansicht zurückkehren" title="Zur geführten Ansicht zurückkehren">
+                <Check size={17} aria-hidden="true" /> <span className="sr-only">Zur geführten Ansicht zurückkehren</span>
               </button>
             </>
           )}
         </div>
       )}
+      <div className={`visitor-view-notice ${controlNotice ? 'is-visible' : ''}`} role="status" aria-live="polite">
+        {controlNotice}
+      </div>
 
       {isActiveStationFreeView && appState.viewMode === 'reveal' && (
         <div className="mobile-reveal-explore-guide" role="region" aria-label="Freie Reveal-Erkundung">

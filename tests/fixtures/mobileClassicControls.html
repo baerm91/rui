@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIU · Mobile Story-Steuerung</title>
+</head>
+<body style="margin:0;min-height:100vh;background:linear-gradient(160deg,#283134,#8d8a75 58%,#4e4433);color:#f4f0e8">
+  <div id="react-root"></div>
+  <script type="module">
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import '../../src/fonts.css';
+    import '../../style.css';
+    import { NarrativeTextBlock } from '../../src/components/NarrativeTextBlock.jsx';
+    import { StationNavDots } from '../../src/components/StationNavDots.jsx';
+    import { VisitorControls } from '../../src/components/VisitorControls.jsx';
+
+    const stations = Array.from({ length: 7 }, (_, index) => ({
+      id: `station-${index}`,
+      title: index === 0 ? 'Starhemberg' : `Kapitel ${index + 1}`,
+      description: index === 0
+        ? 'Die Burg Starhemberg entstand um 1160 als Höhenburg und nordöstlichste Festung der Steiermark. Sie war unter dem letzten Babenberger eine bedeutende Residenz.'
+        : 'Beschreibung des Kapitels.',
+      textX: 3,
+      textY: 60,
+      textWidth: 360,
+      highContrastBg: true
+    }));
+
+    function Fixture() {
+      const [annotationsVisible, setAnnotationsVisible] = useState(true);
+      const [freeView, setFreeView] = useState(false);
+      const appState = {
+        stationMode: 'scroll',
+        stations,
+        currentStationIndex: 0,
+        scrollProgress: 0.08,
+        freeNavigationActive: freeView,
+        freeNavigationStationId: freeView ? stations[0].id : null,
+        viewMode: 'default'
+      };
+      window.appState = {
+        ...appState,
+        resetFreeView() {},
+        exitFreeNavigation() { setFreeView(false); }
+      };
+      return React.createElement(React.Fragment, null,
+        React.createElement(VisitorControls, {
+          activeStation: stations[0],
+          appState,
+          annotationsVisible,
+          canEnterFreeView: true,
+          hasAnnotations: true,
+          isMuted: false,
+          onEnterFreeView() { setFreeView(true); },
+          onToggleAnnotations() { setAnnotationsVisible((visible) => !visible); },
+          onToggleMute() {},
+          storyTitle: 'Burg Starhemberg'
+        }),
+        React.createElement(StationNavDots, { stations, currentStationIndex: 0, onScrollToStation() {} }),
+        React.createElement(NarrativeTextBlock, {
+          activeStation: stations[0],
+          activeIndex: 0,
+          appState,
+          isIntroActive: false,
+          introPhase: 'text',
+          onDragStart() {},
+          isEditorMode: false,
+          textAnimation: 'none'
+        })
+      );
+    }
+
+    createRoot(document.getElementById('react-root')).render(React.createElement(Fixture));
+  </script>
+</body>
+</html>
