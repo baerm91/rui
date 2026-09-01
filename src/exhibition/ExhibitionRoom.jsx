@@ -1164,7 +1164,7 @@ function SpatialThumbnail({ item, selected, multiSelected, editorMode, onSelect,
   const top = Math.max(10, Math.min(90, 52 - position[1] * 20));
   const width = 118 * item.thumbnailTransform.scale;
   const thumbnailUrl = resolveSpatialThumbnailUrl(item);
-  return <button ref={buttonRef} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
+  return <button ref={buttonRef} data-spatial-item-id={item.id} className={`spatial-thumbnail ${selected ? 'is-selected' : ''} ${multiSelected ? 'is-multi-selected' : ''} ${editorMode ? 'is-editable' : ''} ${dragging ? 'is-dragging' : ''}`} style={{ left: `${left}%`, top: `${top}%`, width }} onClick={(event) => { if (suppressClickRef.current) event.preventDefault(); else onSelect(event); }} onPointerDown={startDrag}><span>{thumbnailUrl ? <img src={thumbnailUrl} alt="" draggable="false" /> : <Box size={24} />}</span><b>{item.title}</b><small>{item.sourceType === 'sketchfab' ? 'Sketchfab' : '3D-Modell'}</small></button>;
 }
 
 export default function ExhibitionRoom({ story, initialMode = 'visitor', backHref = '/', onSaveStory }) {
@@ -1188,6 +1188,8 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const [selectedSurface, setSelectedSurface] = useState('wall');
   const captureCameraRef = useRef(null);
   const storyCopyRef = useRef(null);
+  const spatialThumbnailsRef = useRef(null);
+  const pendingMobileThumbnailFocusRef = useRef(null);
   const [storyCopyHasMore, setStoryCopyHasMore] = useState(false);
   const overviewMapViewRef = useRef(null);
   const viewTransitionRef = useRef({ active: false, changeTimer: null, midTimer: null, endTimer: null });
@@ -1324,7 +1326,9 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     else applyChange();
   };
   const enterItem = (index, itemId) => {
-    setMobileModelOpen(true);
+    const enterMobileStationFirst = mobileVisitor && overviewMode;
+    setMobileModelOpen(!enterMobileStationFirst);
+    pendingMobileThumbnailFocusRef.current = enterMobileStationFirst ? itemId : null;
     const applyChange = () => {
       setStationIndex(index);
       setOverviewMode(false);
@@ -1368,6 +1372,24 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     setMobileModelOpen(false);
     resetModelInteraction();
   };
+
+  useEffect(() => {
+    const itemId = pendingMobileThumbnailFocusRef.current;
+    if (!mobileVisitor || overviewMode || viewTransitioning || mobileModelOpen || !itemId || openItemId !== itemId) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const thumbnail = [...(spatialThumbnailsRef.current?.querySelectorAll('[data-spatial-item-id]') || [])]
+        .find((element) => element.dataset.spatialItemId === itemId);
+      if (!thumbnail) return;
+      thumbnail.focus({ preventScroll: true });
+      thumbnail.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+      pendingMobileThumbnailFocusRef.current = null;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mobileModelOpen, mobileVisitor, openItemId, overviewMode, stationIndex, viewTransitioning]);
   useEffect(() => {
     const copy = storyCopyRef.current;
     if (!copy || mode !== 'visitor' || overviewMode) {
@@ -1477,7 +1499,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       ? <VisitorTopControls authorId={story.ownerId} authorName={story.authorName} editorNames={visitorEditorNames} isMuted={station.spatial.audio.autoplay ? audioMuted : !audioPlaying} onToggleMute={() => { if (station.spatial.audio.autoplay) setAudioMuted((value) => !value); else setAudioPlaying((value) => !value); }} showMute={!overviewMode && Boolean(station.spatial.audio.url)} />
       : <a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a>}<div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
     {overviewMode && <StationOverview title={story.name} stations={stations} stationIndex={stationIndex} onOpenStation={enterStation} onOpenItem={enterItem} mapViewRef={overviewMapViewRef} />}
-    {!overviewMode && <section className="spatial-station-content"><div ref={storyCopyRef} className="spatial-story-copy"><span>{mode === 'visitor' ? 'Thema' : 'Station'} {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div>{mode === 'visitor' && storyCopyHasMore && <button type="button" className="spatial-copy-scroll-hint" aria-label="Beschreibung weiterlesen" onClick={() => storyCopyRef.current?.scrollBy({ top: storyCopyRef.current.clientHeight * .65, behavior: 'smooth' })}><ChevronDown size={19} aria-hidden="true" /></button>}<div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setMobileModelOpen(true); resetModelInteraction(); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Dieses Thema wird noch kuratiert.'}</span></div>}</div>
+    {!overviewMode && <section className="spatial-station-content"><div ref={storyCopyRef} className="spatial-story-copy"><span>{mode === 'visitor' ? 'Thema' : 'Station'} {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div>{mode === 'visitor' && storyCopyHasMore && <button type="button" className="spatial-copy-scroll-hint" aria-label="Beschreibung weiterlesen" onClick={() => storyCopyRef.current?.scrollBy({ top: storyCopyRef.current.clientHeight * .65, behavior: 'smooth' })}><ChevronDown size={19} aria-hidden="true" /></button>}<div ref={spatialThumbnailsRef} className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setMobileModelOpen(true); resetModelInteraction(); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Dieses Thema wird noch kuratiert.'}</span></div>}</div>
       {inlineSelectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={inlineSelectedItem} onInteractionChange={changeModelInteraction} />}
       {inlineSelectedItem?.sourceType === 'gltf' && modelStatus.state !== 'ready' && <div className={`spatial-model-status is-${modelStatus.state}`} role={modelStatus.state === 'error' ? 'alert' : 'status'} aria-live="polite"><i aria-hidden="true" /><span>{modelStatus.message || '3D-Modell wird vorbereitet'}</span></div>}
       {inlineSelectedItem && <SpatialObjectDetails item={inlineSelectedItem} className="spatial-object-caption" />}

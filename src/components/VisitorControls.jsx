@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Eye, EyeOff, MousePointer2, RotateCcw, ScanSearch } from 'lucide-react';
+import { ArrowLeftRight, Check, Eye, EyeOff, MousePointer2, RotateCcw, ScanSearch } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
 import { VisitorTopControls } from './VisitorTopControls.jsx';
+import { getInterpretationState, getNextInterpretationState, normalizeInterpretationComparison } from '../utils/interpretationComparison.js';
 import { isCompactExperienceViewport } from '../utils/revealInteraction.js';
 
 export function VisitorControls({
@@ -29,10 +30,15 @@ export function VisitorControls({
     && !!activeStation?.id
     && !!appState.freeNavigationActive
     && appState.freeNavigationStationId === activeStation.id;
+  const interpretationComparison = normalizeInterpretationComparison(activeStation?.interpretationComparison);
+  const comparisonStates = interpretationComparison?.states || [];
+  const activeComparisonState = getInterpretationState(interpretationComparison, appState.viewMode);
+  const nextComparisonState = getNextInterpretationState(interpretationComparison, appState.viewMode);
+  const isMobileComparisonFreeView = isActiveStationFreeView && comparisonStates.length > 1;
 
   useEffect(() => {
     if (!isCompactExperienceViewport()) return undefined;
-    const isRevealExploring = isActiveStationFreeView && appState.viewMode === 'reveal';
+    const isRevealExploring = isMobileComparisonFreeView;
     if (isRevealExploring === wasRevealExploringRef.current) return undefined;
     wasRevealExploringRef.current = isRevealExploring;
     const frame = window.requestAnimationFrame(() => {
@@ -40,7 +46,7 @@ export function VisitorControls({
       else revealExploreButtonRef.current?.focus();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [appState.viewMode, isActiveStationFreeView]);
+  }, [appState.viewMode, isMobileComparisonFreeView]);
   useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
   if (appState.stationMode !== 'scroll') return null;
@@ -117,10 +123,23 @@ export function VisitorControls({
         {controlNotice}
       </div>
 
-      {isActiveStationFreeView && appState.viewMode === 'reveal' && (
+      {isMobileComparisonFreeView && (
         <div className="mobile-reveal-explore-guide" role="region" aria-label="Freie Reveal-Erkundung">
           <ScanSearch size={18} aria-hidden="true" />
-          <span><strong>Reveal fixiert</strong> Ein Finger dreht, zwei Finger zoomen.</span>
+          <div className="mobile-reveal-model-switcher">
+            <strong>{activeComparisonState?.label || 'Interaktiver Vergleich'}</strong>
+            <button
+              type="button"
+              className="mobile-reveal-model-switch"
+              aria-label={`${nextComparisonState.label} an der aktuellen Position anzeigen`}
+              onClick={() => {
+                selectInterpretationView(nextComparisonState.viewMode);
+                announceControl(`${nextComparisonState.label} aktiviert`);
+              }}
+            >
+              <ArrowLeftRight size={14} aria-hidden="true" /> {nextComparisonState.label}
+            </button>
+          </div>
           <button
             ref={revealDoneButtonRef}
             type="button"

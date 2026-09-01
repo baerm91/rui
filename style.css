@@ -2256,15 +2256,19 @@ body.annotation-placement-mode #scene-canvas {
     color: #e0bd74;
   }
 
-  .mobile-reveal-explore-guide > span {
+  .mobile-reveal-model-switcher {
+    min-width: 0;
     font-size: 10px;
     line-height: 1.35;
   }
 
-  .mobile-reveal-explore-guide > span strong {
+  .mobile-reveal-model-switcher > strong {
     display: block;
+    overflow: hidden;
     color: #f2d99f;
     font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .mobile-reveal-explore-guide button {
@@ -2280,6 +2284,15 @@ body.annotation-placement-mode #scene-canvas {
     font-size: 10px;
     font-weight: 700;
     touch-action: manipulation;
+  }
+
+  .mobile-reveal-explore-guide .mobile-reveal-model-switch {
+    min-height: 32px;
+    margin-top: 3px;
+    padding: 0 8px;
+    border-color: rgba(224, 194, 132, 0.24);
+    background: rgba(255, 255, 255, 0.04);
+    white-space: nowrap;
   }
 
   .station-dots-nav.station-line-nav {

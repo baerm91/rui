@@ -56,6 +56,13 @@ export function getInterpretationState(comparison, viewMode) {
     || (normalized.experimentalMode?.viewMode === viewMode ? normalized.experimentalMode : null);
 }
 
+export function getNextInterpretationState(comparison, viewMode) {
+  const normalized = normalizeInterpretationComparison(comparison);
+  if (!normalized || normalized.states.length < 2) return null;
+  const activeIndex = normalized.states.findIndex((state) => state.viewMode === viewMode);
+  return normalized.states[(activeIndex + 1 + normalized.states.length) % normalized.states.length];
+}
+
 export function createInterpretationViewOverride(station, viewMode) {
   const comparison = normalizeInterpretationComparison(station?.interpretationComparison);
   if (!station?.id || !getInterpretationState(comparison, viewMode)) return null;

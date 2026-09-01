@@ -29,6 +29,16 @@ test('spatial themes reuse the same visitor button group', async () => {
   assert.match(source, /showMute=\{!overviewMode && Boolean\(station\.spatial\.audio\.url\)\}/);
 });
 
+test('mobile overview thumbnails enter the theme before opening their model', async () => {
+  const source = await readExhibitionSource();
+
+  assert.match(source, /const enterMobileStationFirst = mobileVisitor && overviewMode;/);
+  assert.match(source, /setMobileModelOpen\(!enterMobileStationFirst\);/);
+  assert.match(source, /pendingMobileThumbnailFocusRef\.current = enterMobileStationFirst \? itemId : null;/);
+  assert.match(source, /data-spatial-item-id=\{item\.id\}/);
+  assert.match(source, /thumbnail\.focus\(\{ preventScroll: true \}\);[\s\S]*thumbnail\.scrollIntoView\(/);
+});
+
 test('mobile view controls stay compact and announce their action after activation', async () => {
   const [source, styles] = await Promise.all([readVisitorControlsSource(), readStyles()]);
 
@@ -38,6 +48,15 @@ test('mobile view controls stay compact and announce their action after activati
   assert.match(source, /role="status" aria-live="polite"/);
   assert.match(styles, /\.visitor-view-controls \{[\s\S]*top: max\(\.9rem, env\(safe-area-inset-top\)\) !important;/);
   assert.match(styles, /\.visitor-view-control-reset \{\s*display: none;/);
+});
+
+test('mobile free reveal view exposes an in-place model switch', async () => {
+  const [source, styles] = await Promise.all([readVisitorControlsSource(), readStyles()]);
+
+  assert.match(source, /getNextInterpretationState\(interpretationComparison, appState\.viewMode\)/);
+  assert.match(source, /aria-label=\{`\$\{nextComparisonState\.label\} an der aktuellen Position anzeigen`\}/);
+  assert.match(source, /selectInterpretationView\(nextComparisonState\.viewMode\)/);
+  assert.match(styles, /\.mobile-reveal-explore-guide \.mobile-reveal-model-switch \{/);
 });
 
 test('mobile narrative cards can collapse to the unclipped title only', async () => {

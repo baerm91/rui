@@ -5,6 +5,7 @@ import { normalizeStationConfig, prepareStationsForStorage } from '../src/statio
 import {
   createInterpretationViewOverride,
   getInterpretationState,
+  getNextInterpretationState,
   normalizeInterpretationComparison,
   resolveInterpretationStation
 } from '../src/utils/interpretationComparison.js';
@@ -41,6 +42,9 @@ test('active interpretation state follows the rendered Three.js view mode', () =
   assert.equal(getInterpretationState(comparison, 'ruin').id, 'evidence');
   assert.equal(getInterpretationState(comparison, 'recon').id, 'reconstruction');
   assert.equal(getInterpretationState(comparison, 'reveal').label, 'Vergleich');
+  assert.equal(getNextInterpretationState(comparison, 'reveal').viewMode, 'ruin');
+  assert.equal(getNextInterpretationState(comparison, 'ruin').viewMode, 'recon');
+  assert.equal(getNextInterpretationState(comparison, 'recon').viewMode, 'ruin');
 });
 
 test('session override resolves an effective station without mutating authored data', () => {
