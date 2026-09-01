@@ -82,7 +82,7 @@ export function getNextInterpretationState(comparison, viewMode) {
 }
 
 export function createInterpretationViewOverride(station, viewMode) {
-  const comparison = normalizeInterpretationComparison(station?.interpretationComparison);
+  const comparison = resolveRevealInterpretationComparison(station);
   if (!station?.id || !getInterpretationState(comparison, viewMode)) return null;
   return { stationId: station.id, viewMode };
 }

@@ -6,6 +6,7 @@ const readSource = () => readFile(new URL('../src/components/VisitorTopControls.
 const readExhibitionSource = () => readFile(new URL('../src/exhibition/ExhibitionRoom.jsx', import.meta.url), 'utf8');
 const readVisitorControlsSource = () => readFile(new URL('../src/components/VisitorControls.jsx', import.meta.url), 'utf8');
 const readNarrativeSource = () => readFile(new URL('../src/components/NarrativeTextBlock.jsx', import.meta.url), 'utf8');
+const readMainSource = () => readFile(new URL('../main.js', import.meta.url), 'utf8');
 const readStyles = () => readFile(new URL('../style.css', import.meta.url), 'utf8');
 
 test('visitor branding and home icon form one Discover link', async () => {
@@ -51,14 +52,15 @@ test('mobile view controls stay compact and announce their action after activati
 });
 
 test('mobile free reveal view exposes an in-place model switch', async () => {
-  const [source, styles] = await Promise.all([readVisitorControlsSource(), readStyles()]);
+  const [source, mainSource, styles] = await Promise.all([readVisitorControlsSource(), readMainSource(), readStyles()]);
 
   assert.match(source, /getNextInterpretationState\(interpretationComparison, appState\.viewMode\)/);
   assert.match(source, /initialMobileModelState = isCompactExperienceViewport\(\) && appState\.viewMode === 'reveal'/);
-  assert.match(source, /selectInterpretationView\(initialMobileModelState\.viewMode\)/);
   assert.match(source, /onExplore=\{enterFreeView\}/);
   assert.match(source, /aria-label=\{`\$\{nextComparisonState\.label\} an der aktuellen Position anzeigen`\}/);
   assert.match(source, /selectInterpretationView\(nextComparisonState\.viewMode\)/);
+  assert.match(mainSource, /initialMobileModelState = isCompactExperienceViewport\(\) && station\.viewMode === 'reveal'/);
+  assert.match(mainSource, /window\.appState\.setInterpretationViewMode\?\.\(station\.id, initialMobileModelState\.viewMode\)/);
   assert.match(styles, /\.mobile-reveal-explore-guide \.mobile-reveal-model-switch \{/);
 });
 

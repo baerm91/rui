@@ -43,7 +43,11 @@ import {
   shouldRequireExplicitRevealExploration,
   shouldTrackRevealPointer
 } from './src/utils/revealInteraction.js';
-import { resolveInterpretationStation } from './src/utils/interpretationComparison.js';
+import {
+  getNextInterpretationState,
+  resolveInterpretationStation,
+  resolveRevealInterpretationComparison
+} from './src/utils/interpretationComparison.js';
 
 // ─── DOM & CANVAS ─────────────────────────────────────
 const canvas = document.getElementById('scene-canvas');
@@ -618,6 +622,9 @@ function activateFreeNavigation() {
   const stationIndex = window.appState.currentStationIndex;
   const station = window.appState.stations?.[stationIndex];
   if (!station?.id) return;
+  const initialMobileModelState = isCompactExperienceViewport() && station.viewMode === 'reveal'
+    ? getNextInterpretationState(resolveRevealInterpretationComparison(station), 'reveal')
+    : null;
 
   // Activation only releases the scroll camera and selects the independent
   // orbit pivot. Camera position and look direction remain untouched.
@@ -633,6 +640,9 @@ function activateFreeNavigation() {
   ctx.targetCameraTarget.copy(controls.target);
   window.appState.update(activationState);
   syncScrollControlsForStation(station);
+  if (initialMobileModelState) {
+    window.appState.setInterpretationViewMode?.(station.id, initialMobileModelState.viewMode);
+  }
   window.appState.setFreeNavigationMaxDistance?.(
     station.freeNavigationMaxDistance,
     camera.position.distanceTo(controls.target)

@@ -62,8 +62,8 @@ export function VisitorControls({
   const selectInterpretationView = (mode) => {
     const liveState = window.appState;
     const station = liveState?.stations?.[liveState.currentStationIndex];
-    if (!station?.interpretationComparison || station.id !== activeStation?.id) return;
-    liveState.setInterpretationViewMode?.(station.id, mode);
+    if (!station?.id || station.id !== activeStation?.id) return false;
+    return liveState.setInterpretationViewMode?.(station.id, mode) === true;
   };
   const announceControl = (message) => {
     window.clearTimeout(noticeTimerRef.current);
@@ -80,7 +80,6 @@ export function VisitorControls({
       : null;
     onEnterFreeView?.();
     if (initialMobileModelState) {
-      selectInterpretationView(initialMobileModelState.viewMode);
       announceControl(`Freie Ansicht: ${initialMobileModelState.label}`);
     } else {
       announceControl('Freie Ansicht aktiviert');
