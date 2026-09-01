@@ -54,6 +54,9 @@ test('mobile free reveal view exposes an in-place model switch', async () => {
   const [source, styles] = await Promise.all([readVisitorControlsSource(), readStyles()]);
 
   assert.match(source, /getNextInterpretationState\(interpretationComparison, appState\.viewMode\)/);
+  assert.match(source, /initialMobileModelState = isCompactExperienceViewport\(\) && appState\.viewMode === 'reveal'/);
+  assert.match(source, /selectInterpretationView\(initialMobileModelState\.viewMode\)/);
+  assert.match(source, /onExplore=\{enterFreeView\}/);
   assert.match(source, /aria-label=\{`\$\{nextComparisonState\.label\} an der aktuellen Position anzeigen`\}/);
   assert.match(source, /selectInterpretationView\(nextComparisonState\.viewMode\)/);
   assert.match(styles, /\.mobile-reveal-explore-guide \.mobile-reveal-model-switch \{/);

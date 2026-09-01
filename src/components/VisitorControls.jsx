@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeftRight, Check, Eye, EyeOff, MousePointer2, RotateCcw, ScanSearch } from 'lucide-react';
+import { ArrowLeftRight, Check, Eye, EyeOff, MousePointer2, RotateCcw } from 'lucide-react';
 import { InterpretationComparison } from './InterpretationComparison.jsx';
 import { VisitorTopControls } from './VisitorTopControls.jsx';
 import { getInterpretationState, getNextInterpretationState, resolveRevealInterpretationComparison } from '../utils/interpretationComparison.js';
@@ -75,8 +75,16 @@ export function VisitorControls({
     announceControl(annotationsVisible ? 'Annotationen ausgeblendet' : 'Annotationen eingeblendet');
   };
   const enterFreeView = () => {
+    const initialMobileModelState = isCompactExperienceViewport() && appState.viewMode === 'reveal'
+      ? getNextInterpretationState(interpretationComparison, 'reveal')
+      : null;
     onEnterFreeView?.();
-    announceControl('Freie Ansicht aktiviert');
+    if (initialMobileModelState) {
+      selectInterpretationView(initialMobileModelState.viewMode);
+      announceControl(`Freie Ansicht: ${initialMobileModelState.label}`);
+    } else {
+      announceControl('Freie Ansicht aktiviert');
+    }
   };
   const resetFreeView = () => {
     window.appState?.resetFreeView?.();
@@ -132,10 +140,10 @@ export function VisitorControls({
       </div>
 
       {isMobileComparisonFreeView && (
-        <div className="mobile-reveal-explore-guide" role="region" aria-label="Freie Reveal-Erkundung">
-          <ScanSearch size={18} aria-hidden="true" />
+        <div className="mobile-reveal-explore-guide" role="region" aria-label="Modellansicht wechseln">
+          <ArrowLeftRight size={18} aria-hidden="true" />
           <div className="mobile-reveal-model-switcher">
-            <strong>{activeComparisonState?.label || 'Interaktiver Vergleich'}</strong>
+            <strong>{activeComparisonState?.viewMode === 'reveal' ? 'Modellansicht' : activeComparisonState?.label}</strong>
             <button
               type="button"
               className="mobile-reveal-model-switch"
@@ -165,7 +173,7 @@ export function VisitorControls({
           comparison={activeStation.interpretationComparison}
           exploreButtonRef={revealExploreButtonRef}
           viewMode={appState.viewMode}
-          onExplore={onEnterFreeView}
+          onExplore={enterFreeView}
           onViewModeChange={selectInterpretationView}
         />
       )}
