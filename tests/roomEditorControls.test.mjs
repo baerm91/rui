@@ -25,6 +25,18 @@ test('visitor room renderer yields the GPU while Sketchfab renders the active mo
   assert.match(roomSource, /if \(!sketchfabOverlayActive \|\| runtimeRef\.current\?\.cameraTransitionFrame \|\| roomNeedsRenderRef\.current\)/);
 });
 
+test('mobile room descriptions expose a progressive scroll affordance', async () => {
+  const [roomSource, cssSource] = await Promise.all([
+    readSource('../src/exhibition/ExhibitionRoom.jsx'),
+    readSource('../src/exhibition/exhibitionRoom.css')
+  ]);
+  assert.match(roomSource, /storyCopyHasMore/);
+  assert.match(roomSource, /aria-label="Beschreibung weiterlesen"/);
+  assert.match(roomSource, /scrollTop \+ copy\.clientHeight < copy\.scrollHeight/);
+  assert.match(cssSource, /\.spatial-copy-scroll-hint/);
+  assert.match(cssSource, /scrollbar-width: thin/);
+});
+
 test('room demo keeps the editor return control mounted', async () => {
   const roomSource = await readSource('../src/exhibition/ExhibitionRoom.jsx');
 

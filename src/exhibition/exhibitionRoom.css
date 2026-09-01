@@ -183,17 +183,70 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 .mode-visitor .exhibition-back,
 .mode-visitor .station-stepper,
 .mode-visitor .exhibition-footer-actions {
-  min-height: 34px;
-  padding: 0 13px;
-  border: 1px solid rgba(255, 255, 255, .12);
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 999px;
-  background: rgba(235, 232, 223, .72);
-  box-shadow: 0 4px 16px rgba(38, 34, 28, .14);
-  backdrop-filter: blur(12px);
+  background: rgba(9, 9, 11, .62);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .38);
+  color: #d4d4d8;
+  backdrop-filter: blur(16px);
+  transition: border-color .2s ease, background .2s ease, color .2s ease, transform .2s ease;
 }
 
 .mode-visitor .exhibition-back {
   width: max-content;
+  cursor: pointer;
+}
+
+.mode-visitor .exhibition-back:hover,
+.mode-visitor .exhibition-back:focus-visible,
+.mode-visitor .station-stepper:focus-within,
+.mode-visitor .exhibition-footer-actions:hover,
+.mode-visitor .exhibition-footer-actions:focus-within {
+  border-color: rgba(201, 169, 110, .55);
+  color: #fde7b0;
+}
+
+.mode-visitor .exhibition-back:active,
+.mode-visitor .walk-hint:active,
+.mode-visitor .station-stepper button:active:not(:disabled) {
+  transform: scale(.97);
+}
+
+.mode-visitor .station-stepper button {
+  border-color: rgba(255, 255, 255, .13);
+  color: #d4d4d8;
+  cursor: pointer;
+}
+
+.mode-visitor .station-stepper button:hover:not(:disabled),
+.mode-visitor .station-stepper button:focus-visible {
+  border-color: rgba(201, 169, 110, .55);
+  color: #fde7b0;
+}
+
+.mode-visitor .station-stepper button:disabled {
+  opacity: .32;
+  cursor: default;
+}
+
+.mode-visitor .station-stepper span,
+.mode-visitor .station-stepper b,
+.mode-visitor .walk-hint {
+  color: inherit;
+}
+
+.mode-visitor .walk-hint {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.mode-visitor .exhibition-footer-actions:has(.walk-hint.is-active) {
+  border-color: rgba(201, 169, 110, .5);
+  background: rgba(95, 65, 30, .76);
+  color: #ffedbd;
 }
 
 @media (max-width: 720px) {
@@ -427,6 +480,8 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
   width: min(34vw, 500px);
   padding: 28px;
 }
+
+.spatial-copy-scroll-hint { display: none; }
 
 .mode-visitor .spatial-story-copy > span {
   font-size: var(--riu-type-label, .6875rem);
@@ -820,4 +875,47 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 
   .mode-visitor.thumbnail-layout-carousel .spatial-thumbnail small { display: none; }
   .mode-visitor.thumbnail-layout-carousel .spatial-object-caption { bottom: 186px; }
+}
+
+@media (max-width: 720px) {
+  .mode-visitor .spatial-story-copy {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(142,67,29,.62) rgba(255,255,255,.18);
+  }
+
+  .mode-visitor .spatial-story-copy::-webkit-scrollbar { width: 5px; }
+  .mode-visitor .spatial-story-copy::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(142,67,29,.62); }
+  .mode-visitor .spatial-story-copy::-webkit-scrollbar-track { background: rgba(255,255,255,.18); }
+
+  .mode-visitor .spatial-copy-scroll-hint {
+    position: absolute;
+    z-index: 16;
+    top: calc(78px + 52% - 18px);
+    left: calc(16px + min(36vw, 160px));
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.72);
+    border-radius: 50%;
+    background: rgba(142,67,29,.9);
+    color: #fff;
+    box-shadow: 0 7px 18px rgba(55,39,27,.28);
+    transform: translate(-50%,-50%);
+    cursor: pointer;
+    pointer-events: auto;
+    animation: spatial-copy-scroll-pulse 1.8s ease-in-out infinite;
+  }
+
+  .mode-visitor .spatial-copy-scroll-hint:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+}
+
+@keyframes spatial-copy-scroll-pulse {
+  0%, 100% { transform: translate(-50%,-50%); }
+  50% { transform: translate(-50%,calc(-50% + 5px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-visitor .spatial-copy-scroll-hint { animation: none; }
 }

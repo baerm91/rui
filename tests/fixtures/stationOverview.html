@@ -23,7 +23,10 @@
       title: SPATIAL_DEMO_STORY.name,
       stations: SPATIAL_DEMO_STORY.stations,
       stationIndex: 0,
-      onOpenStation(index) { document.querySelector('output').textContent = `Thema ${index + 1} geöffnet`; }
+      onOpenStation(index) { document.querySelector('output').textContent = `Thema ${index + 1} geöffnet`; },
+      onOpenItem(index, itemId) {
+        document.querySelector('output').textContent = `Objekt ${itemId} in Thema ${index + 1} geöffnet`;
+      }
     }));
   </script>
 </body>

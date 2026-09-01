@@ -14,7 +14,6 @@
 .is-overview .exhibition-progress { background: #484234ed; color: #f3eddf; border-color: #e5d5b52e; }
 .is-overview .exhibition-progress span:first-child { color: #e3c18d; }
 .is-overview .station-stepper { visibility: hidden; }
-.is-overview .exhibition-back, .is-overview .walk-hint { background: #ede5d5; color: #4d4436; border-color: #92816966; }
 .is-overview .exhibition-footer-actions .walk-hint { display: flex; background: transparent; white-space: nowrap; }
 .exhibition-back[type="button"] { font-family: inherit; cursor: pointer; justify-self: start; }
 .is-view-transitioning .spatial-view-wash,

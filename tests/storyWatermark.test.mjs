@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveStoryWatermarkOpacity } from '../src/utils/storyWatermark.js';
+import { resolveStoryWatermarkFitSize, resolveStoryWatermarkOpacity } from '../src/utils/storyWatermark.js';
 
 test('story watermark fades during departure from the first station', () => {
   assert.equal(resolveStoryWatermarkOpacity({ scrollProgress: 0, stationCount: 5 }), 1);
@@ -12,4 +12,13 @@ test('story watermark fades during departure from the first station', () => {
 test('editor watermark is restricted to the first station', () => {
   assert.equal(resolveStoryWatermarkOpacity({ isEditor: true, activeIndex: 0 }), 1);
   assert.equal(resolveStoryWatermarkOpacity({ isEditor: true, activeIndex: 1 }), 0);
+});
+
+test('long story titles receive a smaller viewport-fit size', () => {
+  const shortTitleSize = Number.parseFloat(resolveStoryWatermarkFitSize('RIU'));
+  const longTitleSize = Number.parseFloat(resolveStoryWatermarkFitSize('BURG STARHEMBERG'));
+
+  assert.ok(longTitleSize < shortTitleSize);
+  assert.equal(resolveStoryWatermarkFitSize('BURG STARHEMBERG'), '8.3333vw');
+  assert.equal(resolveStoryWatermarkFitSize(''), '13.4vw');
 });

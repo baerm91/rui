@@ -5,7 +5,13 @@ import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import { createStationMapGesture, createStationMapZoomTarget, createStationMapLayout, createStationPreviewLayout, advanceStationMapZoom, STATION_MAP_CAPTION_HEIGHT } from '../utils/stationMapLayout.js';
 import './mobileStationMap.css';
 
-export function StationMap({ title, stations, stationIndex, onOpenStation, viewRef }) {
+export const resolveStationMapOpenItemId = (target, images = []) => {
+  const imageElement = target?.closest?.('[data-image-index]');
+  const imageIndex = Number(imageElement?.dataset?.imageIndex);
+  return Number.isInteger(imageIndex) ? images[imageIndex]?.key || null : null;
+};
+
+export function StationMap({ title, stations, stationIndex, onOpenStation, onOpenItem, viewRef }) {
   const viewportRef = useRef(null);
   const headingRef = useRef(null);
   const localViewRef = useRef(null);
@@ -149,7 +155,15 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, viewR
             title={`Thema ${tile.index + 1}: ${station.title}`}
             aria-label={`Thema ${tile.index + 1}: ${station.title} öffnen`}
             onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) { candidateRef.current = tile.index; candidateImageRef.current = 0; zoomTargetRef.current.reset(); } }}
-            onClick={(event) => { if (event.detail === 0 || gestureRef.current.canOpen()) onOpenStation(tile.index); else event.preventDefault(); }}>
+            onClick={(event) => {
+              if (event.detail !== 0 && !gestureRef.current.canOpen()) {
+                event.preventDefault();
+                return;
+              }
+              const itemId = resolveStationMapOpenItemId(event.target, stationImages[tile.index]);
+              if (itemId && onOpenItem) onOpenItem(tile.index, itemId);
+              else onOpenStation(tile.index);
+            }}>
             <span className="station-map-stone-face" data-preview-count={tile.images.length} aria-hidden="true">
               <span className="station-map-images">
               {!tile.images.length && <Box size={28} />}

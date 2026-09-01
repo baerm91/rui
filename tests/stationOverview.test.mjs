@@ -8,6 +8,7 @@ test('station overview keeps every station accessible and defers thumbnails and 
   const compiler = await createServer({ configFile: false, logLevel: 'silent', appType: 'custom', server: { middlewareMode: true, hmr: false, watch: null } });
   try {
     const { StationOverview } = await compiler.ssrLoadModule('/src/exhibition/StationOverview.jsx');
+    const { resolveStationMapOpenItemId } = await compiler.ssrLoadModule('/src/exhibition/MobileStationMap.jsx');
     const stations = [0, 1, 3, 6, 12].map((count, index) => ({
       id: `station-${index}`, title: `Sammlung ${index + 1}`,
       items: Array.from({ length: count }, (_, itemIndex) => ({ id: `item-${itemIndex}`, title: `Objekt ${itemIndex + 1}`, thumbnailUrl: `/thumb-${index}-${itemIndex}.jpg` }))
@@ -42,6 +43,10 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((html.match(/class="station-map-images"/g) || []).length, 5);
     assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
+    assert.equal(resolveStationMapOpenItemId({ closest: () => ({ dataset: { imageIndex: '2' } }) }, [
+      { key: 'object-1' }, { key: 'object-2' }, { key: 'object-3' }
+    ]), 'object-3');
+    assert.equal(resolveStationMapOpenItemId({ closest: () => null }, [{ key: 'object-1' }]), null);
   } finally {
     await compiler.close();
   }

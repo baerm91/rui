@@ -14,3 +14,9 @@ export function resolveStoryWatermarkOpacity({
 
   return 1 - easedFade;
 }
+
+export function resolveStoryWatermarkFitSize(watermark = '') {
+  const characterCount = Math.max(1, String(watermark).trim().length);
+  const viewportSize = Math.min(13.4, 80 / characterCount / 0.6);
+  return `${Number(viewportSize.toFixed(4))}vw`;
+}

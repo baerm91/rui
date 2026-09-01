@@ -1482,10 +1482,11 @@ body.annotation-placement-mode #scene-canvas {
 
 .hero-watermark-title {
   display: block;
-  width: 100vw;
+  box-sizing: border-box;
+  width: 100%;
   padding-left: 4.8vw;
   font-family: var(--font-monument) !important;
-  font-size: clamp(5.6rem, 13.4vw, 14.2rem);
+  font-size: clamp(20px, min(13.4vw, var(--watermark-fit-size, 13.4vw)), 14.2rem);
   font-weight: 600;
   letter-spacing: 0.035em;
   text-align: left;
@@ -1495,6 +1496,7 @@ body.annotation-placement-mode #scene-canvas {
 }
 
 .story-watermark-layer {
+  overflow: hidden;
   transition: opacity 180ms linear, visibility 180ms linear;
 }
 
@@ -1512,7 +1514,9 @@ body.annotation-placement-mode #scene-canvas {
 }
 
 .station-title-line {
+  max-width: 100%;
   min-height: 0.92em;
+  overflow-wrap: anywhere;
 }
 
 .station-title .gold-text-gradient {
@@ -2429,7 +2433,7 @@ body.annotation-placement-mode #scene-canvas {
   .hero-watermark-title {
     padding-left: 0 !important;
     text-align: center !important;
-    font-size: clamp(2rem, 11vw, 3.6rem) !important;
+    font-size: clamp(20px, var(--watermark-fit-size, 11vw), 3.6rem) !important;
     letter-spacing: 0.06em !important;
     transform: none !important;
   }

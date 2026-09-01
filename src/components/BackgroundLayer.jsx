@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { resolveStoryWatermarkFitSize } from '../utils/storyWatermark.js';
 
 export function BackgroundLayer({ stations, activeIndex, watermarkOpacity = 0, useIntroWatermarkFade, watermark }) {
   const bgRoot = document.getElementById('bg-root');
@@ -29,16 +30,17 @@ export function BackgroundLayer({ stations, activeIndex, watermarkOpacity = 0, u
 
       {/* Giant background typography with the active project name */}
       <div 
-        className={`story-watermark-layer fixed inset-x-0 w-full top-[13%] sm:top-[10%] md:top-[8%] text-center pointer-events-none select-none z-[2] overflow-visible ${
+        className={`story-watermark-layer fixed inset-x-0 w-full top-[13%] sm:top-[10%] md:top-[8%] text-center pointer-events-none select-none z-[2] overflow-hidden ${
           useIntroWatermarkFade ? 'intro-title-fade-in' : ''
         }`}
         style={{
           opacity: watermarkOpacity,
-          visibility: watermarkOpacity > 0.001 ? 'visible' : 'hidden'
+          visibility: watermarkOpacity > 0.001 ? 'visible' : 'hidden',
+          '--watermark-fit-size': resolveStoryWatermarkFitSize(watermark)
         }}
         aria-hidden={watermarkOpacity <= 0.001}
       >
-        <span className="hero-watermark-title font-serif watermark-text-gradient uppercase leading-none block select-none whitespace-nowrap overflow-visible">
+        <span className="hero-watermark-title font-serif watermark-text-gradient uppercase leading-none block select-none whitespace-nowrap">
           {watermark}
         </span>
       </div>

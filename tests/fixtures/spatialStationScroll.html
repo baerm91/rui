@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIU · Mobile Themenbeschreibung</title>
+</head>
+<body>
+  <div id="react-root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import '../../src/fonts.css';
+    import '../../src/exhibition/exhibitionRoom.css';
+    import ExhibitionRoom from '../../src/exhibition/ExhibitionRoom.jsx';
+    import { SPATIAL_DEMO_STORY } from '../../src/exhibition/spatialDemo.js';
+
+    const longIntroduction = Array(5).fill('Die römische Welt war voller Bilder. Götter, Fabelwesen, Tiere und menschliche Gesichter begegneten den Menschen auf Monumenten, Gefäßen, Schmuckstücken und Gegenständen des täglichen Lebens.').join(' ');
+    const story = {
+      ...SPATIAL_DEMO_STORY,
+      stations: SPATIAL_DEMO_STORY.stations.map((station, index) => index === 0 ? { ...station, introduction: longIntroduction } : station)
+    };
+    createRoot(document.getElementById('react-root')).render(React.createElement(ExhibitionRoom, { story, initialMode: 'visitor' }));
+  </script>
+</body>
+</html>
