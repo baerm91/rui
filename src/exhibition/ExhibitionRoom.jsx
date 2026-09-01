@@ -19,6 +19,7 @@ import { createSpatialMeshMaterial, disposeSpatialMaterial } from './spatialMate
 import './exhibitionRoom.css';
 import { StationOverview } from './StationOverview.jsx';
 import { MobileModelDialog, useMobileModelView } from './MobileModelDialog.jsx';
+import { SpatialObjectDetails } from './SpatialObjectDetails.jsx';
 
 const disposeObject = (root) => root?.traverse((object) => {
   object.geometry?.dispose?.();
@@ -1404,20 +1405,23 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   }, [mode, stationIndex]);
   useEffect(() => {
     const missing = stations.flatMap((entry, entryIndex) => entry.items
-      .filter((item) => item.sourceType === 'sketchfab' && !resolveSpatialThumbnailUrl(item))
+      .filter((item) => item.sourceType === 'sketchfab' && (
+        !resolveSpatialThumbnailUrl(item) || !item.attribution || !item.attributionUrl
+        || !item.license || !item.licenseUrl || !item.sourceUrl
+      ))
       .map((item) => ({ entryIndex, itemId: item.id, modelUrl: item.modelUrl })));
     if (!missing.length) return undefined;
     let cancelled = false;
     Promise.all(missing.map(async (item) => {
       try {
         const metadata = await resolveModelSourceMetadata(item.modelUrl);
-        return { ...item, providerThumbnailUrl: String(metadata.providerThumbnailUrl || '').trim() };
+        return { ...item, metadata };
       } catch {
-        return { ...item, providerThumbnailUrl: '' };
+        return { ...item, metadata: {} };
       }
     })).then((resolved) => {
       if (cancelled) return;
-      const available = resolved.filter((item) => item.providerThumbnailUrl);
+      const available = resolved.filter((item) => Object.values(item.metadata).some(Boolean));
       if (!available.length) return;
       setStations((current) => {
         let changed = false;
@@ -1426,9 +1430,21 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
           if (!replacements.length) return entry;
           const items = entry.items.map((item) => {
             const replacement = replacements.find((candidate) => candidate.itemId === item.id && candidate.modelUrl === item.modelUrl);
-            if (!replacement || resolveSpatialThumbnailUrl(item)) return item;
+            if (!replacement) return item;
+            const metadata = replacement.metadata;
+            const updated = {
+              ...item,
+              providerThumbnailUrl: resolveSpatialThumbnailUrl(item) ? item.providerThumbnailUrl : String(metadata.providerThumbnailUrl || '').trim(),
+              attribution: item.attribution || String(metadata.attribution || '').trim(),
+              attributionUrl: item.attributionUrl || String(metadata.attributionUrl || '').trim(),
+              license: item.license || String(metadata.license || '').trim(),
+              licenseUrl: item.licenseUrl || String(metadata.licenseUrl || '').trim(),
+              sourceUrl: item.sourceUrl || String(metadata.sourceUrl || '').trim()
+            };
+            if (['providerThumbnailUrl', 'attribution', 'attributionUrl', 'license', 'licenseUrl', 'sourceUrl']
+              .every((field) => updated[field] === item[field])) return item;
             changed = true;
-            return { ...item, providerThumbnailUrl: replacement.providerThumbnailUrl };
+            return updated;
           });
           return items === entry.items ? entry : { ...entry, items };
         });
@@ -1464,7 +1480,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     {!overviewMode && <section className="spatial-station-content"><div ref={storyCopyRef} className="spatial-story-copy"><span>{mode === 'visitor' ? 'Thema' : 'Station'} {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div>{mode === 'visitor' && storyCopyHasMore && <button type="button" className="spatial-copy-scroll-hint" aria-label="Beschreibung weiterlesen" onClick={() => storyCopyRef.current?.scrollBy({ top: storyCopyRef.current.clientHeight * .65, behavior: 'smooth' })}><ChevronDown size={19} aria-hidden="true" /></button>}<div className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setMobileModelOpen(true); resetModelInteraction(); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Dieses Thema wird noch kuratiert.'}</span></div>}</div>
       {inlineSelectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={inlineSelectedItem} onInteractionChange={changeModelInteraction} />}
       {inlineSelectedItem?.sourceType === 'gltf' && modelStatus.state !== 'ready' && <div className={`spatial-model-status is-${modelStatus.state}`} role={modelStatus.state === 'error' ? 'alert' : 'status'} aria-live="polite"><i aria-hidden="true" /><span>{modelStatus.message || '3D-Modell wird vorbereitet'}</span></div>}
-      {inlineSelectedItem && <div className="spatial-object-caption"><b>{inlineSelectedItem.title}</b><span>{inlineSelectedItem.description}</span>{(inlineSelectedItem.attribution || inlineSelectedItem.license) && <small>{[inlineSelectedItem.attribution, inlineSelectedItem.license].filter(Boolean).join(' · ')}</small>}</div>}
+      {inlineSelectedItem && <SpatialObjectDetails item={inlineSelectedItem} className="spatial-object-caption" />}
       {inlineSelectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>}
     {mobileModelItem && <MobileModelDialog key={mobileModelItem.id} item={mobileModelItem} onClose={closeMobileModel}>{mobileModelItem.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={mobileModelItem} />}</MobileModelDialog>}

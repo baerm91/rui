@@ -187,6 +187,17 @@ html[data-riu-theme="light"] .discover-page{--discover-bg:#faf9f4;--discover-sur
 .discover-search input{color:var(--discover-ink);font-size:12px}.discover-search input::placeholder{color:var(--discover-muted);opacity:.7}
 .discover-filters label{height:40px;padding:0 14px;border-color:color-mix(in srgb,var(--discover-line) 72%,transparent);color:var(--discover-muted)}
 .discover-filters select{color:var(--discover-muted)}.discover-filters select option{background:var(--discover-surface);color:var(--discover-ink)}
+.discover-filters .discover-facet{position:relative;isolation:isolate;min-width:164px;gap:7px;overflow:hidden;cursor:pointer;transition:border-color .2s ease,background-color .2s ease,color .2s ease,box-shadow .2s ease,transform .15s ease}
+.discover-filters .discover-facet:last-child{min-width:132px}
+.discover-facet>*:not(select){pointer-events:none}
+.discover-facet-label{color:var(--discover-primary);font-size:8px!important;font-weight:700!important;letter-spacing:.12em!important}
+.discover-facet-value{min-width:0;overflow:hidden;color:var(--discover-ink);font-size:9px;font-weight:650;letter-spacing:.08em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.discover-facet-chevron{flex:0 0 auto;margin-left:auto;transition:transform .2s ease,color .2s ease}
+.discover-filters .discover-facet select{position:absolute;z-index:2;inset:0;width:100%;height:100%;padding:0;border:0;opacity:0;cursor:pointer}
+.discover-filters .discover-facet:hover{border-color:color-mix(in srgb,var(--discover-primary) 58%,transparent);background:color-mix(in srgb,var(--discover-primary) 6%,var(--discover-surface));color:var(--discover-primary)}
+.discover-filters .discover-facet:focus-within{border-color:var(--discover-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--discover-primary) 16%,transparent);color:var(--discover-primary)}
+.discover-filters .discover-facet:focus-within .discover-facet-chevron{transform:translateY(1px);color:var(--discover-primary)}
+.discover-filters .discover-facet:active{transform:scale(.985)}
 .discover-results{padding:12px 2px 28px;color:var(--discover-muted);opacity:.68}
 .discover-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:32px}
 .discover-card{border-radius:5px;outline:2px solid transparent;outline-offset:5px;transition:outline-color .25s ease,transform .45s cubic-bezier(.19,1,.22,1),box-shadow .45s cubic-bezier(.19,1,.22,1)}

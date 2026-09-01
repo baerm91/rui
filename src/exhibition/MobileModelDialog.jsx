@@ -8,6 +8,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { SpatialObjectDetails } from './SpatialObjectDetails.jsx';
 import './mobileModelDialog.css';
 
 export const MOBILE_MODEL_QUERY = '(max-width: 720px), (pointer: coarse) and (max-width: 1100px)';
@@ -139,6 +140,7 @@ export function MobileModelDialog({ item, onClose, children }) {
   return createPortal(<dialog ref={dialogRef} className="mobile-model-dialog" aria-labelledby="mobile-model-title" onCancel={(event) => { event.preventDefault(); onClose(); }}>
     <header className="mobile-model-header"><h2 id="mobile-model-title">{item.title}</h2><button type="button" onClick={onClose} aria-label="Modell schließen" autoFocus><X size={25} aria-hidden="true" /></button></header>
     <div className="mobile-model-stage">{item.sourceType === 'gltf' ? <MobileGltfModel key={item.id} item={item} /> : children}</div>
+    <SpatialObjectDetails item={item} className="mobile-model-details" showTitle={false} />
     <p className="mobile-model-hint">Mit einem Finger drehen · Mit zwei Fingern zoomen</p>
   </dialog>, document.body);
 }

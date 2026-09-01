@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIU · Objektrechte</title>
+</head>
+<body style="margin:0;background:#aa9979;min-height:100vh">
+  <div id="react-root"></div>
+  <script type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import '../../src/fonts.css';
+    import '../../src/exhibition/exhibitionRoom.css';
+    import { SpatialObjectDetails } from '../../src/exhibition/SpatialObjectDetails.jsx';
+    import { MobileModelDialog } from '../../src/exhibition/MobileModelDialog.jsx';
+    import { resolveModelSourceMetadata } from '../../src/utils/modelSourceAdapters.js';
+
+    const modelUrl = 'https://sketchfab.com/models/5c44d10d5e3546b59908a6e5198c2eba';
+    const item = {
+      sourceType: 'sketchfab',
+      modelUrl,
+      description: 'Tierfibel aus Carnuntum.',
+      ...await resolveModelSourceMetadata(modelUrl)
+    };
+    const mobile = new URLSearchParams(location.search).has('mobile');
+    createRoot(document.getElementById('react-root')).render(mobile
+      ? React.createElement(MobileModelDialog, { item, onClose() {} }, React.createElement('div', { style: { width: '100%', height: '100%', background: '#b7aa90' } }))
+      : React.createElement(
+        'main',
+        { className: 'exhibition-shell mode-visitor', style: { position: 'relative', minHeight: '100vh' } },
+        React.createElement(SpatialObjectDetails, { item, className: 'spatial-object-caption' })
+      ));
+  </script>
+</body>
+</html>

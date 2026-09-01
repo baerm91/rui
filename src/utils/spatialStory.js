@@ -53,7 +53,10 @@ export function createSpatialItem(input = {}, index = 0) {
       scale: number(input.modelTransform?.scale, 1, 0.02, 20)
     },
     attribution: String(input.attribution || '').trim(),
-    license: String(input.license || '').trim()
+    attributionUrl: String(input.attributionUrl || '').trim(),
+    license: String(input.license || '').trim(),
+    licenseUrl: String(input.licenseUrl || '').trim(),
+    sourceUrl: String(input.sourceUrl || '').trim()
   };
 }
 

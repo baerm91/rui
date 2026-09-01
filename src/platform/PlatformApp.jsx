@@ -382,6 +382,17 @@ function DiscoverCard({ story, selected = false, onSelect }) {
   );
 }
 
+function DiscoverFacet({ children, icon, label, onChange, value, valueLabel }) {
+  const accessibleLabel = label || 'Sortierung';
+  return <label className="discover-facet">
+    {icon}
+    {label && <span className="discover-facet-label">{label}</span>}
+    <strong className="discover-facet-value" aria-hidden="true">{valueLabel}</strong>
+    <ChevronDown className="discover-facet-chevron" size={14} aria-hidden="true" />
+    <select aria-label={accessibleLabel} value={value} onChange={onChange}>{children}</select>
+  </label>;
+}
+
 function Discover({ session, loading = false }) {
   const published = loading ? [] : getPublishedDiscoverStories(readStories());
   const authorId = new URLSearchParams(window.location.search).get('author') || '';
@@ -459,10 +470,10 @@ function Discover({ session, loading = false }) {
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Stories, Autor:innen oder Epochen suchen …" />
           </label>
           <div className="discover-filters">
-            <label><span>Format</span><select value={experienceKind} onChange={(event) => setExperienceKind(event.target.value)}><option value="">Alle</option><option value="tour">Führungen</option><option value="exhibition">Ausstellungen</option></select><ChevronDown size={14} /></label>
-            <label><span>Kategorie</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Alle</option>{availableCategories.map((item) => <option key={item}>{item}</option>)}</select><ChevronDown size={14} /></label>
-            <label><span>Sprache</span><select value={language} onChange={(event) => setLanguage(event.target.value)}><option value="">Alle</option>{availableLanguages.map((code) => <option value={code} key={code}>{STORY_LANGUAGES[code] || code}</option>)}</select><ChevronDown size={14} /></label>
-            <label><ListFilter size={15} /><select aria-label="Sortierung" value={sort} onChange={(event) => setSort(event.target.value)}><option value="latest">Neueste</option><option value="oldest">Älteste</option></select><ChevronDown size={14} /></label>
+            <DiscoverFacet label="Format" value={experienceKind} valueLabel={experienceKind === 'tour' ? 'Führungen' : experienceKind === 'exhibition' ? 'Ausstellungen' : 'Alle'} onChange={(event) => setExperienceKind(event.target.value)}><option value="">Alle</option><option value="tour">Führungen</option><option value="exhibition">Ausstellungen</option></DiscoverFacet>
+            <DiscoverFacet label="Kategorie" value={category} valueLabel={category || 'Alle'} onChange={(event) => setCategory(event.target.value)}><option value="">Alle</option>{availableCategories.map((item) => <option key={item}>{item}</option>)}</DiscoverFacet>
+            <DiscoverFacet label="Sprache" value={language} valueLabel={language ? STORY_LANGUAGES[language] || language : 'Alle'} onChange={(event) => setLanguage(event.target.value)}><option value="">Alle</option>{availableLanguages.map((code) => <option value={code} key={code}>{STORY_LANGUAGES[code] || code}</option>)}</DiscoverFacet>
+            <DiscoverFacet icon={<ListFilter size={15} aria-hidden="true" />} value={sort} valueLabel={sort === 'oldest' ? 'Älteste' : 'Neueste'} onChange={(event) => setSort(event.target.value)}><option value="latest">Neueste</option><option value="oldest">Älteste</option></DiscoverFacet>
           </div>
         </div>
         {authorId && (
