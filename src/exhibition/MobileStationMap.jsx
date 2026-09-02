@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Minus, Plus, Scan } from 'lucide-react';
+import { ArrowUpRight, Box, Minus, Plus, Scan } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import { createStationMapGesture, createStationMapZoomTarget, createStationMapLayout, createStationPreviewLayout, advanceStationMapZoom, STATION_MAP_CAPTION_HEIGHT } from '../utils/stationMapLayout.js';
@@ -172,9 +172,12 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
             <span className={`station-map-stone-face${backgroundSrc ? ' has-background' : ''}`} data-preview-count={tile.images.length} aria-hidden="true">
               {backgroundSrc && <>
                 <span className="station-map-background" style={{ opacity: 1 - previewProgress }}><LazyImage src={backgroundSrc} /></span>
+                <span className="station-map-cover-border" style={{ opacity: 1 - previewProgress }} />
                 <span className="station-map-cover-title" style={{ opacity: coverTitleOpacity }}>
-                  <span>{String(tile.index + 1).padStart(2, '0')}</span>
+                  <span className="station-map-cover-number">{String(tile.index + 1).padStart(2, '0')}</span>
+                  <span className="station-map-cover-rule" />
                   <b>{station.title}</b>
+                  <span className="station-map-cover-cta"><span><ArrowUpRight aria-hidden="true" /></span><em>Thema ansehen</em></span>
                 </span>
               </>}
               <span className="station-map-visual">
