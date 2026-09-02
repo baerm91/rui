@@ -25,6 +25,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
   const [size, setSize] = useState({ width: 1000, height: 700 });
   const [imageRatios, setImageRatios] = useState({});
   const stationImages = useMemo(() => stations.map((station) => station.items.map((item) => ({ key: item.id, src: resolveSpatialThumbnailUrl(item) }))), [stations]);
+  const stationBackgrounds = useMemo(() => stations.map((station) => station.spatial?.wallBackground?.url?.trim?.() || ''), [stations]);
   const baseTiles = useMemo(() => createStationMapLayout(stations, size.width, size.height), [stations, size]);
   const tiles = useMemo(() => createStationMapLayout(stations, size.width, size.height, detail).map((tile) => {
     const ratios = stationImages[tile.index].map((image) => imageRatios[image.src] || 1);
@@ -150,6 +151,8 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
       <div className="station-map-content">
         {tiles.map((tile) => {
           const station = stations[tile.index];
+          const backgroundSrc = stationBackgrounds[tile.index];
+          const previewProgress = backgroundSrc && tile.index === detail.focusIndex ? detail.progress : 0;
           return <button key={station.id} type="button" data-station-index={tile.index} className={`station-map-stone stone-${tile.index % 6} ${tile.index === detail.focusIndex && detail.progress > 0 ? 'is-focused' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%`, '--station-caption-height': `${STATION_MAP_CAPTION_HEIGHT}px` }}
             title={`Thema ${tile.index + 1}: ${station.title}`}
@@ -164,8 +167,10 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
               if (itemId && onOpenItem) onOpenItem(tile.index, itemId);
               else onOpenStation(tile.index);
             }}>
-            <span className="station-map-stone-face" data-preview-count={tile.images.length} aria-hidden="true">
-              <span className="station-map-images">
+            <span className={`station-map-stone-face${backgroundSrc ? ' has-background' : ''}`} data-preview-count={tile.images.length} aria-hidden="true">
+              <span className="station-map-visual">
+              {backgroundSrc && <span className="station-map-background" style={{ opacity: 1 - previewProgress }}><LazyImage src={backgroundSrc} /></span>}
+              <span className="station-map-images" style={backgroundSrc ? { opacity: previewProgress } : undefined}>
               {!tile.images.length && <Box size={28} />}
               {tile.images.map((imageTile) => {
                 const entry = stationImages[tile.index][imageTile.index];
@@ -176,6 +181,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
                   setImageRatios((current) => current[entry.src] === ratio ? current : { ...current, [entry.src]: ratio });
                 }} />}</span>;
               })}
+              </span>
               </span>
               <span className="station-map-station-name"><span className="station-map-station-number">{String(tile.index + 1).padStart(2, '0')} · </span>{station.title}</span>
             </span>

@@ -11,6 +11,7 @@ test('station overview keeps every station accessible and defers thumbnails and 
     const { resolveStationMapOpenItemId } = await compiler.ssrLoadModule('/src/exhibition/MobileStationMap.jsx');
     const stations = [0, 1, 3, 6, 12].map((count, index) => ({
       id: `station-${index}`, title: `Sammlung ${index + 1}`,
+      spatial: { wallBackground: { url: index === 3 ? '/wall-3.jpg' : '' } },
       items: Array.from({ length: count }, (_, itemIndex) => ({ id: `item-${itemIndex}`, title: `Objekt ${itemIndex + 1}`, thumbnailUrl: `/thumb-${index}-${itemIndex}.jpg` }))
     }));
     const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
@@ -41,6 +42,9 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.equal((focusedHtml.match(/class="station-map-image is-zoom-target"/g) || []).length, 1);
     assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
     assert.equal((html.match(/class="station-map-images"/g) || []).length, 5);
+    assert.equal((html.match(/class="station-map-stone-face has-background"/g) || []).length, 1);
+    assert.match(html, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:1"[\s\S]*?class="station-map-images" style="opacity:0"/);
+    assert.match(focusedHtml, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:0"[\s\S]*?class="station-map-images" style="opacity:1"/);
     assert.doesNotMatch(html, />Objekt \d+</);
     assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
     assert.equal(resolveStationMapOpenItemId({ closest: () => ({ dataset: { imageIndex: '2' } }) }, [
