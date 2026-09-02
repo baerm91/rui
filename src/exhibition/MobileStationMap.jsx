@@ -153,6 +153,8 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
           const station = stations[tile.index];
           const backgroundSrc = stationBackgrounds[tile.index];
           const previewProgress = backgroundSrc && tile.index === detail.focusIndex ? detail.progress : 0;
+          const coverTitleOpacity = 1 - Math.min(1, previewProgress * 1.8);
+          const captionOpacity = backgroundSrc ? Math.max(0, (previewProgress - .45) / .55) : 1;
           return <button key={station.id} type="button" data-station-index={tile.index} className={`station-map-stone stone-${tile.index % 6} ${tile.index === detail.focusIndex && detail.progress > 0 ? 'is-focused' : ''}`}
             style={{ left: `${tile.x / size.width * 100}%`, top: `${tile.y / size.height * 100}%`, width: `${tile.width / size.width * 100}%`, height: `${tile.height / size.height * 100}%`, '--station-caption-height': `${STATION_MAP_CAPTION_HEIGHT}px` }}
             title={`Thema ${tile.index + 1}: ${station.title}`}
@@ -168,8 +170,14 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
               else onOpenStation(tile.index);
             }}>
             <span className={`station-map-stone-face${backgroundSrc ? ' has-background' : ''}`} data-preview-count={tile.images.length} aria-hidden="true">
+              {backgroundSrc && <>
+                <span className="station-map-background" style={{ opacity: 1 - previewProgress }}><LazyImage src={backgroundSrc} /></span>
+                <span className="station-map-cover-title" style={{ opacity: coverTitleOpacity }}>
+                  <span>{String(tile.index + 1).padStart(2, '0')}</span>
+                  <b>{station.title}</b>
+                </span>
+              </>}
               <span className="station-map-visual">
-              {backgroundSrc && <span className="station-map-background" style={{ opacity: 1 - previewProgress }}><LazyImage src={backgroundSrc} /></span>}
               <span className="station-map-images" style={backgroundSrc ? { opacity: previewProgress } : undefined}>
               {!tile.images.length && <Box size={28} />}
               {tile.images.map((imageTile) => {
@@ -183,7 +191,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
               })}
               </span>
               </span>
-              <span className="station-map-station-name"><span className="station-map-station-number">{String(tile.index + 1).padStart(2, '0')} · </span>{station.title}</span>
+              <span className="station-map-station-name" style={backgroundSrc ? { opacity: captionOpacity } : undefined}><span className="station-map-station-number">{String(tile.index + 1).padStart(2, '0')} · </span>{station.title}</span>
             </span>
           </button>;
         })}

@@ -47,8 +47,12 @@
 }
 .station-map-visual { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #ccc; }
 .station-map-images { position: absolute; inset: 0; display: grid; place-items: center; min-width: 0; min-height: 0; overflow: hidden; transition: opacity .28s ease-out; }
-.station-map-background { position: absolute; z-index: 2; inset: 0; overflow: hidden; background: #aaa; transition: opacity .28s ease-out; }
+.station-map-background { position: absolute; z-index: 2; inset: 0; overflow: hidden; background: #34312d; transition: opacity .28s ease-out; }
+.station-map-background::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, rgba(18,16,14,.8) 0%, rgba(18,16,14,.55) 38%, rgba(18,16,14,.12) 72%, transparent 100%); }
 .station-map-background .lazy-image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.station-map-cover-title { position: absolute; z-index: 3; left: 0; top: 0; bottom: 0; display: flex; width: 54%; box-sizing: border-box; flex-direction: column; justify-content: center; gap: clamp(5px, 1.2cqw, 13px); padding: clamp(10px, 4cqw, 42px); color: #fff9ec; text-shadow: 0 2px 18px rgba(0,0,0,.42); transition: opacity .28s ease-out; }
+.station-map-cover-title > span { color: #f2b38c; font: 700 clamp(7px, 1.5cqw, 13px)/1 Inter, Arial, sans-serif; letter-spacing: .18em; }
+.station-map-cover-title b { display: -webkit-box; overflow: hidden; font: 500 clamp(18px, 6cqw, 56px)/.86 "Cormorant Garamond", Georgia, serif; letter-spacing: -.035em; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
 .station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; pointer-events: auto; border: 2px solid var(--map-paper); box-sizing: border-box; background: #ccc; background-clip: padding-box; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; animation: station-image-reveal .22s ease-out; }
 .station-map-image .lazy-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; box-sizing: border-box; object-fit: contain; object-position: center; }
 .station-map-image:has(.lazy-image[data-image-state="loaded"]) > svg { visibility: hidden; }
@@ -70,6 +74,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
+  transition: opacity .28s ease-out, background-color .2s;
 }
 .station-map-station-number { color: var(--map-accent); font: 600 .55em/1 Inter, Arial, sans-serif; letter-spacing: .04em; white-space: nowrap; }
 .station-map-stone.is-focused .station-map-stone-face { outline: 2px solid #aa633f; outline-offset: -2px; }
@@ -86,7 +91,8 @@
 .station-map-direct { max-width: 100%; min-height: 44px; width: 230px; border: 1px solid #948269; border-radius: 2px; padding: 0 12px; background: var(--map-paper); color: var(--map-ink); color-scheme: light; font: 12px Inter, sans-serif; }
 .station-map-zoom-hint { flex: none; margin: 0; color: #4e4639; text-align: center; font-size: 11px; line-height: 1.4; }
 @keyframes station-image-reveal { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .station-map-stone, .station-map-stone-face, .station-map-image, .station-map-images, .station-map-background { transition: none; animation: none; } }
+@container (max-width: 170px) { .station-map-cover-title { width: 72%; padding: 8px; } .station-map-cover-title b { font-size: clamp(15px, 9cqw, 24px); line-height: .9; } }
+@media (prefers-reduced-motion: reduce) { .station-map-stone, .station-map-stone-face, .station-map-image, .station-map-images, .station-map-background, .station-map-cover-title, .station-map-station-name { transition: none; animation: none; } }
 @media (max-width: 720px) {
   .station-map { padding-right: 12px; padding-left: 12px; }
   .station-map-heading { padding: 0 4px 18px; }
