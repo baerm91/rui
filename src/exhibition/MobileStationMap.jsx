@@ -172,7 +172,7 @@ export function StationMap({ title, stations, stationIndex, onOpenStation, onOpe
             <span className={`station-map-stone-face${backgroundSrc ? ' has-background' : ''}`} data-preview-count={tile.images.length} aria-hidden="true">
               {backgroundSrc && <>
                 <span className="station-map-background" style={{ opacity: 1 - previewProgress }}><LazyImage src={backgroundSrc} /></span>
-                <svg className="station-map-cover-border" style={{ opacity: 1 - previewProgress }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M3 0H97A3 3 0 0 1 100 3V97A3 3 0 0 1 97 100H3A3 3 0 0 1 0 97V3A3 3 0 0 1 3 0Z" vectorEffect="non-scaling-stroke" /></svg>
+                <svg className="station-map-cover-border" style={{ opacity: 1 - previewProgress }} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M3 0H97A3 3 0 0 0 100 3V97A3 3 0 0 0 97 100H3A3 3 0 0 0 0 97V3A3 3 0 0 0 3 0Z" vectorEffect="non-scaling-stroke" /></svg>
                 <span className="station-map-cover-title" style={{ opacity: coverTitleOpacity }}>
                   <span className="station-map-cover-number">{String(tile.index + 1).padStart(2, '0')}</span>
                   <span className="station-map-cover-rule" />
