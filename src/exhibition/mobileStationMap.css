@@ -49,11 +49,19 @@
 .station-map-images { position: absolute; inset: 0; display: grid; place-items: center; min-width: 0; min-height: 0; overflow: hidden; transition: opacity .28s ease-out; }
 .station-map-background { position: absolute; z-index: 2; inset: 0; overflow: hidden; background: #34312d; transition: opacity .28s ease-out; }
 .station-map-background::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, rgba(18,16,14,.8) 0%, rgba(18,16,14,.55) 38%, rgba(18,16,14,.12) 72%, transparent 100%); }
+.station-map-background.is-fallback { background:linear-gradient(90deg, rgba(18,16,14,1) 0%, rgba(18,16,14,.78) 38%, rgba(18,16,14,.46) 68%, rgba(18,16,14,.2) 100%); }
+.station-map-background.is-fallback::after { content:none; }
 .station-map-background .lazy-image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.station-map-cover-border { position: absolute; z-index: 3; inset: clamp(7px,1.5cqw,17px); width:calc(100% - clamp(14px,3cqw,34px)); height:calc(100% - clamp(14px,3cqw,34px)); overflow:visible; color:rgba(218,158,79,.84); filter:drop-shadow(0 0 9px rgba(20,13,6,.2)); transition:opacity .28s ease-out; }
-.station-map-cover-border path { fill:none; stroke:currentColor; stroke-width:1; }
+.station-map-cover-border { --cover-corner:clamp(14px,1.15vw,22px); position:absolute; z-index:3; inset:clamp(7px,1.5cqw,17px); overflow:hidden; color:rgba(218,158,79,.84); filter:drop-shadow(0 0 9px rgba(20,13,6,.2)); transition:opacity .28s ease-out; }
+.station-map-cover-border::before { content:""; position:absolute; inset:0 var(--cover-corner); border-top:1px solid currentColor; border-bottom:1px solid currentColor; }
+.station-map-cover-border::after { content:""; position:absolute; inset:var(--cover-corner) 0; border-right:1px solid currentColor; border-left:1px solid currentColor; }
+.station-map-cover-border i { position:absolute; width:calc(var(--cover-corner) * 2); height:calc(var(--cover-corner) * 2); box-sizing:border-box; border:1px solid currentColor; border-radius:50%; }
+.station-map-cover-border .is-top-left { top:calc(var(--cover-corner) * -1); left:calc(var(--cover-corner) * -1); }
+.station-map-cover-border .is-top-right { top:calc(var(--cover-corner) * -1); right:calc(var(--cover-corner) * -1); }
+.station-map-cover-border .is-bottom-left { bottom:calc(var(--cover-corner) * -1); left:calc(var(--cover-corner) * -1); }
+.station-map-cover-border .is-bottom-right { right:calc(var(--cover-corner) * -1); bottom:calc(var(--cover-corner) * -1); }
 .station-map-cover-title { position:absolute; z-index:4; left:clamp(22px,2.3vw,42px); top:clamp(28px,3.2vw,52px); display:grid; width:46%; box-sizing:border-box; grid-template-rows:auto auto auto; align-content:start; align-items:start; gap:clamp(7px,min(1.4cqw,3cqh),15px); padding:0; color:#fff9ec; text-shadow:0 2px 18px rgba(0,0,0,.42); transition:opacity .28s ease-out; }
-.station-map-cover-number { color:#e3a653; font:600 clamp(10px,min(2.1cqw,8cqh),22px)/1 "Cormorant Garamond",Georgia,serif; letter-spacing:.08em; }
+.station-map-cover-number { color:#e3a653; font:600 clamp(12px,1.05vw,20px)/1 "Cormorant Garamond",Georgia,serif; letter-spacing:.08em; }
 .station-map-cover-rule { display: block; width: clamp(25px,7cqw,58px); height: 1px; background: #d99d4d; box-shadow: 0 1px 5px rgba(0,0,0,.28); }
 .station-map-cover-title b { display:-webkit-box; overflow:hidden; font:500 clamp(34px,3.4vw,62px)/.88 "Cormorant Garamond",Georgia,serif; letter-spacing:-.035em; overflow-wrap:anywhere; -webkit-box-orient:vertical; -webkit-line-clamp:4; }
 .station-map-cover-cta { position:absolute; z-index:4; right:clamp(18px,min(4cqw,5cqh),48px); bottom:clamp(18px,min(4cqw,5cqh),48px); display:grid; place-items:center; width:clamp(30px,min(5.5cqw,11cqh),52px); height:clamp(30px,min(5.5cqw,11cqh),52px); border:1px solid #dca552; border-radius:50%; background:rgba(15,13,10,.24); color:#fff9ec; box-shadow:0 5px 18px rgba(0,0,0,.18); transition:opacity .28s ease-out,background-color .2s,transform .2s; }
