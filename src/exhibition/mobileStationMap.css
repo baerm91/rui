@@ -24,17 +24,17 @@
   touch-action: none;
   overscroll-behavior: none;
   border-radius: 2px;
-  background: #827b70;
+  background: var(--map-paper);
   box-shadow: none;
 }
 .station-map-viewport:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 4px; }
 .station-map-content { position: absolute; inset: 0; width: 100%; height: 100%; user-select: none; -webkit-user-select: none; pointer-events: none; }
-.station-map-stone { position: absolute; container-type: inline-size; margin: 0; padding: 0; border: 0; background: transparent; color: var(--map-ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; }
+.station-map-stone { position: absolute; container-type: size; margin: 0; padding: 0; border: 0; background: transparent; color: var(--map-ink); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; pointer-events: auto; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; }
 .station-map-stone[hidden] { display: none; }
 .station-map-stone-face {
   position: absolute;
-  /* Separate stations by 6px; internal image seams are narrower. */
-  inset: 3px;
+  /* The paper-coloured 4px seam separates stations from one another. */
+  inset: 2px;
   display: grid;
   grid-template-rows: minmax(0, 1fr) min(var(--station-caption-height, 64px), 35%);
   overflow: hidden;
@@ -50,16 +50,15 @@
 .station-map-background { position: absolute; z-index: 2; inset: 0; overflow: hidden; background: #34312d; transition: opacity .28s ease-out; }
 .station-map-background::after { position: absolute; inset: 0; content: ""; background: linear-gradient(90deg, rgba(18,16,14,.8) 0%, rgba(18,16,14,.55) 38%, rgba(18,16,14,.12) 72%, transparent 100%); }
 .station-map-background .lazy-image { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.station-map-cover-border { position: absolute; z-index: 3; inset: clamp(7px,1.5cqw,17px); border: 1px solid rgba(218,158,79,.82); border-radius: clamp(1px,.4cqw,4px); box-shadow: inset 0 0 0 1px rgba(255,220,161,.06),0 0 18px rgba(20,13,6,.18); transition: opacity .28s ease-out; }
-.station-map-cover-title { position: absolute; z-index: 4; left: 0; top: 0; bottom: 0; display: grid; width: 56%; box-sizing: border-box; grid-template-rows:auto auto minmax(0,1fr) auto; align-items:start; gap: clamp(5px,1.2cqw,13px); padding: clamp(16px,5cqw,54px); color: #fff9ec; text-shadow: 0 2px 18px rgba(0,0,0,.42); transition: opacity .28s ease-out; }
-.station-map-cover-number { color: #e3a653; font: 600 clamp(9px,2.1cqw,21px)/1 "Cormorant Garamond",Georgia,serif; letter-spacing: .08em; }
+.station-map-cover-border { position: absolute; z-index: 3; inset: clamp(7px,1.5cqw,17px); width:calc(100% - clamp(14px,3cqw,34px)); height:calc(100% - clamp(14px,3cqw,34px)); overflow:visible; color:rgba(218,158,79,.84); filter:drop-shadow(0 0 9px rgba(20,13,6,.2)); transition:opacity .28s ease-out; }
+.station-map-cover-border path { fill:none; stroke:currentColor; stroke-width:1; }
+.station-map-cover-title { position:absolute; z-index:4; left:0; top:0; display:grid; width:60%; height:62%; box-sizing:border-box; grid-template-rows:auto auto auto; align-content:start; align-items:start; gap:clamp(5px,min(1.2cqw,2cqh),13px); padding:clamp(14px,min(4.5cqw,5cqh),48px); color:#fff9ec; text-shadow:0 2px 18px rgba(0,0,0,.42); transition:opacity .28s ease-out; }
+.station-map-cover-number { color:#e3a653; font:600 clamp(9px,min(2.1cqw,4cqh),21px)/1 "Cormorant Garamond",Georgia,serif; letter-spacing:.08em; }
 .station-map-cover-rule { display: block; width: clamp(25px,7cqw,58px); height: 1px; background: #d99d4d; box-shadow: 0 1px 5px rgba(0,0,0,.28); }
-.station-map-cover-title b { display: -webkit-box; align-self:center; overflow: hidden; font: 500 clamp(18px,6cqw,58px)/.86 "Cormorant Garamond",Georgia,serif; letter-spacing: -.035em; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 4; }
-.station-map-cover-cta { display: inline-flex; align-items:center; gap: clamp(7px,1.3cqw,13px); color: #fff9ec; text-shadow:none; }
-.station-map-cover-cta > span { display:grid; place-items:center; width:clamp(30px,5.5cqw,52px); height:clamp(30px,5.5cqw,52px); border:1px solid #dca552; border-radius:50%; background:rgba(15,13,10,.22); box-shadow:0 5px 18px rgba(0,0,0,.18); transition:background-color .2s,transform .2s; }
-.station-map-cover-cta svg { width:clamp(13px,2cqw,19px); height:auto; stroke-width:1.5; }
-.station-map-cover-cta em { font:600 clamp(7px,1.2cqw,11px)/1 Inter,Arial,sans-serif; letter-spacing:.12em; text-transform:uppercase; }
-.station-map-stone:hover .station-map-cover-cta > span { background:rgba(218,158,79,.2); transform:translate(2px,-2px); }
+.station-map-cover-title b { display:-webkit-box; overflow:hidden; font:500 clamp(16px,min(6cqw,10cqh),58px)/.88 "Cormorant Garamond",Georgia,serif; letter-spacing:-.035em; overflow-wrap:anywhere; -webkit-box-orient:vertical; -webkit-line-clamp:4; }
+.station-map-cover-cta { position:absolute; z-index:4; right:clamp(18px,min(4cqw,5cqh),48px); bottom:clamp(18px,min(4cqw,5cqh),48px); display:grid; place-items:center; width:clamp(30px,min(5.5cqw,11cqh),52px); height:clamp(30px,min(5.5cqw,11cqh),52px); border:1px solid #dca552; border-radius:50%; background:rgba(15,13,10,.24); color:#fff9ec; box-shadow:0 5px 18px rgba(0,0,0,.18); transition:opacity .28s ease-out,background-color .2s,transform .2s; }
+.station-map-cover-cta svg { width:clamp(13px,min(2cqw,4cqh),19px); height:auto; stroke-width:1.5; }
+.station-map-stone:hover .station-map-cover-cta { background:rgba(218,158,79,.2); transform:translate(2px,-2px); }
 .station-map-image { position: absolute; display: grid; place-items: center; overflow: hidden; pointer-events: auto; border: 2px solid var(--map-paper); box-sizing: border-box; background: #ccc; background-clip: padding-box; transition: left .2s ease-out, top .2s ease-out, width .2s ease-out, height .2s ease-out; animation: station-image-reveal .22s ease-out; }
 .station-map-image .lazy-image { position: absolute; inset: 0; display: block; width: 100%; height: 100%; padding: 0; box-sizing: border-box; object-fit: contain; object-position: center; }
 .station-map-image:has(.lazy-image[data-image-state="loaded"]) > svg { visibility: hidden; }
@@ -98,8 +97,8 @@
 .station-map-direct { max-width: 100%; min-height: 44px; width: 230px; border: 1px solid #948269; border-radius: 2px; padding: 0 12px; background: var(--map-paper); color: var(--map-ink); color-scheme: light; font: 12px Inter, sans-serif; }
 .station-map-zoom-hint { flex: none; margin: 0; color: #4e4639; text-align: center; font-size: 11px; line-height: 1.4; }
 @keyframes station-image-reveal { from { opacity: 0; } to { opacity: 1; } }
-@container (max-width: 170px) { .station-map-cover-title { width: 76%; padding: 12px; gap:4px; } .station-map-cover-title b { font-size:clamp(15px,9cqw,24px); line-height:.9; } .station-map-cover-cta em { display:none; } .station-map-cover-cta > span { width:27px; height:27px; } }
-@media (prefers-reduced-motion: reduce) { .station-map-stone, .station-map-stone-face, .station-map-image, .station-map-images, .station-map-background, .station-map-cover-border, .station-map-cover-title, .station-map-cover-cta>span, .station-map-station-name { transition: none; animation: none; } }
+@container (max-width: 170px) { .station-map-cover-title { width:76%; height:68%; padding:10px; gap:4px; } .station-map-cover-title b { font-size:clamp(14px,min(9cqw,9cqh),22px); line-height:.9; } .station-map-cover-cta { right:12px; bottom:12px; width:27px; height:27px; } }
+@media (prefers-reduced-motion: reduce) { .station-map-stone, .station-map-stone-face, .station-map-image, .station-map-images, .station-map-background, .station-map-cover-border, .station-map-cover-title, .station-map-cover-cta, .station-map-station-name { transition: none; animation: none; } }
 @media (max-width: 720px) {
   .station-map { padding-right: 12px; padding-left: 12px; }
   .station-map-heading { padding: 0 4px 18px; }
