@@ -921,3 +921,59 @@ body.spatial-editor-mode{--editor-panel-width:430px;overflow:hidden}
 @media (prefers-reduced-motion: reduce) {
   .mode-visitor .spatial-copy-scroll-hint { animation: none; }
 }
+
+/* On desktop the carousel belongs to the topic information: it sits directly
+   beside that card and never extends above or below it. The actual card bounds
+   are mirrored into the custom properties by ExhibitionRoom's ResizeObserver. */
+@media (min-width: 721px) {
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnails {
+    left: var(--carousel-left, calc(5vw + min(34vw, 500px) + 18px));
+    right: auto;
+    top: var(--carousel-top, 9%);
+    bottom: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 104px;
+    max-width: 104px;
+    height: var(--carousel-height, 280px);
+    min-height: 0;
+    padding: 3px 10px 3px 3px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-padding-block: 3px 42px;
+    scroll-snap-type: y proximity;
+    overscroll-behavior-y: contain;
+    transform: none;
+    transition: opacity .22s ease;
+  }
+
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnails.has-more-below {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 58px), transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 58px), transparent 100%);
+  }
+
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnails.has-more-above.has-more-below {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 58px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 58px), transparent 100%);
+  }
+
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnails.has-more-above:not(.has-more-below) {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 100%);
+  }
+
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnail,
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnail:hover,
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnail.is-dragging,
+  .mode-visitor.thumbnail-layout-carousel .spatial-thumbnail.is-selected {
+    flex: 0 0 82px;
+    width: 82px !important;
+    min-width: 82px;
+    height: 82px;
+    touch-action: pan-y;
+    scroll-snap-align: start;
+  }
+}

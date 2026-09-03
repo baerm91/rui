@@ -1407,6 +1407,37 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     };
   }, [mode, overviewMode, stationIndex, station?.introduction, station?.title]);
   useEffect(() => {
+    const copy = storyCopyRef.current;
+    const thumbnails = spatialThumbnailsRef.current;
+    const carouselActive = mode === 'visitor' && !overviewMode && station?.thumbnailLayout === 'carousel';
+    if (!copy || !thumbnails || !carouselActive) return undefined;
+
+    const updateCarousel = () => {
+      const container = thumbnails.parentElement;
+      if (!container) return;
+      const copyRect = copy.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      thumbnails.style.setProperty('--carousel-top', `${copyRect.top - containerRect.top}px`);
+      thumbnails.style.setProperty('--carousel-left', `${copyRect.right - containerRect.left + 18}px`);
+      thumbnails.style.setProperty('--carousel-height', `${copyRect.height}px`);
+      thumbnails.classList.toggle('has-more-above', thumbnails.scrollTop > 2);
+      thumbnails.classList.toggle('has-more-below', thumbnails.scrollTop + thumbnails.clientHeight < thumbnails.scrollHeight - 2);
+    };
+
+    updateCarousel();
+    thumbnails.addEventListener('scroll', updateCarousel, { passive: true });
+    window.addEventListener('resize', updateCarousel);
+    const observer = new ResizeObserver(updateCarousel);
+    observer.observe(copy);
+    observer.observe(thumbnails);
+    return () => {
+      thumbnails.removeEventListener('scroll', updateCarousel);
+      window.removeEventListener('resize', updateCarousel);
+      observer.disconnect();
+      thumbnails.classList.remove('has-more-above', 'has-more-below');
+    };
+  }, [mode, overviewMode, stationIndex, station?.thumbnailLayout, station?.items.length, station?.introduction, station?.title]);
+  useEffect(() => {
     if (!mobileVisitor) setMobileModelOpen(false);
     clearTimeout(modelReleaseTimerRef.current);
     modelReleaseTimerRef.current = null;
