@@ -17,13 +17,12 @@ test('station overview keeps every station accessible and defers thumbnails and 
     const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
     assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
     for (let index = 0; index < stations.length; index++) {
-      assert.ok(html.includes(`Thema ${index + 1}: Sammlung ${index + 1} öffnen`));
+      assert.ok(html.includes(`Thema ${index + 1}: Sammlung ${index + 1} vergrößern`));
       assert.ok(html.includes(`<span class="station-map-station-name" style="opacity:0"><span class="station-map-station-number">${String(index + 1).padStart(2, '0')} · </span>Sammlung ${index + 1}</span>`));
     }
-    assert.match(html, /Heranzoomen/);
-    assert.match(html, /Alle Themen anzeigen/);
+    assert.doesNotMatch(html, /Heranzoomen|Herauszoomen|Alle Themen anzeigen/);
     assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-/);
-    assert.match(html, /Thema direkt öffnen/);
+    assert.doesNotMatch(html, /Thema direkt öffnen/);
     assert.match(html, /loading="lazy"/);
     assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
     assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
@@ -41,9 +40,12 @@ test('station overview keeps every station accessible and defers thumbnails and 
       title: 'Ausstellung', stations, stationIndex: 1,
       mapViewRef: { current: { focusIndex: 1, progress: 1 } }
     }));
-    // Zoom changes the space distribution, never the number of previews.
+    // Expanding a tile overlays the unchanged overview and never changes the number of previews.
+    const tileStyle = (markup, index) => markup.match(new RegExp(`data-station-index="${index}"[^>]*style="([^"]+)"`))?.[1];
+    for (const index of [0, 1, 2, 4]) assert.equal(tileStyle(focusedHtml, index), tileStyle(html, index));
+    assert.notEqual(tileStyle(focusedHtml, 3), tileStyle(html, 3));
     assert.equal((focusedHtml.match(/class="station-map-image(?: is-zoom-target)?"/g) || []).length, 22);
-    assert.equal((focusedHtml.match(/class="station-map-image is-zoom-target"/g) || []).length, 1);
+    assert.equal((focusedHtml.match(/class="station-map-image is-zoom-target"/g) || []).length, 0);
     assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
     assert.equal((html.match(/class="station-map-images"/g) || []).length, 5);
     assert.equal((html.match(/class="station-map-stone-face has-background"/g) || []).length, 1);
@@ -53,6 +55,8 @@ test('station overview keeps every station accessible and defers thumbnails and 
     assert.match(html, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:1"[\s\S]*?class="station-map-cover-border" style="opacity:1"[\s\S]*?class="station-map-cover-title" style="opacity:1"[\s\S]*?class="station-map-cover-number">04<\/span>[\s\S]*?class="station-map-cover-rule"[\s\S]*?<b>Sammlung 4<\/b>[\s\S]*?class="station-map-cover-cta" style="opacity:1"[\s\S]*?class="station-map-images" style="opacity:0"/);
     assert.match(html, /class="station-map-stone-face"[^>]*>[\s\S]*?class="station-map-background is-fallback" style="opacity:1"[\s\S]*?class="station-map-cover-number">01<\/span>[\s\S]*?<b>Sammlung 1<\/b>/);
     assert.doesNotMatch(html, /Thema ansehen/);
+    assert.match(focusedHtml, /Thema betreten/);
+    assert.match(focusedHtml, /Kachel verkleinern/);
     assert.match(focusedHtml, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:0"[\s\S]*?class="station-map-cover-title" style="opacity:0"[\s\S]*?class="station-map-images" style="opacity:1"/);
     assert.match(fallbackFocusedHtml, /class="station-map-stone-face"[^>]*>[\s\S]*?class="station-map-background is-fallback" style="opacity:0"[\s\S]*?class="station-map-cover-title" style="opacity:0"[\s\S]*?class="station-map-station-name" style="opacity:1"/);
     assert.doesNotMatch(html, />Objekt \d+</);
