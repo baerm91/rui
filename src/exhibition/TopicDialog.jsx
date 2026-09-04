@@ -10,6 +10,7 @@ import './topicDialog.css';
 export function TopicDialog({ station, stationIndex, stationCount, itemId, onSelectItem, onNavigate, onClose, renderSketchfab }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
+  const copyRef = useRef(null);
   const stripRef = useRef(null);
   const closeTimer = useRef(null);
   const releaseTimer = useRef(null);
@@ -39,6 +40,20 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
       dialog.close();
       if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
+  }, []);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    // Keep the theme scrollable while its visual layer is behind the model.
+    const scrollCopy = (event) => {
+      const copy = copyRef.current;
+      const rect = copy.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) return;
+      event.preventDefault();
+      event.stopPropagation();
+      copy.scrollTop += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? copy.clientHeight : 1);
+    };
+    dialog.addEventListener('wheel', scrollCopy, { capture: true, passive: false });
+    return () => dialog.removeEventListener('wheel', scrollCopy, true);
   }, []);
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
@@ -86,7 +101,7 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
         <button ref={closeRef} type="button" className="topic-dialog-close" aria-label="Thema schließen" onClick={close} autoFocus><X size={22} /><span>Schließen</span></button>
       </div>
     </header>
-    <aside className="topic-dialog-copy">
+    <aside ref={copyRef} className="topic-dialog-copy" tabIndex={0} aria-label="Themenbeschreibung">
       <span className="topic-dialog-eyebrow">{station.items.length} {station.items.length === 1 ? 'Objekt' : 'Objekte'}</span>
       <h1 id="topic-dialog-title">{station.title}</h1>
       {station.introduction && <p className="topic-dialog-introduction">{station.introduction}</p>}

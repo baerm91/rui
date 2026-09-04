@@ -87,3 +87,5 @@
 .topic-dialog-object-info { z-index:0; pointer-events:none; }
 .topic-dialog-stage { z-index:1; }
 .topic-dialog.is-interacting .topic-dialog-object-info { pointer-events:none; }
+.topic-dialog-copy { z-index:0; pointer-events:none; }
+.topic-dialog.is-interacting .topic-dialog-copy { pointer-events:none; }

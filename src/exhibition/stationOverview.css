@@ -75,3 +75,4 @@
 .topic-cluster-viewport { scrollbar-width:none; scrollbar-gutter:auto; }
 .topic-cluster-viewport::-webkit-scrollbar { display:none; }
 .topic-cluster-tile,.topic-cluster-image { background:transparent; }
+.topic-cluster-tile .lazy-image { object-fit:cover; }

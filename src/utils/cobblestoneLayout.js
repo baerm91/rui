@@ -1,6 +1,6 @@
 // Keep neighbouring topic objects in staggered rows, then justify each row
 // using the source images' proportions, including the final incomplete row.
-export function createCobblestoneLayout(stations, width, imageRatios = {}) {
+export function createCobblestoneLayout(stations, width) {
   if (width <= 24) return [];
   const columns = width < 560 ? 2 : width < 960 ? 3 : 5;
   const bandRows = columns === 2 ? 3 : 2;
@@ -14,20 +14,20 @@ export function createCobblestoneLayout(stations, width, imageRatios = {}) {
     for (let itemIndex = 0; itemIndex < count; itemIndex++, cursor++) {
       const row = Math.floor(cursor / capacity) * bandRows + cursor % bandRows;
       if (!rows.has(row)) rows.set(row, []);
-      const ratio = imageRatios[`${stationIndex}:${itemIndex}`];
-      rows.get(row).push({ stationIndex, itemIndex, ratio: Number.isFinite(ratio) && ratio > 0 ? ratio : 16 / 9 });
+      rows.get(row).push({ stationIndex, itemIndex });
     }
   });
   const tiles = [];
+  const stagger = Math.min(64, width * .055);
+  const tileWidth = (width - 24 - stagger - (columns - 1) * gap) / columns;
+  const height = tileWidth * 9 / 16;
   let y = 16;
   for (const [row, entries] of [...rows.entries()].sort(([a], [b]) => a - b)) {
-    const inset = row % 2 ? Math.min(64, width * .055) : 0;
-    const availableWidth = width - 24 - inset;
-    const height = (availableWidth - (entries.length - 1) * gap) / entries.reduce((sum, entry) => sum + entry.ratio, 0);
-    let x = 12 + inset;
-    for (const { ratio, ...entry } of entries) {
-      tiles.push({ ...entry, x, y, width: height * ratio, height });
-      x += height * ratio + gap;
+    const rowWidth = entries.length * tileWidth + (entries.length - 1) * gap;
+    let x = (width - stagger - rowWidth) / 2 + (row % 2 ? stagger : 0);
+    for (const entry of entries) {
+      tiles.push({ ...entry, x, y, width: tileWidth, height });
+      x += tileWidth + gap;
     }
     y += height + gap;
   }
