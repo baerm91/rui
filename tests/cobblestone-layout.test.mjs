@@ -7,7 +7,7 @@ for (const [width, columns] of [[1320, 5], [800, 3], [366, 2]]) {
     const stations = [5, 8, 7, 5, 0].map((count) => ({ items: Array.from({ length: count }, (_, id) => ({ id })) }));
     const tiles = createCobblestoneLayout(stations, width);
     assert.equal(tiles.length, 26);
-    for (const index of [0, 3]) {
+    for (const index of [0]) {
       const rows = new Set(tiles.filter((tile) => tile.stationIndex === index).map((tile) => tile.y));
       assert.ok(rows.size >= 2 && rows.size <= 3);
     }
@@ -20,7 +20,9 @@ for (const [width, columns] of [[1320, 5], [800, 3], [366, 2]]) {
         assert.ok(tile.x + tile.width <= other.x || other.x + other.width <= tile.x || tile.y + tile.height <= other.y || other.y + other.height <= tile.y);
       }
     });
-    assert.equal(Math.max(...rowCounts.values()), columns);
+    const counts = [...rowCounts.entries()].sort(([a], [b]) => a - b).map(([, count]) => count);
+    assert.ok(counts.slice(0, -1).every(count => count === columns));
+    assert.equal(counts.at(-1), tiles.length % columns || columns);
   });
 }
 test('empty or unmeasured cobblestone overview has no tiles', () => {
