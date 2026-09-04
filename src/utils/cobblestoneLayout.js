@@ -5,10 +5,10 @@ export function createCobblestoneLayout(stations, width) {
   const columns = width < 560 ? 2 : width < 960 ? 3 : 5;
   const bandRows = columns === 2 ? 3 : 2;
   const capacity = columns * bandRows;
-  const gap = width < 560 ? 10 : 16;
+  const gap = width < 560 ? 6 : 8;
   const unit = (width - 24) / (columns + .35);
   const tileWidth = unit - gap;
-  const tileHeight = tileWidth * .78 + 48;
+  const tileHeight = tileWidth * .72;
   let cursor = 0;
   const tiles = [];
   stations.forEach((station, stationIndex) => {

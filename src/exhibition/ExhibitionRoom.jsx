@@ -1560,7 +1560,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     {mode === 'editor' && mobileModelItem && <MobileModelDialog key={mobileModelItem.id} item={mobileModelItem} onClose={closeMobileModel}>{mobileModelItem.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={mobileModelItem} />}</MobileModelDialog>}
     {mode === 'visitor' && topicOpen && <TopicDialog station={station} stationIndex={stationIndex} stationCount={stations.length} itemId={openItemId}
       onSelectItem={setOpenItemId} onNavigate={enterStation} onClose={() => { setTopicOpen(false); setOpenItemId(null); }}
-      renderSketchfab={(item) => <SpatialSketchfabViewer item={item} />} />}
+      renderSketchfab={(item, onInteractionChange) => <SpatialSketchfabViewer item={item} onInteractionChange={onInteractionChange} />} />}
     <footer className="exhibition-footer">
       {overviewMode
         ? <a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a>

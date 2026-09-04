@@ -33,7 +33,9 @@ const disposeModel = (object) => object?.traverse((child) => {
   }
 });
 
-export function MobileGltfModel({ item }) {
+export function MobileGltfModel({ item, onInteractionChange }) {
+  const interactionRef = useRef(onInteractionChange);
+  interactionRef.current = onInteractionChange;
   const canvasRef = useRef(null);
   const [status, setStatus] = useState('loading');
   useEffect(() => {
@@ -56,6 +58,10 @@ export function MobileGltfModel({ item }) {
     scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8275, 2));
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
+    const interactionStart = () => interactionRef.current?.(true);
+    const interactionEnd = () => interactionRef.current?.(false);
+    controls.addEventListener('start', interactionStart);
+    controls.addEventListener('end', interactionEnd);
     controls.minDistance = .8;
     controls.maxDistance = 12;
     const fitCamera = () => {
@@ -112,6 +118,8 @@ export function MobileGltfModel({ item }) {
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();
+      controls.removeEventListener('start', interactionStart);
+      controls.removeEventListener('end', interactionEnd);
       disposeModel(model);
       environment.dispose();
       renderer.dispose();
