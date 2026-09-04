@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>RIU · Themen-Modal prüfen</title>
+<style>body { margin:0; } * { box-sizing:border-box; }</style></head>
+<body><div id="root"></div><script type="module">
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import '../../style.css';
+import '../../src/platform/platform.css';
+import '../../src/fonts.css';
+import ExhibitionRoom from '../../src/exhibition/ExhibitionRoom.jsx';
+import { SPATIAL_DEMO_STORY } from '../../src/exhibition/spatialDemo.js';
+const sourceItems = SPATIAL_DEMO_STORY.stations[0].items;
+const story = { ...SPATIAL_DEMO_STORY, stations: SPATIAL_DEMO_STORY.stations.map((station, index) => ({
+  ...station,
+  items: Array.from({ length: [5, 8, 7][index] }, (_, i) => ({ ...sourceItems[i % sourceItems.length], id: `fixture-${index}-${i}`, title: `${sourceItems[i % sourceItems.length].title} ${i + 1}` }))
+})) };
+createRoot(document.getElementById('root')).render(React.createElement(ExhibitionRoom, { story }));
+</script></body></html>

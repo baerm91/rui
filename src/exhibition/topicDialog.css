@@ -1,0 +1,48 @@
+.topic-dialog { position:fixed; inset:0; width:100%; height:100dvh; max-width:none; max-height:none; margin:0; padding:0; border:0; background:#eeebe3; color:#30362f; color-scheme:light; overflow:hidden; font-family:Inter,Arial,sans-serif; overscroll-behavior:contain; }
+.topic-dialog[open] { display:flex; flex-direction:column; animation:topic-dialog-enter .28s ease-out both; }
+.topic-dialog::backdrop { background:#272d2966; backdrop-filter:blur(8px); }
+.topic-dialog.is-closing { animation:topic-dialog-exit .18s ease-in both; pointer-events:none; }
+.topic-dialog-header { display:flex; align-items:center; justify-content:space-between; flex:none; gap:16px; padding:max(16px,env(safe-area-inset-top)) clamp(20px,4vw,72px) 16px; border-bottom:1px solid #333a2e1a; }
+.topic-dialog-header > span,.topic-dialog-eyebrow { font:500 10px/1.4 Inter,Arial,sans-serif; letter-spacing:.15em; color:#74796d; }
+.topic-dialog-navigation { display:flex; gap:8px; align-items:center; }
+.topic-dialog-navigation button { display:flex; align-items:center; justify-content:center; min-width:44px; height:44px; border:0; border-radius:50%; background:transparent; color:inherit; cursor:pointer; }
+.topic-dialog-navigation button:hover { background:#dcded5; }
+.topic-dialog-navigation button:disabled { opacity:.25; cursor:default; }
+.topic-dialog-navigation .topic-dialog-close { gap:10px; border-radius:3px; padding:0 14px; margin-left:16px; background:#e0e2d9; font-size:12px; }
+.topic-dialog-body { display:grid; grid-template-columns:minmax(260px, .8fr) minmax(0, 2fr); gap:clamp(28px,5vw,90px); flex:1; min-height:0; overflow:auto; padding:clamp(28px,4vw,64px) clamp(20px,4vw,72px); }
+.topic-dialog-copy { min-width:0; }
+.topic-dialog-copy h1 { margin:14px 0 24px; font:500 clamp(36px,3.6vw,62px)/1 "Cormorant Garamond",Georgia,serif; letter-spacing:-.025em; overflow-wrap:anywhere; }
+.topic-dialog-introduction { margin:0; font:400 15px/1.8 Inter,Arial,sans-serif; color:#666c61; white-space:pre-line; }
+.topic-dialog-audio { margin-top:24px; max-width:100%; height:42px; }
+.topic-dialog-collection { position:relative; min-width:0; }
+.topic-dialog-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:28px 20px; align-content:start; }
+.topic-dialog-grid button { display:block; align-self:start; width:100%; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.topic-dialog-preview { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; overflow:hidden; border-radius:4px; background:#e2dfd5; }
+.topic-dialog-preview .lazy-image { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transition:transform .4s ease; }
+.topic-dialog-preview:has([data-image-state="loaded"]) > svg { visibility:hidden; }
+.topic-dialog-preview [data-image-state="error"] { visibility:hidden; }
+.topic-dialog-grid button:hover .lazy-image { transform:scale(1.035); }
+.topic-dialog-object-title { display:flex; align-items:start; justify-content:space-between; gap:12px; padding:12px 0; font:500 23px/1.15 "Cormorant Garamond",Georgia,serif; }
+.topic-dialog-object-title svg { flex:none; margin-top:3px; }
+.topic-dialog-back { display:inline-flex; align-items:center; gap:9px; min-height:44px; padding:0 12px 0 0; border:0; background:transparent; color:#5f675b; font:500 12px Inter,Arial,sans-serif; cursor:pointer; }
+.topic-dialog-stage { position:relative; height:clamp(300px,52dvh,760px); width:100%; border-radius:5px; overflow:hidden; background:#e2dfd5; }
+.topic-dialog-stage .spatial-sketchfab { position:absolute; inset:0; width:100%; height:100%; opacity:1; visibility:visible; pointer-events:auto; }
+.topic-dialog-stage .spatial-sketchfab iframe { width:100%; height:100%; }
+.topic-dialog-stage .mobile-model-status { background:#eeebe3; }
+.topic-dialog-model-hint { margin:12px 0 20px; color:#767c70; text-align:center; font-size:11px; }
+.topic-dialog-filmstrip { display:flex; gap:12px; overflow:auto; padding:4px 2px 14px; }
+.topic-dialog-filmstrip button { display:flex; flex-direction:column; flex:0 0 108px; gap:8px; padding:6px; border:0; border-radius:3px; background:transparent; color:#666d60; text-align:left; font-size:11px; cursor:pointer; }
+.topic-dialog-filmstrip button[aria-pressed="true"] { background:#d6dace; color:#30362f; }
+.topic-dialog-filmstrip img { width:96px; height:74px; object-fit:contain; }
+.topic-dialog-object-info { margin-top:36px; padding-top:26px; border-top:1px solid #333a2e20; }
+.topic-dialog-details > b { display:block; margin-top:10px; font:500 30px/1.1 "Cormorant Garamond",Georgia,serif; }
+.topic-dialog-details .spatial-object-description { color:#626a5c; font-size:13px; line-height:1.7; white-space:pre-line; }
+.topic-dialog-details .spatial-object-rights { display:flex; flex-wrap:wrap; gap:8px 14px; margin:20px 0; font-size:11px; line-height:1.5; }
+.topic-dialog-details a { color:#4d5e48; text-underline-offset:3px; }
+.topic-dialog-details .spatial-object-source { display:inline-flex; align-items:center; gap:8px; font-size:12px; }
+.topic-dialog button:focus-visible,.topic-dialog a:focus-visible { outline:2px solid #5f7059; outline-offset:4px; }
+@keyframes topic-dialog-enter { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes topic-dialog-exit { to { opacity:0; transform:translateY(10px); } }
+@media(max-width:960px) { .topic-dialog-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .topic-dialog-body { grid-template-columns:minmax(210px,.8fr) minmax(0,1.4fr); gap:28px; } }
+@media(max-width:720px) { .topic-dialog-body { display:block; padding:28px 20px; } .topic-dialog-copy { margin-bottom:28px; } .topic-dialog-copy h1 { font-size:40px; margin-bottom:18px; } .topic-dialog-introduction { font-size:14px; } .topic-dialog-stage { height:52dvh; min-height:300px; } .topic-dialog-object-title { font-size:21px; } .topic-dialog-navigation .topic-dialog-close { margin-left:0; padding:0 10px; } .topic-dialog-close span { display:none; } .topic-dialog-header { padding:12px 16px; } }
+@media(prefers-reduced-motion:reduce) { .topic-dialog[open],.topic-dialog.is-closing { animation:none; } .topic-dialog-preview .lazy-image { transition:none; } }

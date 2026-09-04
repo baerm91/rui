@@ -1,38 +1,28 @@
-// Pack each theme down two or three staggered rows before moving sideways.
-// Choose the band width that gives the largest readable stones in the viewport.
-export function createCobblestoneLayout(stations, width, height) {
-  const groups = stations.map((station, stationIndex) =>
-    Array.from({ length: Math.max(1, station.items?.length || 0) }, (_, itemIndex) => ({ stationIndex, itemIndex })));
-  const count = groups.reduce((sum, group) => sum + group.length, 0);
-  if (!count || width <= 24 || height <= 24) return [];
-  let best = null;
-  for (const bandRows of [...new Set([Math.min(2, count), Math.min(3, count)])]) {
-    const minimumColumns = Math.ceil(Math.min(6, Math.max(...groups.map((group) => group.length))) / bandRows);
-    for (let columns = minimumColumns; columns <= count; columns++) {
-      const capacity = columns * bandRows;
-      let cursor = 0;
-      const positions = [];
-      for (const group of groups) {
-        // Small themes stay within one band, even at a wrap boundary.
-        if (group.length <= capacity && cursor % capacity + group.length > capacity) cursor += capacity - cursor % capacity;
-        for (const entry of group) {
-          const band = Math.floor(cursor / capacity);
-          const local = cursor % capacity;
-          positions.push({ ...entry, row: band * bandRows + local % bandRows, column: Math.floor(local / bandRows) });
-          cursor++;
-        }
-      }
-      const rows = Math.max(...positions.map((entry) => entry.row)) + 1;
-      const unit = Math.min((width - 24) / (columns + (rows > 1 ? .45 : 0)), (height - 24) / rows * 1.5);
-      if (!best || unit > best.unit) best = { positions, columns, rows, unit };
+// A readable, scrollable wall: five stones per row on desktop, fewer on mobile.
+// Fill neighbouring rows first so a topic's objects form a connected cluster.
+export function createCobblestoneLayout(stations, width) {
+  if (width <= 24) return [];
+  const columns = width < 560 ? 2 : width < 960 ? 3 : 5;
+  const bandRows = columns === 2 ? 3 : 2;
+  const capacity = columns * bandRows;
+  const gap = width < 560 ? 10 : 16;
+  const unit = (width - 24) / (columns + .35);
+  const tileWidth = unit - gap;
+  const tileHeight = tileWidth * .78 + 48;
+  let cursor = 0;
+  const tiles = [];
+  stations.forEach((station, stationIndex) => {
+    const count = Math.max(1, station.items?.length || 0);
+    // Keep small topics within two or three rows at band boundaries, too.
+    if (count <= 5 && cursor % capacity + count > capacity) cursor += capacity - cursor % capacity;
+    for (let itemIndex = 0; itemIndex < count; itemIndex++, cursor++) {
+      const band = Math.floor(cursor / capacity);
+      const local = cursor % capacity;
+      const row = band * bandRows + local % bandRows;
+      const column = Math.floor(local / bandRows);
+      tiles.push({ stationIndex, itemIndex, x: 12 + (column + (row % 2 ? .35 : 0)) * unit,
+        y: 16 + row * (tileHeight + gap), width: tileWidth, height: tileHeight });
     }
-  }
-  const { positions, columns, rows, unit } = best;
-  const gap = Math.min(8, unit * .1);
-  const cellHeight = unit / 1.5;
-  const offsetX = (width - (columns + (rows > 1 ? .45 : 0)) * unit + gap) / 2;
-  const offsetY = (height - rows * cellHeight + gap) / 2;
-  return positions.map(({ row, column, ...entry }) => ({ ...entry,
-    x: offsetX + (column + (row % 2 ? .45 : 0)) * unit,
-    y: offsetY + row * cellHeight, width: unit - gap, height: cellHeight - gap }));
+  });
+  return tiles;
 }

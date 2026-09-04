@@ -33,7 +33,7 @@ const disposeModel = (object) => object?.traverse((child) => {
   }
 });
 
-function MobileGltfModel({ item }) {
+export function MobileGltfModel({ item }) {
   const canvasRef = useRef(null);
   const [status, setStatus] = useState('loading');
   useEffect(() => {

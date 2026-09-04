@@ -20,6 +20,7 @@ import './exhibitionRoom.css';
 import { StationOverview } from './StationOverview.jsx';
 import { MobileModelDialog, useMobileModelView } from './MobileModelDialog.jsx';
 import { SpatialObjectDetails } from './SpatialObjectDetails.jsx';
+import { TopicDialog } from './TopicDialog.jsx';
 
 const disposeObject = (root) => root?.traverse((object) => {
   object.geometry?.dispose?.();
@@ -1176,6 +1177,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const [mobileModelOpen, setMobileModelOpen] = useState(false);
   const [openItemId, setOpenItemId] = useState(() => initialMode === 'visitor' ? null : undefined);
   const [overviewMode, setOverviewMode] = useState(() => initialMode === 'visitor');
+  const [topicOpen, setTopicOpen] = useState(false);
   const [viewTransitioning, setViewTransitioning] = useState(false);
   const [viewTransitionDirection, setViewTransitionDirection] = useState(null);
   const [modelInteracting, setModelInteracting] = useState(false);
@@ -1191,7 +1193,6 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   const spatialThumbnailsRef = useRef(null);
   const pendingMobileThumbnailFocusRef = useRef(null);
   const [storyCopyHasMore, setStoryCopyHasMore] = useState(false);
-  const overviewMapViewRef = useRef(null);
   const viewTransitionRef = useRef({ active: false, changeTimer: null, midTimer: null, endTimer: null });
   const modelReleaseTimerRef = useRef(null);
   const station = stations[stationIndex];
@@ -1311,6 +1312,13 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     }, 280 + changeDelay);
   };
   const enterStation = (index) => {
+    if (mode === 'visitor') {
+      setStationIndex(index);
+      setOpenItemId(null);
+      setOverviewMode(true);
+      setTopicOpen(true);
+      return;
+    }
     setMobileModelOpen(false);
     const nextItemId = resolveSpatialVisitorItemId(stations[index], stations[index]?.items);
     const applyChange = () => {
@@ -1326,6 +1334,13 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     else applyChange();
   };
   const enterItem = (index, itemId) => {
+    if (mode === 'visitor') {
+      setStationIndex(index);
+      setOpenItemId(itemId);
+      setOverviewMode(true);
+      setTopicOpen(true);
+      return;
+    }
     const enterMobileStationFirst = mobileVisitor && overviewMode;
     setMobileModelOpen(!enterMobileStationFirst);
     pendingMobileThumbnailFocusRef.current = enterMobileStationFirst ? itemId : null;
@@ -1342,6 +1357,12 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
     else applyChange();
   };
   const toggleOverview = () => {
+    if (mode === 'visitor') {
+      setOpenItemId(null);
+      setOverviewMode(true);
+      setTopicOpen((value) => !value);
+      return;
+    }
     setMobileModelOpen(false);
     const nextOverviewMode = !overviewMode;
     const nextItemId = resolveSpatialVisitorItemId(station, station.items);
@@ -1524,19 +1545,22 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
   }, [audioMuted, audioPlaying, stationIndex, mode, overviewMode, station?.spatial]);
   if (!station) return null;
   return <main className={`exhibition-shell mode-${mode} thumbnail-layout-${station.thumbnailLayout} ${overviewMode ? 'is-overview' : ''} ${explorationMode ? 'is-exploring' : 'is-curated'} ${modelInteracting ? 'is-model-interacting' : ''} ${viewTransitioning ? 'is-view-transitioning' : ''} ${viewTransitionDirection ? `transition-${viewTransitionDirection}` : ''}`}>
-    {!overviewMode && <SpatialRoomCanvas suspended={!!mobileModelItem} stations={stations} stationIndex={stationIndex} selectedItem={inlineSelectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onSelectSurface={setSelectedSurface} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />}
+    {mode === 'editor' && !overviewMode && <SpatialRoomCanvas suspended={!!mobileModelItem} stations={stations} stationIndex={stationIndex} selectedItem={inlineSelectedItem} editorMode={mode === 'editor'} overviewMode={overviewMode} overviewContentVisible={!(overviewMode && viewTransitionDirection === 'enter')} largePresentation={mode === 'visitor'} explorationMode={explorationMode} onCameraReady={(capture) => { captureCameraRef.current = capture; }} onSelectStation={enterStation} onSelectItem={enterItem} onSelectSurface={setSelectedSurface} onModelInteractionChange={changeModelInteraction} onModelStatusChange={setModelStatus} />}
     <div className="spatial-view-wash" aria-hidden="true" />
     <header className="exhibition-header">{mode === 'visitor'
       ? <VisitorTopControls authorId={story.ownerId} authorName={story.authorName} editorNames={visitorEditorNames} isMuted={station.spatial.audio.autoplay ? audioMuted : !audioPlaying} onToggleMute={() => { if (station.spatial.audio.autoplay) setAudioMuted((value) => !value); else setAudioPlaying((value) => !value); }} showMute={!overviewMode && Boolean(station.spatial.audio.url)} />
-      : <a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a>}<div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
-    {overviewMode && <StationOverview title={story.name} stations={stations} stationIndex={stationIndex} onOpenStation={enterStation} onOpenItem={enterItem} mapViewRef={overviewMapViewRef} />}
-    {!overviewMode && <section className="spatial-station-content"><div ref={storyCopyRef} className="spatial-story-copy"><span>{mode === 'visitor' ? 'Thema' : 'Station'} {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div>{mode === 'visitor' && storyCopyHasMore && <button type="button" className="spatial-copy-scroll-hint" aria-label="Beschreibung weiterlesen" onClick={() => storyCopyRef.current?.scrollBy({ top: storyCopyRef.current.clientHeight * .65, behavior: 'smooth' })}><ChevronDown size={19} aria-hidden="true" /></button>}<div ref={spatialThumbnailsRef} className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setMobileModelOpen(true); resetModelInteraction(); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Dieses Thema wird noch kuratiert.'}</span></div>}</div>
+      : <a href={backHref} className="exhibition-brand" title="Zurück zu den Stories" aria-label="Zurück zu den Stories"><span className="exhibition-mark"><i /></span><b>RIU</b></a>}<div className="exhibition-mode-switch"><button className={mode === 'visitor' ? 'is-active' : ''} onClick={() => { setMode('visitor'); setTopicOpen(false); setOpenItemId(null); setOverviewMode(true); setExplorationMode(false); }}><Footprints size={14} /> Besucher</button>{initialMode === 'editor' && <button className={mode === 'editor' ? 'is-active' : ''} onClick={() => { setMode('editor'); setTopicOpen(false); setOverviewMode(false); setExplorationMode(false); }}><MousePointer2 size={13} /> Editor</button>}</div><div className="exhibition-progress"><span>{String(stationIndex + 1).padStart(2, '0')}</span><i /><span>{String(stations.length).padStart(2, '0')}</span></div></header>
+    {(mode === 'visitor' || overviewMode) && <StationOverview title={story.name} stations={stations} onOpenStation={enterStation} onOpenItem={enterItem} />}
+    {mode === 'editor' && !overviewMode && <section className="spatial-station-content"><div ref={storyCopyRef} className="spatial-story-copy"><span>{mode === 'visitor' ? 'Thema' : 'Station'} {String(stationIndex + 1).padStart(2, '0')}</span><h1>{station.title}</h1><p>{station.introduction}</p></div>{mode === 'visitor' && storyCopyHasMore && <button type="button" className="spatial-copy-scroll-hint" aria-label="Beschreibung weiterlesen" onClick={() => storyCopyRef.current?.scrollBy({ top: storyCopyRef.current.clientHeight * .65, behavior: 'smooth' })}><ChevronDown size={19} aria-hidden="true" /></button>}<div ref={spatialThumbnailsRef} className="spatial-thumbnails">{station.items.map((item) => <SpatialThumbnail key={item.id} item={item} selected={item.id === selectedItem?.id} multiSelected={mode === 'editor' && selectedThumbnailIds.includes(item.id)} editorMode={mode === 'editor'} onSelect={(event) => { if (mode === 'editor') selectThumbnailItem(item.id, event); else { setOpenItemId(item.id); setMobileModelOpen(true); resetModelInteraction(); setExplorationMode(false); } }} onMove={(position) => updateItem(stationIndex, item.id, { thumbnailTransform: { ...item.thumbnailTransform, position } })} />)}{mode === 'visitor' && !selectedItem && station.items.length > 0 && <div className="spatial-open-hint">Objekt auswählen, um es räumlich zu öffnen</div>}{!station.items.length && <div className="spatial-empty-objects"><Box size={25} /><span>{mode === 'editor' ? 'Fügen Sie in der Seitenleiste das erste Modell hinzu.' : 'Dieses Thema wird noch kuratiert.'}</span></div>}</div>
       {inlineSelectedItem?.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={inlineSelectedItem} onInteractionChange={changeModelInteraction} />}
       {inlineSelectedItem?.sourceType === 'gltf' && modelStatus.state !== 'ready' && <div className={`spatial-model-status is-${modelStatus.state}`} role={modelStatus.state === 'error' ? 'alert' : 'status'} aria-live="polite"><i aria-hidden="true" /><span>{modelStatus.message || '3D-Modell wird vorbereitet'}</span></div>}
       {inlineSelectedItem && <SpatialObjectDetails item={inlineSelectedItem} className="spatial-object-caption" />}
       {inlineSelectedItem && <div className="model-interaction-hint"><Rotate3D size={14} /> Ziehen zum Drehen <i /> Scrollen zum Zoomen</div>}
     </section>}
-    {mobileModelItem && <MobileModelDialog key={mobileModelItem.id} item={mobileModelItem} onClose={closeMobileModel}>{mobileModelItem.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={mobileModelItem} />}</MobileModelDialog>}
+    {mode === 'editor' && mobileModelItem && <MobileModelDialog key={mobileModelItem.id} item={mobileModelItem} onClose={closeMobileModel}>{mobileModelItem.sourceType === 'sketchfab' && <SpatialSketchfabViewer item={mobileModelItem} />}</MobileModelDialog>}
+    {mode === 'visitor' && topicOpen && <TopicDialog station={station} stationIndex={stationIndex} stationCount={stations.length} itemId={openItemId}
+      onSelectItem={setOpenItemId} onNavigate={enterStation} onClose={() => { setTopicOpen(false); setOpenItemId(null); }}
+      renderSketchfab={(item) => <SpatialSketchfabViewer item={item} />} />}
     <footer className="exhibition-footer">
       {overviewMode
         ? <a href={backHref} className="exhibition-back"><ArrowLeft size={14} /> Meine Stories</a>
@@ -1544,7 +1568,7 @@ export default function ExhibitionRoom({ story, initialMode = 'visitor', backHre
       <div className="station-stepper"><button disabled={stationIndex === 0} onClick={() => enterStation(stationIndex - 1)}><ChevronLeft /></button><span><b>{String(stationIndex + 1).padStart(2, '0')}</b> / {String(stations.length).padStart(2, '0')}</span><button disabled={stationIndex === stations.length - 1} onClick={() => enterStation(stationIndex + 1)}><ChevronRight /></button></div>
       {overviewMode && <div className="exhibition-footer-actions"><button className="walk-hint is-active" type="button" onClick={toggleOverview}><Footprints size={15} /> Zum Thema</button></div>}
     </footer>
-    {initialMode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => { setStationIndex(index); setSelectedSurface('wall'); }} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} isPreviewMode={mode === 'visitor'} previewStationIndex={stationIndex} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? resolveSpatialVisitorItemId(station, station.items) : null); setOverviewMode(false); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} projectControlsAvailable={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} selectedSpatialSurface={selectedSurface} onSelectSpatialItem={selectThumbnailItem} onSelectSpatialSurface={setSelectedSurface} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
+    {initialMode === 'editor' && <EditorSidebar editingStations={stations} editingAnnotations={[]} editingIndex={stationIndex} activeAccordionIndex={null} activeImageAccordion={null} configFile={{ showImportExport: false, openDialog() {} }} onSetActiveAccordion={() => {}} onSetActiveImageAccordion={() => {}} onTestStation={(index) => { setStationIndex(index); setSelectedSurface('wall'); }} onMoveStation={moveStation} onDeleteStation={deleteStation} onCaptureCamera={captureCamera} onPlaceOriginPoint={() => {}} onUpdateText={() => {}} onUpdateImage={() => {}} onUploadImage={() => {}} onAddAnnotation={() => {}} onDeleteAnnotation={() => {}} onMoveAnnotation={() => {}} onUpdateAnnotation={() => {}} onCaptureAnnotation={() => {}} onPlaceAnnotationInScene={() => {}} onUploadAnnotationImages={() => {}} onLocalBgUpload={() => {}} getBgSelectValue={() => ''} onCancel={() => { location.href = backHref; }} onSave={save} onRealign={() => {}} onRestoreDefaults={() => setStations(normalizeStoryStations(story))} onAddStation={addStation} isPreviewMode={mode === 'visitor'} previewStationIndex={stationIndex} onPreviewModeChange={(preview) => { setMode(preview ? 'visitor' : 'editor'); setOpenItemId(preview ? resolveSpatialVisitorItemId(station, station.items) : null); setOverviewMode(preview); setTopicOpen(preview); }} projects={[editorProject]} activeProject={editorProject} saveStatus={saved ? 'saved' : 'idle'} onUpdateProject={() => {}} canCreateProjects={false} projectControlsAvailable={false} spatialMode selectedSpatialItemIds={selectedThumbnailIds} selectedSpatialSurface={selectedSurface} onSelectSpatialItem={selectThumbnailItem} onSelectSpatialSurface={setSelectedSurface} onUpdateSpatialStation={updateStation} onUpdateSpatialItem={updateItem} onUpdateSpatialItemPositions={updateItemPositions} onMoveSpatialItem={moveItem} onAddSpatialItem={addItem} onRemoveSpatialItem={removeItem} />}
     {saved && <div className="spatial-save-toast"><Check size={14} /> Story gespeichert</div>}
   </main>;
 }

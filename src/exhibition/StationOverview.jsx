@@ -1,23 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Panzoom from '@panzoom/panzoom';
-import { ArrowUpRight, Box, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ArrowUpRight, Box } from 'lucide-react';
 import { LazyImage } from '../platform/LazyImage.jsx';
 import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
-import { createStationMapGesture } from '../utils/stationMapLayout.js';
 import { createCobblestoneLayout } from '../utils/cobblestoneLayout.js';
 import './stationOverview.css';
 
-export function StationOverview({ title, stations, onOpenStation, onOpenItem, mapViewRef }) {
+export function StationOverview({ title, stations, onOpenStation, onOpenItem }) {
   const viewportRef = useRef(null);
-  const canvasRef = useRef(null);
   const headingRef = useRef(null);
-  const panzoomRef = useRef(null);
-  const gesture = useRef(createStationMapGesture());
   const leaveTimer = useRef(null);
   const [active, setActive] = useState(null);
-  const [zoom, setZoom] = useState(mapViewRef?.current?.scale || 1);
-  const [size, setSize] = useState({ width: 1000, height: 600 });
-  const tiles = useMemo(() => createCobblestoneLayout(stations, size.width, size.height), [stations, size]);
+  const [width, setWidth] = useState(1200);
+  const tiles = useMemo(() => createCobblestoneLayout(stations, width), [stations, width]);
+  const contentHeight = Math.max(0, ...tiles.map((tile) => tile.y + tile.height)) + 24;
   const activate = (index) => { clearTimeout(leaveTimer.current); setActive(index); };
   const release = () => { clearTimeout(leaveTimer.current); leaveTimer.current = setTimeout(() => setActive(null), 100); };
 
@@ -25,55 +20,11 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem, ma
     headingRef.current?.focus({ preventScroll: true });
     const viewport = viewportRef.current;
     const observer = new ResizeObserver(() => {
-      const { width, height } = viewport.getBoundingClientRect();
-      if (width && height) setSize({ width, height });
+      if (viewport.clientWidth) setWidth(viewport.clientWidth);
     });
     observer.observe(viewport);
     return () => { observer.disconnect(); clearTimeout(leaveTimer.current); };
   }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    const canvas = canvasRef.current;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const saved = mapViewRef?.current;
-    const panzoom = Panzoom(canvas, {
-      canvas: true, minScale: .75, maxScale: 2, startScale: saved?.scale || 1,
-      startX: saved?.x || 0, startY: saved?.y || 0,
-      duration: 240, easing: 'ease-out', panOnlyWhenZoomed: true,
-      handleStartEvent: (event) => event.preventDefault(),
-    });
-    panzoomRef.current = panzoom;
-    const wheel = (event) => {
-      event.preventDefault();
-      const bounds = viewport.getBoundingClientRect();
-      const delta = (event.deltaY || event.deltaX) * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? bounds.height : 1);
-      const scale = Math.max(.75, Math.min(2, panzoom.getScale() * Math.exp(-Math.max(-120, Math.min(120, delta)) * .002)));
-      panzoom.zoom(scale, {
-        animate: !reducedMotion.matches,
-        focal: { x: (event.clientX - bounds.left - bounds.width / 2) * scale, y: (event.clientY - bounds.top - bounds.height / 2) * scale },
-      });
-    };
-    const change = (event) => {
-      const { scale, x, y } = event.detail;
-      setZoom(scale);
-      if (mapViewRef) mapViewRef.current = { scale, x, y };
-    };
-    viewport.addEventListener('wheel', wheel, { passive: false });
-    canvas.addEventListener('panzoomchange', change);
-    return () => {
-      viewport.removeEventListener('wheel', wheel);
-      canvas.removeEventListener('panzoomchange', change);
-      panzoom.destroy();
-      panzoomRef.current = null;
-    };
-  }, [mapViewRef]);
-
-  const adjustZoom = (amount) => {
-    const options = { animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches };
-    if (!amount) { panzoomRef.current?.zoom(1, options); panzoomRef.current?.pan(0, 0, { ...options, force: true }); }
-    else panzoomRef.current?.zoom(panzoomRef.current.getScale() + amount, options);
-  };
 
   return <section className="topic-cluster" aria-labelledby="topic-cluster-title">
     <header className="topic-cluster-heading">
@@ -87,19 +38,10 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem, ma
         <span>{String(index + 1).padStart(2, '0')}</span>{station.title}<small>{station.items.length}</small>
       </button>)}
     </nav>
-    <div ref={viewportRef} className="topic-cluster-viewport" role="region" aria-label="Modelle der Ausstellung. Mausrad zum Zoomen, Ziehen zum Verschieben." tabIndex={0}
+    <div ref={viewportRef} className="topic-cluster-viewport" role="region" aria-label="Modelle der Ausstellung" tabIndex={0}
       onPointerLeave={release} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) release(); }}
-      onPointerDownCapture={(event) => gesture.current.start(event.pointerId, event.clientX, event.clientY)}
-      onPointerMoveCapture={(event) => gesture.current.move(event.pointerId, event.clientX, event.clientY)}
-      onPointerUpCapture={(event) => gesture.current.end(event.pointerId)} onPointerCancel={() => gesture.current.cancel()}
-      onKeyDown={(event) => {
-        if (['+', '=', '-', '0', 'Escape'].includes(event.key)) {
-          event.preventDefault();
-          if (event.key === 'Escape') activate(null);
-          else adjustZoom(event.key === '-' ? -.15 : event.key === '0' ? 0 : .15);
-        }
-      }}>
-      <div ref={canvasRef} className="topic-cluster-canvas">
+      onKeyDown={(event) => { if (event.key === 'Escape') activate(null); }}>
+      <div className="topic-cluster-canvas" style={{ height: contentHeight }}>
         {tiles.map((tile) => {
           const station = stations[tile.stationIndex];
           const item = station.items[tile.itemIndex];
@@ -108,31 +50,17 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem, ma
           return <button type="button" key={`${station.id}:${item?.id || 'empty'}`} data-station-index={tile.stationIndex}
             className={`topic-cluster-tile${focused ? ' is-active' : ''}${active !== null && !focused ? ' is-muted' : ''}`}
             style={{ left: tile.x, top: tile.y, width: tile.width, height: tile.height }}
-            aria-label={`${station.title}: ${item?.title || item?.name || 'Thema betreten'}`}
-            onPointerEnter={(event) => { if (event.pointerType !== 'touch' && !event.buttons) activate(tile.stationIndex); }}
+            aria-label={`${station.title}: ${item?.title || item?.name || 'Thema betreten'}`} aria-haspopup="dialog"
+            onPointerEnter={(event) => { if (event.pointerType !== 'touch') activate(tile.stationIndex); }}
             onFocus={() => activate(tile.stationIndex)}
-            onClick={(event) => {
-              if (!gesture.current.canOpen() && event.detail !== 0) return;
-              if (event.nativeEvent.pointerType === 'touch' && !focused) { activate(tile.stationIndex); return; }
-              if (item && onOpenItem) onOpenItem(tile.stationIndex, item.id);
-              else onOpenStation(tile.stationIndex);
-            }}>
-            <Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />
-            {src && <LazyImage key={src} src={src} />}
-            <span className="topic-cluster-caption"><small>THEMA {String(tile.stationIndex + 1).padStart(2, '0')}</small><strong>{station.title}</strong><ArrowUpRight size={18} aria-hidden="true" /></span>
+            onClick={() => { if (item && onOpenItem) onOpenItem(tile.stationIndex, item.id); else onOpenStation(tile.stationIndex); }}>
+            <span className="topic-cluster-image"><Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />{src && <LazyImage key={src} src={src} />}</span>
+            <span className="topic-cluster-caption"><strong>{item?.title || item?.name || station.title}</strong><ArrowUpRight size={16} aria-hidden="true" /></span>
           </button>;
         })}
       </div>
       {!tiles.length && <p className="topic-cluster-empty">Diese Ausstellung enthält noch keine Themen.</p>}
     </div>
-    <footer className="topic-cluster-footer">
-      <p>Über ein Modell fahren, um sein Thema zu entdecken <span>· Mausrad zum Zoomen · Ziehen zum Verschieben</span></p>
-      <div className="topic-cluster-zoom" role="group" aria-label="Ansicht zoomen">
-        <button type="button" aria-label="Herauszoomen" disabled={zoom <= .751} onClick={() => adjustZoom(-.15)}><Minus size={16} /></button>
-        <output aria-label="Zoomstufe">{Math.round(zoom * 100)} %</output>
-        <button type="button" aria-label="Hineinzoomen" disabled={zoom >= 1.999} onClick={() => adjustZoom(.15)}><Plus size={16} /></button>
-        <button type="button" aria-label="Ansicht zurücksetzen" onClick={() => adjustZoom(0)}><RotateCcw size={15} /></button>
-      </div>
-    </footer>
+    <p className="topic-cluster-hint">Ein Objekt oder Thema auswählen, um die Sammlung zu öffnen.</p>
   </section>;
 }
