@@ -15,14 +15,22 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
   const closeTimer = useRef(null);
   const releaseTimer = useRef(null);
   const [closing, setClosing] = useState(false);
+  const [hiddenModel, setHiddenModel] = useState(null);
   const [interacting, setInteracting] = useState(false);
   const [edges, setEdges] = useState({ before: false, after: false });
   const background = station.spatial?.wallBackground;
   const item = station.items.find((entry) => entry.id === itemId)
     || station.items.find((entry) => entry.id === station.initialItemId) || station.items[0];
+  const modelKey = `${station.id}:${item?.id}`;
+  const modelVisible = Boolean(item) && hiddenModel !== modelKey;
   const updateEdges = useCallback(() => {
     const strip = stripRef.current;
-    if (strip) setEdges({ before: strip.scrollTop > 2, after: strip.scrollTop + strip.clientHeight < strip.scrollHeight - 2 });
+    if (!strip) return;
+    const horizontal = matchMedia('(max-width:720px)').matches;
+    const position = horizontal ? strip.scrollLeft : strip.scrollTop;
+    const size = horizontal ? strip.clientWidth : strip.clientHeight;
+    const total = horizontal ? strip.scrollWidth : strip.scrollHeight;
+    setEdges({ before: position > 2, after: position + size < total - 2 });
   }, []);
   const changeInteraction = useCallback((active) => {
     clearTimeout(releaseTimer.current);
@@ -59,6 +67,7 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
     closeRef.current?.focus({ preventScroll: true });
     const strip = stripRef.current;
     strip.scrollTop = 0;
+    strip.scrollLeft = 0;
     const observer = new ResizeObserver(updateEdges);
     observer.observe(strip);
     updateEdges();
@@ -70,9 +79,13 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
     const button = [...stripRef.current.querySelectorAll('button')].find((entry) => entry.dataset.itemId === item?.id);
     if (button) {
       const strip = stripRef.current;
-      const top = button.offsetTop;
-      if (top < strip.scrollTop) strip.scrollTop = top;
-      else if (top + button.offsetHeight > strip.scrollTop + strip.clientHeight) strip.scrollTop = top + button.offsetHeight - strip.clientHeight;
+      const horizontal = matchMedia('(max-width:720px)').matches;
+      const position = horizontal ? 'scrollLeft' : 'scrollTop';
+      const size = horizontal ? strip.clientWidth : strip.clientHeight;
+      const start = horizontal ? button.offsetLeft : button.offsetTop;
+      const length = horizontal ? button.offsetWidth : button.offsetHeight;
+      if (start < strip[position]) strip[position] = start;
+      else if (start + length > strip[position] + size) strip[position] = start + length - size;
     }
     updateEdges();
   }, [item?.id, updateEdges]);
@@ -83,22 +96,32 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
     setClosing(true);
     closeTimer.current = setTimeout(onClose, 180);
   };
-  const scrollObjects = (direction) => stripRef.current?.scrollBy({ top: direction * stripRef.current.clientHeight, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  const hideModel = () => {
+    setHiddenModel(modelKey);
+    clearTimeout(releaseTimer.current);
+    setInteracting(false);
+  };
+  const scrollObjects = (direction) => {
+    const strip = stripRef.current;
+    const horizontal = matchMedia('(max-width:720px)').matches;
+    strip?.scrollBy({ [horizontal ? 'left' : 'top']: direction * (horizontal ? strip.clientWidth : strip.clientHeight), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
 
-  return createPortal(<dialog ref={dialogRef} className={`topic-dialog${closing ? ' is-closing' : ''}${interacting ? ' is-interacting' : ''}`} aria-labelledby="topic-dialog-title"
-    onCancel={(event) => { event.preventDefault(); close(); }}>
+  return createPortal(<dialog ref={dialogRef} className={`topic-dialog${closing ? ' is-closing' : ''}${interacting ? ' is-interacting' : ''}${!modelVisible ? ' is-model-hidden' : ''}`} aria-labelledby="topic-dialog-title"
+    onCancel={(event) => { event.preventDefault(); if (modelVisible) hideModel(); else close(); }}>
     {background?.url && <img key={background.url} className="topic-dialog-background" src={background.url} alt="" style={{ opacity: background.opacity ?? .72 }} />}
-    <div className="topic-dialog-stage" key={item?.id || 'empty'}>
+    {modelVisible && <div className="topic-dialog-stage" key={item?.id || 'empty'}>
       {item?.sourceType === 'gltf' ? <MobileGltfModel item={item} onInteractionChange={changeInteraction} />
         : item?.sourceType === 'sketchfab' ? renderSketchfab?.(item, changeInteraction)
           : <p className="topic-dialog-empty">{item ? 'Für dieses Objekt ist noch keine 3D-Ansicht verfügbar.' : 'Dieses Thema wird noch kuratiert.'}</p>}
-    </div>
+    </div>}
     <header className="topic-dialog-header">
+      <button type="button" className="topic-dialog-back" onClick={close}><ChevronLeft size={18} />Zur Übersicht</button>
       <span>THEMA {String(stationIndex + 1).padStart(2, '0')} / {String(stationCount).padStart(2, '0')}</span>
       <div className="topic-dialog-navigation">
         <button type="button" aria-label="Vorheriges Thema" disabled={stationIndex === 0} onClick={() => onNavigate(stationIndex - 1)}><ChevronLeft size={20} /></button>
         <button type="button" aria-label="Nächstes Thema" disabled={stationIndex === stationCount - 1} onClick={() => onNavigate(stationIndex + 1)}><ChevronRight size={20} /></button>
-        <button ref={closeRef} type="button" className="topic-dialog-close" aria-label="Thema schließen" onClick={close} autoFocus><X size={22} /><span>Schließen</span></button>
+        <button ref={closeRef} type="button" className="topic-dialog-close" aria-label="3D-Modell schließen" disabled={!modelVisible} onClick={hideModel} autoFocus><X size={22} /><span>Modell schließen</span></button>
       </div>
     </header>
     <aside ref={copyRef} className="topic-dialog-copy" tabIndex={0} aria-label="Themenbeschreibung">
@@ -107,14 +130,14 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
       {station.introduction && <p className="topic-dialog-introduction">{station.introduction}</p>}
       {station.spatial?.audio?.url && <audio key={station.id} controls preload="none" src={station.spatial.audio.url} aria-label={`Audiobeitrag: ${station.title}`} />}
     </aside>
-    {item && <>
+    {modelVisible && <>
       <div className="topic-dialog-object-info"><SpatialObjectDetails item={item} className="topic-dialog-details" showRights={false} showSource={false} /></div>
       <div className="topic-dialog-credits" aria-label="Verfasser, Lizenz und Quelle"><SpatialObjectDetails item={item} className="topic-dialog-details" showTitle={false} showDescription={false} /></div>
     </>}
     <aside className="topic-dialog-rail" aria-label="Objekte dieses Themas">
       <button className="topic-dialog-scroll" type="button" disabled={!edges.before} onClick={() => scrollObjects(-1)} aria-label="Vorherige Objekte"><ChevronUp size={18} /></button>
       <div ref={stripRef} onScroll={updateEdges} className={`topic-dialog-filmstrip${edges.before ? ' has-before' : ''}${edges.after ? ' has-after' : ''}`}>
-        {station.items.map((entry) => <button key={entry.id} type="button" data-item-id={entry.id} aria-label={entry.title} aria-pressed={entry.id === item?.id} onClick={() => onSelectItem(entry.id)}>
+        {station.items.map((entry) => <button key={entry.id} type="button" data-item-id={entry.id} aria-label={entry.title} aria-pressed={modelVisible && entry.id === item?.id} onClick={() => { setHiddenModel(null); onSelectItem(entry.id); }}>
           <span className="topic-dialog-thumb"><Box size={24} aria-hidden="true" /><LazyImage key={resolveSpatialThumbnailUrl(entry)} src={resolveSpatialThumbnailUrl(entry)} /></span><span>{entry.title}</span>
         </button>)}
       </div>

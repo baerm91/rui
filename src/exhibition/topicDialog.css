@@ -89,3 +89,26 @@
 .topic-dialog.is-interacting .topic-dialog-object-info { pointer-events:none; }
 .topic-dialog-copy { z-index:0; pointer-events:none; }
 .topic-dialog.is-interacting .topic-dialog-copy { pointer-events:none; }
+.topic-dialog-back { display:flex; align-items:center; gap:5px; min-height:44px; padding:0 12px; border:0; border-radius:3px; background:#eeebe3e6; color:inherit; font:500 12px Inter,Arial,sans-serif; cursor:pointer; pointer-events:auto; }
+.topic-dialog.is-model-hidden .topic-dialog-copy { pointer-events:auto; }
+@media(max-width:720px) {
+ .topic-dialog-header { gap:4px; padding:max(8px,env(safe-area-inset-top)) 12px 8px; }
+ .topic-dialog-header > span { display:none; }
+ .topic-dialog-navigation { gap:2px; }
+ .topic-dialog-back { padding:0 6px; }
+ .topic-dialog-rail { left:12px; right:12px; top:auto; bottom:max(12px,env(safe-area-inset-bottom)); width:auto; height:88px; flex-direction:row; align-items:center; gap:4px; }
+ .topic-dialog-filmstrip { flex:1; flex-direction:row; height:88px; max-height:none; min-width:0; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; touch-action:pan-x; }
+ .topic-dialog-filmstrip button { flex:0 0 108px; height:88px; }
+ .topic-dialog-filmstrip.has-after { mask-image:linear-gradient(to right,#000 85%,transparent); }
+ .topic-dialog-filmstrip.has-before { mask-image:linear-gradient(to right,transparent,#000 15%); }
+ .topic-dialog-filmstrip.has-before.has-after { mask-image:linear-gradient(to right,transparent,#000 15%,#000 85%,transparent); }
+ .topic-dialog-scroll { width:24px; height:44px; }
+ .topic-dialog-scroll svg { transform:rotate(-90deg); }
+ .topic-dialog-scroll span { display:none; }
+ .topic-dialog-object-info { top:72px; left:16px; right:16px; max-height:17dvh; padding:8px; }
+ .topic-dialog-copy { top:calc(80px + 17dvh); left:16px; width:calc(100% - 32px); max-height:calc(83dvh - 320px); padding:10px; scrollbar-width:none; }
+ .topic-dialog-credits { right:20px; bottom:calc(max(12px,env(safe-area-inset-bottom)) + 108px); width:calc(100% - 40px); max-height:100px; padding:8px 12px; }
+ .topic-dialog-model-hint { display:none; }
+ .topic-dialog.is-model-hidden .topic-dialog-copy { top:80px; max-height:calc(100dvh - 200px); }
+}
+.topic-dialog.is-model-hidden .topic-dialog-model-hint { display:none; }
