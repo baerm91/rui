@@ -4,67 +4,35 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-test('station overview keeps every station accessible and defers thumbnails and 3D content', async () => {
-  const compiler = await createServer({ configFile: false, logLevel: 'silent', appType: 'custom', server: { middlewareMode: true, hmr: false, watch: null } });
+test('cluster overview exposes every object and empty topic while deferring image and 3D loading', async () => {
+  const compiler = await createServer({ configFile: false, logLevel: 'silent', appType: 'custom', ssr: { noExternal: ['@panzoom/panzoom'] }, server: { middlewareMode: true, hmr: false, watch: null } });
   try {
     const { StationOverview } = await compiler.ssrLoadModule('/src/exhibition/StationOverview.jsx');
-    const { resolveStationMapOpenItemId } = await compiler.ssrLoadModule('/src/exhibition/MobileStationMap.jsx');
-    const stations = [0, 1, 3, 6, 12].map((count, index) => ({
+    const stations = [0, 1, 5, 6, 12].map((count, index) => ({
       id: `station-${index}`, title: `Sammlung ${index + 1}`,
-      spatial: { wallBackground: { url: index === 3 ? '/wall-3.jpg' : '' } },
+      spatial: { wallBackground: { url: '/wall.jpg' } },
       items: Array.from({ length: count }, (_, itemIndex) => ({ id: `item-${itemIndex}`, title: `Objekt ${itemIndex + 1}`, thumbnailUrl: `/thumb-${index}-${itemIndex}.jpg` }))
     }));
-    const html = renderToStaticMarkup(React.createElement(StationOverview, { title: 'Ausstellung', stations, stationIndex: 1 }));
-    assert.equal((html.match(/class="station-map-stone stone-/g) || []).length, 5);
-    for (let index = 0; index < stations.length; index++) {
-      assert.ok(html.includes(`Thema ${index + 1}: Sammlung ${index + 1} vergrößern`));
-      assert.ok(html.includes(`<span class="station-map-station-name" style="opacity:0"><span class="station-map-station-number">${String(index + 1).padStart(2, '0')} · </span>Sammlung ${index + 1}</span>`));
-    }
-    assert.doesNotMatch(html, /Heranzoomen|Herauszoomen|Alle Themen anzeigen/);
-    assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-/);
-    assert.doesNotMatch(html, /Thema direkt öffnen/);
-    assert.match(html, /loading="lazy"/);
-    assert.doesNotMatch(html, /station-map-tile-heading|station-map-tile-footer|station-map-preview-caption|station-map-stone-title/);
-    assert.equal((html.match(/class="station-map-station-name"/g) || []).length, 5);
-    assert.equal((html.match(/class="station-map-station-number"/g) || []).length, 5);
-    assert.doesNotMatch(html, /data-station-number=/);
-    // Every station exposes its complete collection before any zooming.
-    assert.equal((html.match(/class="station-map-image(?: is-zoom-target)?"/g) || []).length, 22);
-    assert.deepEqual([...html.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
-    assert.doesNotMatch(html, /transform:|station-map-world/);
-    const focusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
-      title: 'Ausstellung', stations, stationIndex: 3,
-      mapViewRef: { current: { focusIndex: 3, progress: 1 } }
+    const render = (saved) => renderToStaticMarkup(React.createElement(StationOverview, {
+      title: 'Ausstellung', stations, mapViewRef: { current: saved }
     }));
-    const fallbackFocusedHtml = renderToStaticMarkup(React.createElement(StationOverview, {
-      title: 'Ausstellung', stations, stationIndex: 1,
-      mapViewRef: { current: { focusIndex: 1, progress: 1 } }
+    const html = render(null);
+    assert.equal((html.match(/class="topic-cluster-tile"/g) || []).length, 25);
+    assert.match(html, /aria-label="Sammlung 1: Thema betreten"/);
+    stations.forEach((station) => station.items.forEach((item) => {
+      assert.ok(html.includes(`aria-label="${station.title}: ${item.title}"`));
     }));
-    // Expanding a tile overlays the unchanged overview and never changes the number of previews.
-    const tileStyle = (markup, index) => markup.match(new RegExp(`data-station-index="${index}"[^>]*style="([^"]+)"`))?.[1];
-    for (const index of [0, 1, 2, 4]) assert.equal(tileStyle(focusedHtml, index), tileStyle(html, index));
-    assert.notEqual(tileStyle(focusedHtml, 3), tileStyle(html, 3));
-    assert.equal((focusedHtml.match(/class="station-map-image(?: is-zoom-target)?"/g) || []).length, 22);
-    assert.equal((focusedHtml.match(/class="station-map-image is-zoom-target"/g) || []).length, 0);
-    assert.deepEqual([...focusedHtml.matchAll(/data-preview-count="(\d+)"/g)].map((match) => Number(match[1])), [0, 1, 3, 6, 12]);
-    assert.equal((html.match(/class="station-map-images"/g) || []).length, 5);
-    assert.equal((html.match(/class="station-map-stone-face has-background"/g) || []).length, 1);
-    assert.equal((html.match(/class="station-map-background is-fallback"/g) || []).length, 4);
-    assert.equal((html.match(/class="station-map-cover-border"/g) || []).length, 5);
-    assert.equal((html.match(/class="station-map-cover-title"/g) || []).length, 5);
-    assert.match(html, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:1"[\s\S]*?class="station-map-cover-border" style="opacity:1"[\s\S]*?class="station-map-cover-title" style="opacity:1"[\s\S]*?class="station-map-cover-number">04<\/span>[\s\S]*?class="station-map-cover-rule"[\s\S]*?<b>Sammlung 4<\/b>[\s\S]*?class="station-map-cover-cta" style="opacity:1"[\s\S]*?class="station-map-images" style="opacity:0"/);
-    assert.match(html, /class="station-map-stone-face"[^>]*>[\s\S]*?class="station-map-background is-fallback" style="opacity:1"[\s\S]*?class="station-map-cover-number">01<\/span>[\s\S]*?<b>Sammlung 1<\/b>/);
-    assert.doesNotMatch(html, /Thema ansehen/);
-    assert.match(focusedHtml, /Thema betreten/);
-    assert.match(focusedHtml, /Kachel verkleinern/);
-    assert.match(focusedHtml, /class="station-map-stone-face has-background"[^>]*>[\s\S]*?class="station-map-background" style="opacity:0"[\s\S]*?class="station-map-cover-title" style="opacity:0"[\s\S]*?class="station-map-images" style="opacity:1"/);
-    assert.match(fallbackFocusedHtml, /class="station-map-stone-face"[^>]*>[\s\S]*?class="station-map-background is-fallback" style="opacity:0"[\s\S]*?class="station-map-cover-title" style="opacity:0"[\s\S]*?class="station-map-station-name" style="opacity:1"/);
-    assert.doesNotMatch(html, />Objekt \d+</);
-    assert.doesNotMatch(html, /NaN|Infinity|station-overview-grid/);
-    assert.equal(resolveStationMapOpenItemId({ closest: () => ({ dataset: { imageIndex: '2' } }) }, [
-      { key: 'object-1' }, { key: 'object-2' }, { key: 'object-3' }
-    ]), 'object-3');
-    assert.equal(resolveStationMapOpenItemId({ closest: () => null }, [{ key: 'object-1' }]), null);
+    assert.doesNotMatch(html, /<canvas|<iframe|src="\/thumb-|src="\/wall.jpg"|NaN|Infinity/);
+    assert.equal((html.match(/loading="lazy"/g) || []).length, 24);
+    assert.match(html, /aria-label="Herauszoomen"/);
+    assert.match(html, /aria-label="Hineinzoomen"/);
+    assert.match(html, /aria-label="Ansicht zurücksetzen"/);
+    const restored = render({ scale: 1.5, x: 30, y: 10 });
+    assert.match(restored, />150 %<\/output>/);
+    assert.equal((restored.match(/class="topic-cluster-tile"/g) || []).length, 25);
+    // Hover and zoom don't replace or repartition any object's base rectangle.
+    const rectangles = (markup) => [...markup.matchAll(/data-station-index="\d+"[^>]*style="([^"]+)"/g)].map((match) => match[1]);
+    assert.deepEqual(rectangles(restored), rectangles(html));
   } finally {
     await compiler.close();
   }
