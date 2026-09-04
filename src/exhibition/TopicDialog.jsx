@@ -16,6 +16,7 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
   const [closing, setClosing] = useState(false);
   const [interacting, setInteracting] = useState(false);
   const [edges, setEdges] = useState({ before: false, after: false });
+  const background = station.spatial?.wallBackground;
   const item = station.items.find((entry) => entry.id === itemId)
     || station.items.find((entry) => entry.id === station.initialItemId) || station.items[0];
   const updateEdges = useCallback(() => {
@@ -71,6 +72,7 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
 
   return createPortal(<dialog ref={dialogRef} className={`topic-dialog${closing ? ' is-closing' : ''}${interacting ? ' is-interacting' : ''}`} aria-labelledby="topic-dialog-title"
     onCancel={(event) => { event.preventDefault(); close(); }}>
+    {background?.url && <img key={background.url} className="topic-dialog-background" src={background.url} alt="" style={{ opacity: background.opacity ?? .72 }} />}
     <div className="topic-dialog-stage" key={item?.id || 'empty'}>
       {item?.sourceType === 'gltf' ? <MobileGltfModel item={item} onInteractionChange={changeInteraction} />
         : item?.sourceType === 'sketchfab' ? renderSketchfab?.(item, changeInteraction)
@@ -90,7 +92,10 @@ export function TopicDialog({ station, stationIndex, stationCount, itemId, onSel
       {station.introduction && <p className="topic-dialog-introduction">{station.introduction}</p>}
       {station.spatial?.audio?.url && <audio key={station.id} controls preload="none" src={station.spatial.audio.url} aria-label={`Audiobeitrag: ${station.title}`} />}
     </aside>
-    {item && <div className="topic-dialog-object-info"><SpatialObjectDetails item={item} className="topic-dialog-details" /></div>}
+    {item && <>
+      <div className="topic-dialog-object-info"><SpatialObjectDetails item={item} className="topic-dialog-details" showRights={false} showSource={false} /></div>
+      <div className="topic-dialog-credits" aria-label="Verfasser, Lizenz und Quelle"><SpatialObjectDetails item={item} className="topic-dialog-details" showTitle={false} showDescription={false} /></div>
+    </>}
     <aside className="topic-dialog-rail" aria-label="Objekte dieses Themas">
       <button className="topic-dialog-scroll" type="button" disabled={!edges.before} onClick={() => scrollObjects(-1)} aria-label="Vorherige Objekte"><ChevronUp size={18} /></button>
       <div ref={stripRef} onScroll={updateEdges} className={`topic-dialog-filmstrip${edges.before ? ' has-before' : ''}${edges.after ? ' has-after' : ''}`}>

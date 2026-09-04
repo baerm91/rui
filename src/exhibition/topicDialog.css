@@ -61,3 +61,24 @@
  .topic-dialog-object-info { left:50%; bottom:48px; width:calc(100% - 32px); max-height:16dvh; transform:translateX(-50%); box-sizing:border-box; }
  .topic-dialog.is-interacting .topic-dialog-object-info { transform:translateX(-50%) translateY(8px) scale(.98); }
 }
+/* Contain Sketchfab's z-index within the model layer so its full-screen
+   interaction surface cannot cover any of the dialog controls. */
+.topic-dialog-stage { z-index:0; isolation:isolate; }
+.topic-dialog-background { position:absolute; z-index:-1; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.topic-dialog { isolation:isolate; --rail-clearance:calc(clamp(110px,11vw,166px) + clamp(14px,2vw,36px) + 40px); }
+.topic-dialog-copy,.topic-dialog-object-info,.topic-dialog-credits,.topic-dialog-rail { pointer-events:auto; overscroll-behavior:contain; }
+.topic-dialog.is-interacting .topic-dialog-copy,.topic-dialog.is-interacting .topic-dialog-object-info { pointer-events:auto; }
+.topic-dialog-copy:focus-within,.topic-dialog.is-interacting .topic-dialog-copy:hover { opacity:1; filter:none; transform:none; }
+.topic-dialog-copy { padding:14px 16px; box-sizing:border-box; background:#eeebe3ce; backdrop-filter:blur(6px); border-radius:4px; }
+.topic-dialog-object-info { top:90px; bottom:auto; left:calc(clamp(220px,23vw,360px) + clamp(20px,3vw,56px) + 30px); right:var(--rail-clearance); width:auto; max-height:23dvh; transform:none; box-sizing:border-box; }
+.topic-dialog.is-interacting .topic-dialog-object-info { transform:translateY(-6px) scale(.98); }
+.topic-dialog-object-info:focus-within,.topic-dialog.is-interacting .topic-dialog-object-info:hover { opacity:1; filter:none; transform:none; }
+.topic-dialog-credits { position:absolute; z-index:2; right:var(--rail-clearance); bottom:clamp(70px,9vh,110px); width:min(360px,32vw); max-height:20dvh; overflow:auto; padding:12px 16px; background:#eeebe3d9; backdrop-filter:blur(6px); border-radius:4px; text-align:right; box-sizing:border-box; }
+.topic-dialog-credits .spatial-object-rights { justify-content:flex-end; border:0; margin:0 0 8px; padding:0; }
+@media(max-width:720px) {
+ .topic-dialog { --rail-clearance:114px; }
+ .topic-dialog-object-info { top:78px; left:16px; right:var(--rail-clearance); width:auto; max-height:18dvh; transform:none; }
+ .topic-dialog-copy { top:calc(90px + 18dvh); width:calc(100% - 130px); max-height:25dvh; padding:10px; }
+ .topic-dialog-credits { right:var(--rail-clearance); bottom:66px; width:calc(100% - 130px); max-height:17dvh; padding:10px; }
+ .topic-dialog.is-interacting .topic-dialog-object-info { transform:translateY(-6px) scale(.98); }
+}
