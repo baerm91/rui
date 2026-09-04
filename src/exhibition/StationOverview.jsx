@@ -11,7 +11,8 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem }) 
   const leaveTimer = useRef(null);
   const [active, setActive] = useState(null);
   const [width, setWidth] = useState(1200);
-  const tiles = useMemo(() => createCobblestoneLayout(stations, width), [stations, width]);
+  const [imageRatios, setImageRatios] = useState({});
+  const tiles = useMemo(() => createCobblestoneLayout(stations, width, imageRatios), [stations, width, imageRatios]);
   const contentHeight = Math.max(0, ...tiles.map((tile) => tile.y + tile.height)) + 24;
   const activate = (index) => { clearTimeout(leaveTimer.current); setActive(index); };
   const release = () => { clearTimeout(leaveTimer.current); leaveTimer.current = setTimeout(() => setActive(null), 100); };
@@ -54,7 +55,13 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem }) 
             onPointerEnter={(event) => { if (event.pointerType !== 'touch') activate(tile.stationIndex); }}
             onFocus={() => activate(tile.stationIndex)}
             onClick={() => { if (item && onOpenItem) onOpenItem(tile.stationIndex, item.id); else onOpenStation(tile.stationIndex); }}>
-            <span className="topic-cluster-image"><Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />{src && <LazyImage key={src} src={src} />}</span>
+            <span className="topic-cluster-image"><Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />{src && <LazyImage key={src} src={src} onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              if (!naturalWidth || !naturalHeight) return;
+              const key = `${tile.stationIndex}:${tile.itemIndex}`;
+              const ratio = naturalWidth / naturalHeight;
+              setImageRatios((current) => current[key] === ratio ? current : { ...current, [key]: ratio });
+            }} />}</span>
             <span className="topic-cluster-caption"><strong>{item?.title || item?.name || station.title}</strong><ArrowUpRight size={16} aria-hidden="true" /></span>
           </button>;
         })}

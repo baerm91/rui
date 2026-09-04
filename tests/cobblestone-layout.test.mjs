@@ -27,3 +27,15 @@ test('empty or unmeasured cobblestone overview has no tiles', () => {
   assert.deepEqual(createCobblestoneLayout([], 1000), []);
   assert.deepEqual(createCobblestoneLayout([{ items: [] }], 0), []);
 });
+
+test('rows fill the right edge and tiles match original image proportions', () => {
+  const stations = [{ items: Array.from({ length: 7 }, (_, id) => ({ id })) }];
+  const ratios = { '0:0': 16/9, '0:1': 1, '0:2': .75, '0:3': 2, '0:4': 1.5, '0:5': 16/9, '0:6': 1 };
+  const tiles = createCobblestoneLayout(stations, 1320, ratios);
+  const rowEnds = new Map();
+  for (const tile of tiles) {
+    assert.ok(Math.abs(tile.width / tile.height - ratios[`0:${tile.itemIndex}`]) < .00001);
+    rowEnds.set(tile.y, Math.max(rowEnds.get(tile.y) || 0, tile.x + tile.width));
+  }
+  for (const right of rowEnds.values()) assert.ok(Math.abs(right - 1308) < .00001);
+});
