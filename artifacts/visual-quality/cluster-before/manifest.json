@@ -1,0 +1,85 @@
+{
+  "label": "cluster-before",
+  "origin": "http://localhost:3005",
+  "createdAt": "2026-09-05T09:04:21.813Z",
+  "results": [
+    {
+      "ok": true,
+      "name": "room-overview",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\cluster-before\\room-overview-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "H1",
+          "label": null,
+          "text": "Themenüberblick"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-overview",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.exhibition-shell.is-overview')",
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\cluster-before\\room-overview-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "H1",
+          "label": null,
+          "text": "Themenüberblick"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "label": "cluster-open",
+  "origin": "http://localhost:3005",
+  "createdAt": "2026-09-05T09:08:48.008Z",
+  "results": [
+    {
+      "ok": true,
+      "name": "room-cluster-open-object",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "clickSelector": ".topic-cluster-tile",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('dialog[open]')?.textContent.includes('Beschädigter Helm')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\cluster-open\\room-cluster-open-object-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "3D-Modell schließen",
+          "text": "Modell schließen"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Beschädigter Helm drehen und zoomen"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-open-object",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "clickSelector": ".topic-cluster-tile",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('dialog[open]')?.textContent.includes('Beschädigter Helm')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\cluster-open\\room-cluster-open-object-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "3D-Modell schließen",
+          "text": "Modell schließen"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Beschädigter Helm drehen und zoomen"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    }
+  ]
+}

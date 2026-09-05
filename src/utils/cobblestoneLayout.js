@@ -5,7 +5,7 @@ export function createCobblestoneLayout(stations, width) {
   const columns = width < 560 ? 2 : width < 960 ? 3 : 5;
   const bandRows = columns === 2 ? 3 : 2;
   const capacity = columns * bandRows;
-  const gap = width < 560 ? 6 : 8;
+  const gap = width < 560 ? 8 : 12;
   const entries = stations.flatMap((station, stationIndex) =>
     Array.from({ length: Math.max(1, station.items?.length || 0) }, (_, itemIndex) => ({ stationIndex, itemIndex }))
   );

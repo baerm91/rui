@@ -55,7 +55,8 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem }) 
             onFocus={() => activate(tile.stationIndex)}
             onClick={() => { if (item && onOpenItem) onOpenItem(tile.stationIndex, item.id); else onOpenStation(tile.stationIndex); }}>
             <span className="topic-cluster-image"><Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />{src && <LazyImage key={src} src={src} />}</span>
-            <span className="topic-cluster-caption"><strong>{item?.title || item?.name || station.title}</strong><ArrowUpRight size={16} aria-hidden="true" /></span>
+            <span className="topic-cluster-number" aria-hidden="true">{String(tile.stationIndex + 1).padStart(2, '0')}</span>
+            <span className="topic-cluster-caption"><span><small>{station.title}</small><strong>{item?.title || item?.name || station.title}</strong></span><ArrowUpRight size={16} aria-hidden="true" /></span>
           </button>;
         })}
       </div>

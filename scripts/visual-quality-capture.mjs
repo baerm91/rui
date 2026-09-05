@@ -118,6 +118,25 @@ const cases = [
     ready: "!document.querySelector('#loading-failure')?.hidden && document.activeElement?.id === 'loading-failure-heading'"
   },
   { name: 'room-overview', path: '/__spatial-preview?mode=visitor', ready: "document.querySelector('.exhibition-shell.is-overview')" },
+  ...[false, true].map((reducedMotion) => ({
+    name: `room-cluster-focus${reducedMotion ? '-reduced-motion' : ''}`,
+    path: '/__spatial-preview?mode=visitor', reducedMotion,
+    ready: "document.querySelector('.topic-cluster-tile')",
+    actions: [
+      { expression: "document.querySelector('.topic-cluster-tile').focus()", wait: 700 },
+      { waitFor: "document.activeElement.matches('.topic-cluster-tile.is-active') && getComputedStyle(document.activeElement.querySelector('.topic-cluster-caption')).opacity === '1'" },
+      { waitFor: "!matchMedia('(hover: hover) and (pointer: fine)').matches || [...document.querySelectorAll('.topic-cluster-caption')].filter(el => getComputedStyle(el).opacity === '1').length === 1" },
+      ...(reducedMotion ? [{ waitFor: "getComputedStyle(document.activeElement).transform === 'none' && getComputedStyle(document.activeElement).transitionDuration === '0s'" }] : [])
+    ]
+  })),
+  {
+    name: 'room-cluster-open-object', path: '/__spatial-preview?mode=visitor',
+    ready: "document.querySelector('.topic-cluster-tile')",
+    actions: [
+      { clickSelector: '.topic-cluster-tile', wait: 1800 },
+      { waitFor: "document.querySelector('dialog[open]')?.textContent.includes('Beschädigter Helm')" }
+    ]
+  },
   {
     name: 'room-station-one', path: '/__spatial-preview?mode=visitor', ready: "document.querySelector('.exhibition-shell.is-overview')",
     actions: [
