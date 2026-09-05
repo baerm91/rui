@@ -30,13 +30,25 @@
 .topic-cluster-heading h1 { margin:10px 0 0; font:400 clamp(38px,4.2vw,64px)/.95 "Cormorant Garamond",Georgia,serif; letter-spacing:-.035em; }
 .topic-cluster-heading h1:focus { outline:none; }
 .topic-cluster-heading > small { color:#635b4c; font-size:11px; white-space:nowrap; }
-.topic-cluster-index { display:flex; flex:none; gap:8px; overflow-x:auto; padding:3px 2px 18px; scrollbar-width:thin; }
-.topic-cluster-index button { display:flex; align-items:center; flex-shrink:0; gap:9px; min-height:40px; padding:8px 13px; border:1px solid #b5ad9f66; border-radius:5px; background:#fffdf51f; color:#635b4c; font:500 11px/1.3 Inter,Arial,sans-serif; cursor:pointer; transition:background .25s,color .25s,border-color .25s,box-shadow .25s; }
-.topic-cluster-index button span { opacity:.7; font-size:10px; font-variant-numeric:tabular-nums; }
-.topic-cluster-index button small { display:grid; place-items:center; min-width:18px; height:18px; border-radius:50%; background:#8a81751a; font-size:9px; }
-.topic-cluster-index button.is-active { background:#393b35; color:#fffdf5; border-color:#393b35; box-shadow:0 2px 5px #302e2715; }
-.topic-cluster-index button.is-active small { background:#ffffff1a; }
-.topic-cluster-viewport { position:relative; flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#aaa18f66 transparent; }
+.topic-cluster-body { display:grid; grid-template-columns:clamp(230px,23vw,310px) minmax(0,1fr); gap:clamp(20px,3vw,48px); flex:1; min-height:0; }
+.topic-cluster-index { display:flex; flex-direction:column; gap:10px; min-height:0; overflow-y:auto; padding:16px 5px 24px 2px; scrollbar-width:thin; scrollbar-color:#aaa18f66 transparent; }
+.topic-cluster-index button { flex-shrink:0; width:100%; border:1px solid transparent; border-radius:5px; color:#635b4c; font-family:Inter,Arial,sans-serif; cursor:pointer; text-align:left; transition:background .25s,color .25s,border-color .25s,box-shadow .25s; }
+.topic-cluster-all { display:flex; justify-content:space-between; align-items:center; min-height:42px; padding:10px 14px; background:transparent; font-size:11px; }
+.topic-cluster-all span { font-size:16px; }
+.topic-cluster-all.is-active { background:#393b35; color:#fffdf5; }
+.topic-cluster-topic { position:relative; padding:17px 16px 18px; background:#fffdf533; }
+.topic-cluster-topic::before { content:""; position:absolute; inset:16px auto 16px 0; width:2px; border-radius:2px; background:var(--topic-accent); opacity:0; transition:opacity .25s; }
+.topic-cluster-topic.is-active { background:#fffdf5b3; border-color:#b5ad9f55; box-shadow:0 5px 14px -10px #302e2733; }
+.topic-cluster-topic.is-active::before { opacity:1; }
+.topic-cluster-meta { display:flex; align-items:center; gap:7px; font-size:9px; line-height:1.4; letter-spacing:.09em; text-transform:uppercase; }
+.topic-cluster-meta i { flex:none; width:6px; height:6px; border-radius:50%; background:var(--topic-accent); }
+.topic-cluster-meta > span { margin-left:auto; color:#777064; letter-spacing:.02em; text-transform:none; }
+.topic-cluster-topic-title { display:flex; align-items:baseline; gap:12px; margin-top:10px; color:#302e27; }
+.topic-cluster-topic-title strong { flex:1; min-width:0; font:500 clamp(22px,2vw,28px)/1.05 "Cormorant Garamond",Georgia,serif; overflow-wrap:anywhere; }
+.topic-cluster-topic-title svg { flex:none; opacity:0; transform:translate(-3px,3px); transition:opacity .25s,transform .25s; }
+.topic-cluster-topic.is-active .topic-cluster-topic-title svg { opacity:1; transform:none; }
+.topic-cluster-description { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-top:9px; color:#777064; font-size:11px; line-height:1.55; }
+.topic-cluster-viewport { position:relative; min-width:0; flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#aaa18f66 transparent; }
 .topic-cluster-canvas { position:relative; width:100%; user-select:none; }
 .topic-cluster-tile { position:absolute; display:block; padding:0; border:0; border-radius:7px; overflow:hidden; background:#d6d0c4; color:#373a34; cursor:pointer; text-align:left; box-shadow:0 1px 2px #302e2726,0 4px 8px -4px #302e2730; transition:opacity .3s ease,filter .3s ease,transform .35s cubic-bezier(.2,.65,.3,1),box-shadow .35s ease; }
 .topic-cluster-tile::after { content:""; position:absolute; inset:0; z-index:2; border-radius:inherit; pointer-events:none; box-shadow:inset 0 1px 0 #fffdf54d,inset 0 0 0 1px #302e271c; transition:box-shadow .3s; }
@@ -47,9 +59,7 @@
 .topic-cluster-tile [data-image-state="error"] { visibility:hidden; }
 .topic-cluster-placeholder { opacity:.35; }
 .topic-cluster-tile.is-muted { opacity:.64; filter:saturate(.65); }
-.topic-cluster-tile.is-active::after { box-shadow:inset 0 1px 0 #fffdf57a,inset 0 0 0 1px #fffdf580; }
-.topic-cluster-number { position:absolute; top:9px; left:9px; display:grid; place-items:center; width:25px; height:23px; border:1px solid #fffdf52e; border-radius:4px; background:#292c26b8; color:#fffdf5; font:500 10px/1 Inter,Arial,sans-serif; font-variant-numeric:tabular-nums; pointer-events:none; transition:background .3s; }
-.topic-cluster-tile.is-active .topic-cluster-number { background:#eee5d5; color:#393b35; }
+.topic-cluster-tile.is-active::after { box-shadow:inset 0 -3px 0 var(--topic-accent),inset 0 0 0 1px #fffdf580; }
 .topic-cluster-caption { position:absolute; inset:auto 0 0; display:flex; align-items:flex-end; gap:10px; padding:34px 13px 12px; color:#fffdf5; background:linear-gradient(transparent,rgba(25,29,23,.88)); opacity:0; transform:translateY(5px); pointer-events:none; transition:opacity .25s ease,transform .35s ease; }
 .topic-cluster-caption > span { flex:1; min-width:0; }
 .topic-cluster-caption small { display:block; margin-bottom:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:500 9px/1.3 Inter,Arial,sans-serif; letter-spacing:.04em; color:#e5dfd1; }
@@ -70,9 +80,18 @@
   .topic-cluster-caption { opacity:1; transform:none; padding:26px 9px 9px; }
   .topic-cluster-caption small { display:none; }
   .topic-cluster-caption strong { font-size:16px; }
-  .topic-cluster-number { top:6px; left:6px; width:22px; height:20px; }
+}
+@media (max-width:900px) {
+  .topic-cluster-body { grid-template-columns:210px minmax(0,1fr); gap:16px; }
 }
 @media (max-width:720px) {
+  .topic-cluster-body { display:flex; flex-direction:column; gap:8px; }
+  .topic-cluster-index { flex:none; flex-direction:row; align-items:stretch; max-height:130px; overflow-x:auto; overflow-y:hidden; padding:3px 2px 10px; gap:8px; }
+  .topic-cluster-index .topic-cluster-all { width:110px; gap:12px; }
+  .topic-cluster-index .topic-cluster-topic { width:210px; padding:12px; }
+  .topic-cluster-topic-title { margin-top:7px; }
+  .topic-cluster-topic-title strong { font-size:21px; }
+  .topic-cluster-description { -webkit-line-clamp:1; font-size:10px; margin-top:6px; }
   .topic-cluster { padding-right:12px; padding-left:12px; }
   .topic-cluster-heading { padding-bottom:16px; }
   .topic-cluster-heading > small { display:none; }
@@ -86,6 +105,6 @@
   .topic-cluster-index { padding-bottom:6px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  .topic-cluster-tile,.topic-cluster-tile::after,.topic-cluster-tile .lazy-image,.topic-cluster-caption,.topic-cluster-number,.topic-cluster-index button { transition:none; }
+  .topic-cluster-tile,.topic-cluster-tile::after,.topic-cluster-tile .lazy-image,.topic-cluster-caption,.topic-cluster-topic::before,.topic-cluster-topic-title svg,.topic-cluster-index button { transition:none; }
   .topic-cluster-tile:hover,.topic-cluster-tile:focus-visible,.topic-cluster-tile:hover .lazy-image,.topic-cluster-tile:focus-visible .lazy-image { transform:none; }
 }

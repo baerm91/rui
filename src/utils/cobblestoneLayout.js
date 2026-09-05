@@ -2,7 +2,7 @@
 // together across staggered rows. Every stone uses the same dimensions.
 export function createCobblestoneLayout(stations, width) {
   if (width <= 24) return [];
-  const columns = width < 560 ? 2 : width < 960 ? 3 : 5;
+  const columns = width < 560 ? 2 : width < 1120 ? 3 : 5;
   const bandRows = columns === 2 ? 3 : 2;
   const capacity = columns * bandRows;
   const gap = width < 560 ? 8 : 12;

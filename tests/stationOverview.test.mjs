@@ -26,9 +26,10 @@ test('cluster overview exposes every object and empty topic while deferring imag
     assert.equal((html.match(/loading="lazy"/g) || []).length, 24);
     assert.doesNotMatch(html, /Herauszoomen|Hineinzoomen|Zoomstufe/);
     assert.match(html, /<strong>Objekt 1<\/strong>/);
-    assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 25);
-    // Populated cards label their objects; the theme appears once in navigation.
-    assert.doesNotMatch(html, /<strong>Sammlung [2-5]<\/strong>/);
+    assert.equal((html.match(/aria-haspopup="dialog"/g) || []).length, 25 + stations.length);
+    // Theme cards have their own heading; image captions still label the object.
+    const tileMarkup = html.slice(html.indexOf('class="topic-cluster-canvas"'));
+    assert.doesNotMatch(tileMarkup, /<strong>Sammlung [2-5]<\/strong>/);
   } finally {
     await compiler.close();
   }

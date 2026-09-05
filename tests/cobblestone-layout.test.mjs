@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCobblestoneLayout } from '../src/utils/cobblestoneLayout.js';
 
-for (const [width, columns] of [[1320, 5], [800, 3], [366, 2]]) {
+for (const [width, columns] of [[1320, 5], [1000, 3], [800, 3], [366, 2]]) {
   test(`cobblestone overview limits row density to ${columns} at ${width}px and keeps all objects scrollable`, () => {
     const stations = [5, 8, 7, 5, 0].map((count) => ({ items: Array.from({ length: count }, (_, id) => ({ id })) }));
     const tiles = createCobblestoneLayout(stations, width);

@@ -1,0 +1,327 @@
+{
+  "label": "sidebar-interaction",
+  "origin": "http://localhost:3005",
+  "createdAt": "2026-09-05T09:27:35.126Z",
+  "results": [
+    {
+      "ok": true,
+      "name": "room-cluster-focus",
+      "path": "/__spatial-preview?mode=visitor",
+      "reducedMotion": false,
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "expression": "document.querySelector('.topic-cluster-tile').focus()",
+          "wait": 700
+        },
+        {
+          "waitFor": "document.activeElement.matches('.topic-cluster-tile.is-active') && getComputedStyle(document.activeElement.querySelector('.topic-cluster-caption')).opacity === '1'"
+        },
+        {
+          "waitFor": "!matchMedia('(hover: hover) and (pointer: fine)').matches || [...document.querySelectorAll('.topic-cluster-caption')].filter(el => getComputedStyle(el).opacity === '1').length === 1"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-focus-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "Spuren auf der Oberfläche: Beschädigter Helm",
+          "text": "Spuren auf der OberflächeBeschädigter Helm"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-focus",
+      "path": "/__spatial-preview?mode=visitor",
+      "reducedMotion": false,
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "expression": "document.querySelector('.topic-cluster-tile').focus()",
+          "wait": 700
+        },
+        {
+          "waitFor": "document.activeElement.matches('.topic-cluster-tile.is-active') && getComputedStyle(document.activeElement.querySelector('.topic-cluster-caption')).opacity === '1'"
+        },
+        {
+          "waitFor": "!matchMedia('(hover: hover) and (pointer: fine)').matches || [...document.querySelectorAll('.topic-cluster-caption')].filter(el => getComputedStyle(el).opacity === '1').length === 1"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-focus-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "Spuren auf der Oberfläche: Beschädigter Helm",
+          "text": "Spuren auf der OberflächeBeschädigter Helm"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-focus-reduced-motion",
+      "path": "/__spatial-preview?mode=visitor",
+      "reducedMotion": true,
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "expression": "document.querySelector('.topic-cluster-tile').focus()",
+          "wait": 700
+        },
+        {
+          "waitFor": "document.activeElement.matches('.topic-cluster-tile.is-active') && getComputedStyle(document.activeElement.querySelector('.topic-cluster-caption')).opacity === '1'"
+        },
+        {
+          "waitFor": "!matchMedia('(hover: hover) and (pointer: fine)').matches || [...document.querySelectorAll('.topic-cluster-caption')].filter(el => getComputedStyle(el).opacity === '1').length === 1"
+        },
+        {
+          "waitFor": "getComputedStyle(document.activeElement).transform === 'none' && getComputedStyle(document.activeElement).transitionDuration === '0s'"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-focus-reduced-motion-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "Spuren auf der Oberfläche: Beschädigter Helm",
+          "text": "Spuren auf der OberflächeBeschädigter Helm"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-focus-reduced-motion",
+      "path": "/__spatial-preview?mode=visitor",
+      "reducedMotion": true,
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "expression": "document.querySelector('.topic-cluster-tile').focus()",
+          "wait": 700
+        },
+        {
+          "waitFor": "document.activeElement.matches('.topic-cluster-tile.is-active') && getComputedStyle(document.activeElement.querySelector('.topic-cluster-caption')).opacity === '1'"
+        },
+        {
+          "waitFor": "!matchMedia('(hover: hover) and (pointer: fine)').matches || [...document.querySelectorAll('.topic-cluster-caption')].filter(el => getComputedStyle(el).opacity === '1').length === 1"
+        },
+        {
+          "waitFor": "getComputedStyle(document.activeElement).transform === 'none' && getComputedStyle(document.activeElement).transitionDuration === '0s'"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-focus-reduced-motion-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "Spuren auf der Oberfläche: Beschädigter Helm",
+          "text": "Spuren auf der OberflächeBeschädigter Helm"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-open-object",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "clickSelector": ".topic-cluster-tile",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('dialog[open]')?.textContent.includes('Beschädigter Helm')"
+        }
+      ],
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 1000,
+        "mobile": false,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-open-object-desktop.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "3D-Modell schließen",
+          "text": "Modell schließen"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 1440,
+            "height": 1000,
+            "label": "Beschädigter Helm drehen und zoomen"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    },
+    {
+      "ok": true,
+      "name": "room-cluster-open-object",
+      "path": "/__spatial-preview?mode=visitor",
+      "ready": "document.querySelector('.topic-cluster-tile')",
+      "actions": [
+        {
+          "clickSelector": ".topic-cluster-tile",
+          "wait": 1800
+        },
+        {
+          "waitFor": "document.querySelector('dialog[open]')?.textContent.includes('Beschädigter Helm')"
+        }
+      ],
+      "viewport": {
+        "name": "mobile",
+        "width": 390,
+        "height": 844,
+        "mobile": true,
+        "deviceScaleFactor": 1
+      },
+      "file": "D:\\Prog-Proj\\Riu\\artifacts\\visual-quality\\sidebar-interaction\\room-cluster-open-object-mobile.png",
+      "state": {
+        "path": "/__spatial-preview?mode=visitor",
+        "title": "RIU — Räumliche Geschichten",
+        "bodyClass": "platform-page",
+        "camera": null,
+        "modelRenderState": null,
+        "baseModelStatus": null,
+        "externalViewerStatus": null,
+        "activeElement": {
+          "tag": "BUTTON",
+          "label": "3D-Modell schließen",
+          "text": "Modell schließen"
+        },
+        "roomCamera": null,
+        "webglCanvases": [
+          {
+            "width": 300,
+            "height": 150,
+            "label": null
+          },
+          {
+            "width": 390,
+            "height": 844,
+            "label": "Beschädigter Helm drehen und zoomen"
+          }
+        ],
+        "runtimeErrors": []
+      },
+      "expectedErrors": [],
+      "errors": []
+    }
+  ]
+}

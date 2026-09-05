@@ -5,6 +5,9 @@ import { resolveSpatialThumbnailUrl } from '../utils/spatialStory.js';
 import { createCobblestoneLayout } from '../utils/cobblestoneLayout.js';
 import './stationOverview.css';
 
+const topicAccents = ['#527a76', '#92734e', '#747898', '#a56c51', '#738354', '#976c82'];
+const topicAccent = (index) => topicAccents[index % topicAccents.length];
+
 export function StationOverview({ title, stations, onOpenStation, onOpenItem }) {
   const viewportRef = useRef(null);
   const headingRef = useRef(null);
@@ -31,11 +34,14 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem }) 
       <div><span>{title || 'Ihre Ausstellung'}</span><h1 id="topic-cluster-title" ref={headingRef} tabIndex={-1}>Themenüberblick</h1></div>
       <small>{stations.length} Themen · {stations.reduce((sum, station) => sum + station.items.length, 0)} Modelle</small>
     </header>
+    <div className="topic-cluster-body">
     <nav className="topic-cluster-index" aria-label="Themen auswählen" onPointerLeave={release} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) release(); }}>
-      <button type="button" className={active === null ? 'is-active' : ''} onPointerEnter={() => activate(null)} onFocus={() => activate(null)} onClick={() => activate(null)}>Alle Modelle</button>
-      {stations.map((station, index) => <button type="button" key={station.id} className={active === index ? 'is-active' : ''}
-        onPointerEnter={() => activate(index)} onFocus={() => activate(index)} onClick={() => onOpenStation(index)}>
-        <span>{String(index + 1).padStart(2, '0')}</span>{station.title}<small>{station.items.length}</small>
+      <button type="button" className={`topic-cluster-all${active === null ? ' is-active' : ''}`} onPointerEnter={() => activate(null)} onFocus={() => activate(null)} onClick={() => activate(null)}>Alle Modelle<span aria-hidden="true">↗</span></button>
+      {stations.map((station, index) => <button type="button" key={station.id} className={`topic-cluster-topic${active === index ? ' is-active' : ''}`} style={{ '--topic-accent': topicAccent(index) }}
+        aria-haspopup="dialog" onPointerEnter={(event) => { if (event.pointerType !== 'touch') activate(index); }} onFocus={() => activate(index)} onClick={() => onOpenStation(index)}>
+        <span className="topic-cluster-meta"><i aria-hidden="true" />Thema<span>{station.items.length} {station.items.length === 1 ? 'Objekt' : 'Objekte'}</span></span>
+        <span className="topic-cluster-topic-title"><strong>{station.title}</strong><ArrowUpRight size={17} aria-hidden="true" /></span>
+        {station.introduction && <span className="topic-cluster-description">{station.introduction}</span>}
       </button>)}
     </nav>
     <div ref={viewportRef} className="topic-cluster-viewport" role="region" aria-label="Modelle der Ausstellung" tabIndex={0}
@@ -49,18 +55,18 @@ export function StationOverview({ title, stations, onOpenStation, onOpenItem }) 
           const focused = active === tile.stationIndex;
           return <button type="button" key={`${station.id}:${item?.id || 'empty'}`} data-station-index={tile.stationIndex}
             className={`topic-cluster-tile${focused ? ' is-active' : ''}${active !== null && !focused ? ' is-muted' : ''}`}
-            style={{ left: tile.x, top: tile.y, width: tile.width, height: tile.height }}
+            style={{ left: tile.x, top: tile.y, width: tile.width, height: tile.height, '--topic-accent': topicAccent(tile.stationIndex) }}
             aria-label={`${station.title}: ${item?.title || item?.name || 'Thema betreten'}`} aria-haspopup="dialog"
             onPointerEnter={(event) => { if (event.pointerType !== 'touch') activate(tile.stationIndex); }}
             onFocus={() => activate(tile.stationIndex)}
             onClick={() => { if (item && onOpenItem) onOpenItem(tile.stationIndex, item.id); else onOpenStation(tile.stationIndex); }}>
             <span className="topic-cluster-image"><Box className="topic-cluster-placeholder" size={30} aria-hidden="true" />{src && <LazyImage key={src} src={src} />}</span>
-            <span className="topic-cluster-number" aria-hidden="true">{String(tile.stationIndex + 1).padStart(2, '0')}</span>
             <span className="topic-cluster-caption"><span><small>{station.title}</small><strong>{item?.title || item?.name || station.title}</strong></span><ArrowUpRight size={16} aria-hidden="true" /></span>
           </button>;
         })}
       </div>
       {!tiles.length && <p className="topic-cluster-empty">Diese Ausstellung enthält noch keine Themen.</p>}
+    </div>
     </div>
     <p className="topic-cluster-hint">Ein Objekt oder Thema auswählen, um die Sammlung zu öffnen.</p>
   </section>;
